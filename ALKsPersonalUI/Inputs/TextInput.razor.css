@@ -1,0 +1,56 @@
+.input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    width: var(--_ti-width, fit-content);
+}
+
+.input-label {
+    color: var(--ui-text-muted, #a1a1aa);
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding-left: 0.15rem;
+}
+
+.custom-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    width: 100%;
+    color: var(--_ti-text, var(--ui-text));
+    font-family: inherit;
+    font-size: var(--_ti-font-size, 1rem);
+}
+
+    .custom-input::placeholder {
+        color: color-mix(in srgb, var(--_ti-text, var(--ui-text)), transparent 55%);
+        font-style: italic;
+    }
+
+.input-error {
+    color: var(--_ti-error, var(--ui-danger));
+    font-size: calc(var(--_ti-font-size, 1rem) * 0.85);
+    padding-left: 0.25rem;
+}
+
+.password-toggle,
+.input-icon-btn {
+    background: transparent;
+    border: none;
+    padding: 0.15rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: color-mix(in srgb, var(--_ti-text, var(--ui-text)), transparent 40%);
+    transition: color 0.15s ease;
+    flex-shrink: 0;
+}
+
+    .password-toggle:hover,
+    .password-toggle:focus-visible,
+    .input-icon-btn:hover,
+    .input-icon-btn:focus-visible {
+        color: var(--_ti-text, var(--ui-text));
+        outline: none;
+    }

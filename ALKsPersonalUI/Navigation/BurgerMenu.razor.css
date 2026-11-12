@@ -1,0 +1,49 @@
+.burger-menu-container {
+    display: inline-flex;
+    align-items: center;
+}
+
+.drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    background-color: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: flex-end;
+    animation: backdrop-fade 0.15s ease-out;
+}
+
+.drawer-panel {
+    height: 100vh;
+    display: flex;
+    animation: drawer-slide-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drawer-nav {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+}
+
+@keyframes backdrop-fade {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes drawer-slide-in {
+    from {
+        transform: translateX(100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}

@@ -1,0 +1,236 @@
+﻿@inherits UIComponentBase
+@inject UIThemeService ThemeService
+@implements IDisposable
+
+<button class="@BuildButtonCssClasses()"
+        style="@BuildButtonInlineStyles()"
+        type="@HtmlButtonType"
+        disabled="@IsInteractionBlocked"
+        @onclick="HandleClickAsync"
+        @oncontextmenu="HandleContextMenu"
+        @oncontextmenu:preventDefault="@HasSpecialPressBehavior"
+        @onpointerdown="HandlePointerDownAsync"
+        @onpointerup="CancelPressTimers"
+        @onpointerleave="CancelPressTimers"
+        @onpointercancel="CancelPressTimers"
+        @attributes="AdditionalAttributes">
+    <span class="btn-front">
+        @if (IsHoldToConfirmEnabled)
+        {
+            <span class="btn-hold-fill"></span>
+        }
+        <span class="btn-content">
+            @if (IsLoading)
+            {
+                <SimpleSpinner />
+            }
+            else if (ChildContent is not null)
+            {
+                @ChildContent
+            }
+            else
+            {
+                @Text
+            }
+        </span>
+    </span>
+</button>
+
+@code {
+    [Parameter] public string? Text { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+    [Parameter] public EventCallback OnLongPress { get; set; }
+    [Parameter] public bool IsDisabled { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+
+    [Parameter] public ButtonVariant Variant { get; set; } = ButtonVariant.Solid;
+    [Parameter] public ButtonShape Shape { get; set; } = ButtonShape.Rounded;
+    [Parameter] public ButtonSize Size { get; set; } = ButtonSize.Dynamic;
+    [Parameter] public ButtonType Type { get; set; } = ButtonType.Button;
+    [Parameter] public ButtonPressEffect? PressEffect { get; set; }
+    [Parameter] public int HoldDurationMs { get; set; }
+    [Parameter] public int LongPressDurationMs { get; set; } = 600;
+
+    /// <summary>
+    /// When true, holding the button down continuously invokes OnClick with accelerating speed.
+    /// Ideal for stepper buttons (+/-), Backspace, and Arrow keys on touch screens.
+    /// </summary>
+    [Parameter] public bool AutoRepeat { get; set; }
+
+    private CancellationTokenSource? _pressCts;
+    private bool _isHolding;
+    private bool _suppressNextClick;
+    private string? _detectedPointerType;
+
+    private bool IsInteractionBlocked => IsDisabled || IsLoading;
+    private bool IsHoldToConfirmEnabled => HoldDurationMs > 0;
+    private bool HasSpecialPressBehavior => IsHoldToConfirmEnabled || OnLongPress.HasDelegate || AutoRepeat;
+    private string HtmlButtonType => Type.ToString().ToLowerInvariant();
+
+    private ButtonPressEffect ConfiguredPressEffect =>
+        PressEffect ?? ThemeService.Current.DefaultPressEffect;
+
+    private string ResolvedPressEffectClass
+    {
+        get
+        {
+            if (ConfiguredPressEffect != ButtonPressEffect.Auto)
+                return $"press-{ConfiguredPressEffect.ToString().ToLowerInvariant()}";
+
+            return _detectedPointerType switch
+            {
+                "touch" or "pen" => "press-inwardscale",
+                "mouse" => "press-down3d",
+                _ => "press-auto"
+            };
+        }
+    }
+
+    private (string VerticalPadding, string HorizontalPadding, string FontSize) ResolvedSizeMetrics => Size switch
+    {
+        ButtonSize.Small => ButtonDefaults.SmallMetrics,
+        ButtonSize.Medium => ButtonDefaults.MediumMetrics,
+        ButtonSize.Large => ButtonDefaults.LargeMetrics,
+        _ => ResolveCustomMetrics()
+    };
+
+    private (string VerticalPadding, string HorizontalPadding, string FontSize) ResolveCustomMetrics()
+    {
+        var vertical = ModifierOrEmpty.PaddingVerticalValue ?? "0.75rem";
+        var horizontal = ModifierOrEmpty.PaddingHorizontalValue ?? "1.5rem";
+        var fontSize = ModifierOrEmpty.FontSizeValue ?? ButtonDefaults.DefaultFontSize;
+        return (vertical, horizontal, fontSize);
+    }
+
+    private string BuildButtonCssClasses() => new CssBuilder()
+        .Add("action-btn")
+        .Add($"variant-{Variant.ToString().ToLowerInvariant()}")
+        .Add($"shape-{Shape.ToString().ToLowerInvariant()}")
+        .Add(ResolvedPressEffectClass)
+        .Add("is-loading", when: IsLoading)
+        .Add("is-holding", when: _isHolding)
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private string BuildButtonInlineStyles() => new StyleBuilder()
+        .Add("--_btn-base", ModifierOrEmpty.BaseColorValue ?? ButtonDefaults.DefaultBaseColor)
+        .Add("--_btn-text", ModifierOrEmpty.TextColorValue ?? ButtonDefaults.DefaultTextColor)
+        .Add("--_btn-depth", ModifierOrEmpty.DepthValue ?? ButtonDefaults.DefaultDepth)
+        .Add("--_btn-scale", ModifierOrEmpty.PressScaleValue ?? "var(--ui-press-scale, 0.93)")
+        .Add("--_btn-speed", ModifierOrEmpty.AnimationSpeedValue ?? ButtonDefaults.DefaultAnimationSpeed)
+        .Add("--_btn-hold-ms", $"{HoldDurationMs}ms")
+        .Add("--_btn-pad-y", ResolvedSizeMetrics.VerticalPadding)
+        .Add("--_btn-pad-x", ResolvedSizeMetrics.HorizontalPadding)
+        .Add("--_btn-font", ResolvedSizeMetrics.FontSize)
+        .Add("--_btn-width", ModifierOrEmpty.WidthValue ?? ButtonDefaults.DefaultWidth)
+        .Add("--_btn-height", ModifierOrEmpty.HeightValue ?? ButtonDefaults.DefaultHeight)
+        .AddRaw(ModifierOrEmpty.BuildFrameExtras())
+        .Build();
+
+    private void HandleContextMenu() { }
+
+    private async Task HandleClickAsync(MouseEventArgs mouseEvent)
+    {
+        if (IsInteractionBlocked || IsHoldToConfirmEnabled)
+            return;
+
+        if (_suppressNextClick)
+        {
+            _suppressNextClick = false;
+            return;
+        }
+
+        await OnClick.InvokeAsync(mouseEvent);
+    }
+
+    private async Task HandlePointerDownAsync(PointerEventArgs pointerEvent)
+    {
+        if (IsInteractionBlocked)
+            return;
+
+        if (!string.IsNullOrWhiteSpace(pointerEvent.PointerType))
+            _detectedPointerType = pointerEvent.PointerType;
+
+        _suppressNextClick = false;
+
+        if (!HasSpecialPressBehavior)
+            return;
+
+        CancelPressTimers();
+        _pressCts = new CancellationTokenSource();
+        var token = _pressCts.Token;
+
+        if (AutoRepeat && !IsHoldToConfirmEnabled)
+        {
+            await RunAutoRepeatLoopAsync(token);
+            return;
+        }
+
+        _isHolding = IsHoldToConfirmEnabled;
+        var waitMs = IsHoldToConfirmEnabled ? HoldDurationMs : LongPressDurationMs;
+
+        try
+        {
+            await Task.Delay(waitMs, token);
+            if (!token.IsCancellationRequested)
+            {
+                _isHolding = false;
+                if (IsHoldToConfirmEnabled)
+                {
+                    await OnClick.InvokeAsync(new MouseEventArgs());
+                }
+                else if (OnLongPress.HasDelegate)
+                {
+                    _suppressNextClick = true;
+                    await OnLongPress.InvokeAsync();
+                }
+                StateHasChanged();
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            // User released early
+        }
+    }
+
+    private async Task RunAutoRepeatLoopAsync(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(400, token);
+            var intervalMs = 130;
+            while (!token.IsCancellationRequested && !IsInteractionBlocked)
+            {
+                _suppressNextClick = true;
+                await OnClick.InvokeAsync(new MouseEventArgs());
+                StateHasChanged();
+
+                await Task.Delay(intervalMs, token);
+                if (intervalMs > 45)
+                    intervalMs -= 15;
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            // Released
+        }
+    }
+
+    private void CancelPressTimers()
+    {
+        if (_pressCts is not null)
+        {
+            _pressCts.Cancel();
+            _pressCts.Dispose();
+            _pressCts = null;
+        }
+        _isHolding = false;
+    }
+
+    public void Dispose() => CancelPressTimers();
+
+    public enum ButtonVariant { Solid, Outline, Ghost }
+    public enum ButtonShape { Rectangle, Rounded, Pill }
+    public enum ButtonSize { Dynamic, Small, Medium, Large }
+    public enum ButtonType { Button, Submit, Reset }
+}

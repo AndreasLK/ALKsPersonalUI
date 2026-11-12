@@ -1,0 +1,185 @@
+.action-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    position: relative;
+    display: inline-flex;
+    width: var(--_btn-width, fit-content);
+    height: var(--_btn-height, fit-content);
+    background: transparent;
+    border: none;
+    margin: 0;
+    box-sizing: border-box;
+    padding: 0 0 var(--_btn-depth, var(--ui-depth)) 0;
+    cursor: pointer;
+    user-select: none;
+    outline-offset: 4px;
+    border-radius: var(--_btn-radius, var(--ui-radius-lg));
+    flex-shrink: 0;
+}
+
+    .action-btn.press-inwardscale,
+    .action-btn.press-concaveinset {
+        padding: 0;
+    }
+
+.btn-front {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: var(--_btn-pad-y) var(--_btn-pad-x) max(0px, calc(var(--_btn-pad-y) - var(--_btn-depth, var(--ui-depth)))) var(--_btn-pad-x);
+    font-size: var(--_btn-font, 1rem);
+    font-family: inherit;
+    font-weight: 600;
+    text-align: center;
+    border: 2px solid transparent;
+    border-radius: inherit;
+    transition: transform var(--_btn-speed, 0.06s) cubic-bezier(0.2, 0, 0, 1), box-shadow var(--_btn-speed, 0.06s) ease-in, filter calc(var(--_btn-speed, 0.06s) * 2) ease-out;
+    transform: translateY(0) scale(1);
+}
+
+.action-btn.press-inwardscale .btn-front,
+.action-btn.press-concaveinset .btn-front {
+    padding: var(--_btn-pad-y) var(--_btn-pad-x);
+}
+
+.btn-content {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.btn-hold-fill {
+    position: absolute;
+    inset: 0;
+    width: 0%;
+    background-color: rgba(255, 255, 255, 0.28);
+    z-index: 1;
+    pointer-events: none;
+    transition: width 0.1s linear;
+}
+
+.action-btn.is-holding .btn-hold-fill {
+    width: 100%;
+    transition: width var(--_btn-hold-ms, 800ms) linear;
+}
+
+.variant-solid .btn-front {
+    background-color: var(--_btn-base, var(--ui-action));
+    color: var(--_btn-text, var(--ui-text-inverse));
+    border-color: var(--_btn-base, var(--ui-action));
+    --_btn-shadow: color-mix(in srgb, var(--_btn-base, var(--ui-action)), black 28%);
+    box-shadow: 0 var(--_btn-depth, var(--ui-depth)) 0 var(--_btn-shadow);
+}
+
+.action-btn.press-inwardscale.variant-solid .btn-front,
+.action-btn.press-concaveinset.variant-solid .btn-front {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.variant-outline .btn-front {
+    background-color: transparent;
+    color: var(--_btn-base, var(--ui-action));
+    border-color: var(--_btn-base, var(--ui-action));
+    box-shadow: 0 var(--_btn-depth, var(--ui-depth)) 0 var(--_btn-base, var(--ui-action));
+}
+
+.action-btn.press-inwardscale.variant-outline .btn-front,
+.action-btn.press-concaveinset.variant-outline .btn-front {
+    box-shadow: none;
+}
+
+.variant-ghost .btn-front {
+    background-color: transparent;
+    color: var(--_btn-base, var(--ui-action));
+    border-color: transparent;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .action-btn:hover:not(:disabled) .btn-front {
+        filter: brightness(1.1);
+    }
+
+    .action-btn.variant-outline:hover:not(:disabled) .btn-front {
+        background-color: var(--_btn-base, var(--ui-action));
+        color: var(--_btn-text, var(--ui-text-inverse));
+    }
+
+    .action-btn.variant-ghost:hover:not(:disabled) .btn-front {
+        background-color: color-mix(in srgb, var(--_btn-base, var(--ui-action)), transparent 85%);
+    }
+}
+
+/* Auto mode defaults to 3D on fine pointers, and switches to InwardScale on coarse touch screens */
+.action-btn.press-auto:active:not(:disabled) .btn-front,
+.action-btn.press-down3d:active:not(:disabled) .btn-front {
+    transform: translateY(var(--_btn-depth, var(--ui-depth)));
+    box-shadow: 0 0 0 transparent;
+    filter: brightness(0.82);
+}
+
+@media (pointer: coarse) {
+    .action-btn.press-auto {
+        padding: 0;
+    }
+
+        .action-btn.press-auto .btn-front {
+            padding: var(--_btn-pad-y) var(--_btn-pad-x);
+        }
+
+        .action-btn.press-auto.variant-solid .btn-front {
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        }
+
+        .action-btn.press-auto.variant-outline .btn-front {
+            box-shadow: none;
+        }
+
+        .action-btn.press-auto:active:not(:disabled) .btn-front {
+            transform: scale(var(--_btn-scale, 0.93));
+            box-shadow: 0 0 0 transparent;
+            filter: brightness(0.88);
+        }
+}
+
+.action-btn.press-inwardscale:active:not(:disabled) .btn-front {
+    transform: scale(var(--_btn-scale, 0.93));
+    box-shadow: 0 0 0 transparent;
+    filter: brightness(0.88);
+}
+
+.action-btn.press-concaveinset:active:not(:disabled) .btn-front {
+    transform: scale(var(--_btn-scale, 0.92));
+    box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.55), inset 0 1px 2px rgba(0, 0, 0, 0.4);
+    filter: brightness(0.82);
+}
+
+.action-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+    .action-btn:disabled .btn-front {
+        box-shadow: none !important;
+    }
+
+.shape-rectangle {
+    --_btn-radius: var(--ui-radius-sm);
+}
+
+.shape-rounded {
+    --_btn-radius: var(--ui-radius-lg);
+}
+
+.shape-pill {
+    --_btn-radius: var(--ui-radius-pill);
+}

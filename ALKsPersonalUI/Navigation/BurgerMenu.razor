@@ -1,0 +1,82 @@
+﻿@inherits UIComponentBase
+
+<div class="@BuildContainerCssClasses()" @attributes="AdditionalAttributes">
+    <ActionButton Variant="ActionButton.ButtonVariant.Outline"
+                  Shape="ActionButton.ButtonShape.Rounded"
+                  Modifier="@BuildTriggerButtonModifier()"
+                  OnClick="ToggleDrawerAsync"
+                  aria-label="Toggle navigation menu"
+                  aria-expanded="@IsOpen">
+        @CurrentTriggerIcon
+    </ActionButton>
+
+    @if (IsOpen)
+    {
+        <div class="ui-backdrop-blur drawer-backdrop"
+             tabindex="-1"
+             @onclick="CloseDrawerAsync"
+             @onkeydown="CloseIfEscapeKeyPressed">
+            <div class="drawer-panel" @onclick:stopPropagation="true">
+                <TitledWindow Title="@Title"
+                              Modifier="@BuildDrawerWindowModifier()">
+                    <HeaderActions>
+                        <CloseButton OnClick="CloseDrawerAsync" AriaLabel="Close menu" />
+                    </HeaderActions>
+                    <ChildContent>
+                        <nav class="drawer-nav" @onclick="CloseDrawerAsync">
+                            @ChildContent
+                        </nav>
+                    </ChildContent>
+                </TitledWindow>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = NavigationDefaults.BurgerMenu.DefaultTitle;
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    private string CurrentTriggerIcon => IsOpen
+        ? NavigationDefaults.BurgerMenu.CloseIconSymbol
+        : NavigationDefaults.BurgerMenu.OpenIconSymbol;
+
+    private string BuildContainerCssClasses() => new CssBuilder()
+        .Add("burger-menu-container")
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private UIModifier BuildTriggerButtonModifier() => UIModifier.Empty
+        .BaseColor(ModifierOrEmpty.AccentColorValue ?? ModifierOrEmpty.BaseColorValue ?? NavigationDefaults.BurgerMenu.DefaultButtonColor)
+        .TextColor("var(--ui-text)")
+        .Width(NavigationDefaults.BurgerMenu.TriggerButtonWidth)
+        .Padding("0.45rem", "0");
+
+    private UIModifier BuildDrawerWindowModifier() => UIModifier.Empty
+        .Width(ModifierOrEmpty.WidthValue ?? NavigationDefaults.BurgerMenu.DrawerWidth)
+        .Height(ModifierOrEmpty.HeightValue ?? NavigationDefaults.BurgerMenu.DrawerHeight)
+        .BorderRadius(ModifierOrEmpty.BorderRadiusValue ?? NavigationDefaults.BurgerMenu.DrawerBorderRadius)
+        .Padding(ModifierOrEmpty.PaddingValue ?? NavigationDefaults.BurgerMenu.DrawerPadding)
+        .Column()
+        .AlignItems("stretch")
+        .Background(ModifierOrEmpty.BackgroundValue ?? NavigationDefaults.BurgerMenu.DefaultBackgroundColor)
+        .HeaderBackground(ModifierOrEmpty.HeaderBackgroundValue ?? NavigationDefaults.BurgerMenu.DefaultHeaderBackground);
+
+    private Task ToggleDrawerAsync() => SetDrawerOpenStateAsync(!IsOpen);
+    private Task CloseDrawerAsync() => SetDrawerOpenStateAsync(false);
+
+    private async Task CloseIfEscapeKeyPressed(KeyboardEventArgs keyboardEvent)
+    {
+        if (!KeyboardKeys.IsEscape(keyboardEvent))
+            return;
+
+        await CloseDrawerAsync();
+    }
+
+    private async Task SetDrawerOpenStateAsync(bool shouldBeOpen)
+    {
+        IsOpen = shouldBeOpen;
+        await IsOpenChanged.InvokeAsync(IsOpen);
+    }
+}

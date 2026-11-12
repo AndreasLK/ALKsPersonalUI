@@ -1,0 +1,17 @@
+.window {
+    box-sizing: border-box;
+    display: var(--_w-display, flex);
+    flex-direction: var(--_w-flex-dir, column);
+    align-items: var(--_w-align, stretch);
+    justify-content: var(--_w-justify, flex-start);
+    gap: var(--_w-gap, 0.5rem);
+    border-radius: var(--_w-radius, var(--ui-radius-md));
+    background-color: var(--_w-bg, var(--ui-bg-surface));
+    border: 1px solid var(--_w-border, var(--ui-border));
+    width: var(--_w-width, fit-content);
+    height: var(--_w-height, fit-content);
+    min-width: var(--_w-min-width, 0px);
+    min-height: var(--_w-min-height, 0px);
+    padding: var(--_w-padding, 1rem);
+    overflow: var(--_w-overflow, visible);
+}

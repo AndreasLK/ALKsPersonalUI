@@ -1,0 +1,70 @@
+﻿@inherits UIComponentBase
+
+@if (IsInteractiveButton)
+{
+    <button type="button"
+            class="@BuildPillCssClasses()"
+            style="@BuildPillStyles()"
+            disabled="@Disabled"
+            aria-pressed="@Active"
+            @onclick="InvokeClickIfEnabledAsync"
+            @attributes="AdditionalAttributes">
+        @if (ChildContent is not null)
+        {
+            @ChildContent
+        }
+        else
+        {
+            @Text
+        }
+    </button>
+}
+else
+{
+    <span class="@BuildPillCssClasses()" style="@BuildPillStyles()" @attributes="AdditionalAttributes">
+        @if (ChildContent is not null)
+        {
+            @ChildContent
+        }
+        else
+        {
+            @Text
+        }
+    </span>
+}
+
+@code {
+    public enum PillVariant { Neutral, Accent, Success, Warning, Danger }
+
+    [Parameter] public string? Text { get; set; }
+    [Parameter] public PillVariant Variant { get; set; } = PillVariant.Neutral;
+    [Parameter] public bool Active { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    private bool IsInteractiveButton => OnClick.HasDelegate;
+
+    private string BuildPillCssClasses() => new CssBuilder()
+        .Add("ui-pill")
+        .Add("interactive", when: IsInteractiveButton)
+        .Add(Variant.ToString().ToLowerInvariant())
+        .Add("active", when: Active)
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private string BuildPillStyles() => new StyleBuilder()
+        .Add("--_pill-bg", ModifierOrEmpty.BackgroundValue ?? "var(--ui-bg-surface)")
+        .Add("--_pill-border", ModifierOrEmpty.BorderColorValue ?? "var(--ui-border)")
+        .Add("--_pill-text", ModifierOrEmpty.TextColorValue ?? "var(--ui-text)")
+        .Add("--_pill-accent", ModifierOrEmpty.AccentColorValue ?? "var(--ui-accent)")
+        .AddRaw(ModifierOrEmpty.BuildFrameExtras())
+        .Build();
+
+    private async Task InvokeClickIfEnabledAsync(MouseEventArgs mouseEvent)
+    {
+        if (Disabled)
+            return;
+
+        await OnClick.InvokeAsync(mouseEvent);
+    }
+}

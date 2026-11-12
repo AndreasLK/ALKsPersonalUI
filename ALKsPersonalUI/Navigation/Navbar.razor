@@ -1,0 +1,69 @@
+﻿@inherits UIComponentBase
+
+<header class="@BuildWrapperCssClasses()" @attributes="AdditionalAttributes">
+    <Window Modifier="@BuildNavbarWindowModifier()">
+        <div class="navbar-inner">
+            <a href="@BrandHref" class="navbar-brand">
+                @if (HasCustomBrandContent)
+                {
+                    @BrandContent
+                }
+                else
+                {
+                    <span class="brand-text">@Title</span>
+                }
+            </a>
+
+            <nav class="navbar-links-desktop" aria-label="Main navigation">
+                @NavItems
+            </nav>
+
+            <div class="navbar-right">
+                @if (HasRightActions)
+                {
+                    <div class="navbar-actions">@RightActions</div>
+                }
+                @if (HasNavigationItems)
+                {
+                    <div class="navbar-burger-mobile">
+                        <BurgerMenu Title="@Title"
+                                    Modifier="@(UIModifier.Empty.AccentColor(ResolvedAccentColor))">
+                            @NavItems
+                        </BurgerMenu>
+                    </div>
+                }
+            </div>
+        </div>
+    </Window>
+</header>
+
+@code {
+    [Parameter] public string Title { get; set; } = NavigationDefaults.Navbar.DefaultTitle;
+    [Parameter] public string BrandHref { get; set; } = NavigationDefaults.Navbar.DefaultBrandHref;
+    [Parameter] public RenderFragment? BrandContent { get; set; }
+    [Parameter] public RenderFragment? NavItems { get; set; }
+    [Parameter] public RenderFragment? RightActions { get; set; }
+
+    private bool HasCustomBrandContent => BrandContent is not null;
+    private bool HasRightActions => RightActions is not null;
+    private bool HasNavigationItems => NavItems is not null;
+
+    private string ResolvedAccentColor =>
+        ModifierOrEmpty.AccentColorValue ?? NavigationDefaults.Navbar.DefaultAccentColor;
+
+    private UIModifier BuildNavbarWindowModifier() => UIModifier.Empty
+        .Width(ModifierOrEmpty.WidthValue ?? NavigationDefaults.Navbar.Width)
+        .Height(ModifierOrEmpty.HeightValue ?? NavigationDefaults.Navbar.Height)
+        .MinHeight(ModifierOrEmpty.MinHeightValue ?? NavigationDefaults.Navbar.MinHeight)
+        .Padding(ModifierOrEmpty.PaddingValue ?? NavigationDefaults.Navbar.Padding)
+        .BorderRadius(ModifierOrEmpty.BorderRadiusValue ?? NavigationDefaults.Navbar.DefaultBorderRadius)
+        .Background(ModifierOrEmpty.BackgroundValue ?? NavigationDefaults.Navbar.DefaultBackgroundColor)
+        .BorderColor(ModifierOrEmpty.BorderColorValue ?? NavigationDefaults.Navbar.DefaultBorderColor)
+        .Row()
+        .AlignItems("center");
+
+    private string BuildWrapperCssClasses() => new CssBuilder()
+        .Add("ui-navbar-wrapper")
+        .AddRaw(ModifierClass)
+        .Build();
+}

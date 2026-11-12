@@ -1,0 +1,24 @@
+.circular-loader {
+    /* Stop Flexbox from squishing it! */
+    flex-shrink: 0;
+    width: var(--loader-size);
+    height: var(--loader-size);
+    border-radius: 50%;
+    /* The Velocity Tail: A smooth gradient wrapping 360 degrees */
+    background: conic-gradient( from 0deg, transparent 0%, var(--loader-color) 100% );
+    /* The Ring Cutout: Punches a hole in the center, leaving exactly the Thickness */
+    -webkit-mask: radial-gradient( farthest-side, transparent calc(100% - var(--loader-thickness)), black calc(100% - var(--loader-thickness) + 0.5px) /* +0.5px smooths the pixel edges */
+    );
+    mask: radial-gradient( farthest-side, transparent calc(100% - var(--loader-thickness)), black calc(100% - var(--loader-thickness) + 0.5px) );
+    animation: spin var(--loader-speed) linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

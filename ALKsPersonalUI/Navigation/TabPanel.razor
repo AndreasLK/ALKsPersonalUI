@@ -1,0 +1,20 @@
+﻿@if (Parent?.ActiveTabId == Id)
+{
+    <div class="tab-panel-content" role="tabpanel" aria-label="@Title">
+        @ChildContent
+    </div>
+}
+
+@code {
+    [CascadingParameter] public Tabs? Parent { get; set; }
+
+    [Parameter, EditorRequired] public string Id { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public bool Disabled { get; set; } = false;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Parent?.RegisterTab(this);
+    }
+}

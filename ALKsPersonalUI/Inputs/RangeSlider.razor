@@ -1,0 +1,106 @@
+﻿@inherits SliderBase
+
+<div class="@BuildRootCssClasses()"
+     style="@BuildSliderInlineStyles()"
+     @attributes="AdditionalAttributes">
+
+    @if (ShouldRenderTickScale)
+    {
+        <div class="range-scale">
+            <svg viewBox="@SliderDefaults.LinearRange.SvgViewBox" preserveAspectRatio="none" class="scale-graphics">
+                @for (int tickIndex = 0; tickIndex <= TotalTicks; tickIndex++)
+                {
+                    double tickValue = MinValue + (tickIndex * Step);
+                    string horizontalPercentage = GeometryMath.FormatInvariant(
+                        (tickIndex / (double)TotalTicks) * GeometryMath.FullPercentage);
+
+                    <g transform="translate(@horizontalPercentage, 0)">
+                        @if (TickTemplate is not null)
+                        {
+                            @TickTemplate(tickValue)
+                        }
+                        else
+                        {
+                            <line x1="0"
+                                  y1="@SliderDefaults.LinearRange.TickTopY"
+                                  x2="0"
+                                  y2="@SliderDefaults.LinearRange.TickBottomY"
+                                  stroke="@SliderDefaults.LinearRange.DefaultTickColor"
+                                  stroke-width="@GeometryMath.FormatInvariant(SliderDefaults.LinearRange.TickStrokeWidth)" />
+                        }
+                    </g>
+                }
+            </svg>
+        </div>
+    }
+
+    <button class="@BuildTrackButtonCssClasses()"
+            type="button"
+            role="slider"
+            aria-valuemin="@MinValue"
+            aria-valuemax="@MaxValue"
+            aria-valuenow="@SelectedValue"
+            @onkeydown="HandleKeyDown"
+            @onwheel="HandleMouseWheel"
+            @onwheel:preventDefault
+            @onpointerdown="HandlePointerDown"
+            @onpointermove="HandlePointerMove"
+            @onpointerup="HandlePointerUp"
+            @onpointercancel="HandlePointerUp">
+
+        <span class="range-track">
+            <span class="range-fill"></span>
+        </span>
+
+        <span class="@BuildThumbCssClasses()">
+            @if (ShowSelectedValue)
+            {
+                <span class="thumb-readout">@SelectedValue@SelectionUnit</span>
+            }
+        </span>
+
+        <span class="range-hit-area" onpointerdown="this.setPointerCapture(event.pointerId)"></span>
+    </button>
+</div>
+
+@code {
+    [Parameter] public bool ShowTicks { get; set; } = true;
+    [Parameter] public double TrackPixelWidth { get; set; } = SliderDefaults.LinearRange.DefaultTrackPixelWidth;
+
+    private bool ShouldRenderTickScale => ShowTicks && TotalTicks > 0;
+
+    private string BuildRootCssClasses() => new CssBuilder()
+        .Add("range-slider")
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private string BuildSliderInlineStyles() => new StyleBuilder()
+        .Add("--_rng-width", ModifierOrEmpty.WidthValue ?? $"{GeometryMath.FormatInvariant(TrackPixelWidth)}px")
+        .Add("--_rng-progress", $"{GeometryMath.FormatInvariant(ValuePercentage * GeometryMath.FullPercentage)}%")
+        .AddRaw(ModifierOrEmpty.BuildFrameExtras())
+        .Build();
+
+    private string BuildTrackButtonCssClasses() => new CssBuilder()
+        .Add("range-track-button")
+        .Add("dragging", when: IsDragging)
+        .Build();
+
+    private string BuildThumbCssClasses() => new CssBuilder()
+        .Add("range-thumb")
+        .Add("dragging", when: IsDragging)
+        .Build();
+
+    protected override async Task UpdateValueFromPointer(PointerEventArgs pointerEvent)
+    {
+        if (!HasValidRange || TrackPixelWidth <= 0)
+            return;
+
+        var normalizedProgress = Math.Clamp(
+            pointerEvent.OffsetX / TrackPixelWidth,
+            GeometryMath.NormalizedMin,
+            GeometryMath.NormalizedMax);
+
+        var targetValue = MinValue + (normalizedProgress * ValueRange);
+        await UpdateSelectedValue(targetValue);
+    }
+}

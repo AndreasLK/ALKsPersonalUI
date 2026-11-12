@@ -1,0 +1,150 @@
+﻿@inherits UIComponentBase
+
+<CascadingValue Value="this" IsFixed="false">
+    <div class="@BuildContainerCssClasses()" @attributes="AdditionalAttributes">
+        <Window Modifier="@BuildBarWindowModifier()">
+            <div class="tabs-header-bar" role="tablist">
+                @{ var visibleTabPanels = GetVisibleTabPanels().ToList(); }
+                @for (int tabIndex = 0; tabIndex < visibleTabPanels.Count; tabIndex++)
+                {
+                    var tabPanel = visibleTabPanels[tabIndex];
+                    var isTabActive = tabPanel.Id == ActiveTabId;
+
+                    @if (ShouldShowTrailSeparatorBefore(tabIndex))
+                    {
+                        <span class="trail-separator" aria-hidden="true">
+                            @NavigationDefaults.Tabs.TrailSeparatorSymbol
+                        </span>
+                    }
+
+                    <ActionButton Variant="@ResolveTabButtonVariant(isTabActive)"
+                                  Shape="ActionButton.ButtonShape.Rounded"
+                                  Modifier="@BuildTabButtonModifier(isTabActive)"
+                                  IsDisabled="@tabPanel.Disabled"
+                                  OnClick="() => SelectTabAsync(tabPanel.Id)"
+                                  role="tab"
+                                  aria-selected="@isTabActive">
+                        @tabPanel.Title
+                    </ActionButton>
+                }
+            </div>
+        </Window>
+        <div class="tabs-body">@ChildContent</div>
+    </div>
+</CascadingValue>
+
+@code {
+    [Parameter] public string? ActiveTabId { get; set; }
+    [Parameter] public EventCallback<string> ActiveTabIdChanged { get; set; }
+    [Parameter] public bool IsTrailMode { get; set; }
+
+    private readonly List<TabPanel> _registeredTabs = new();
+    private readonly List<string> _breadcrumbTrailTabIds = new();
+
+    private string BuildContainerCssClasses() => new CssBuilder()
+        .Add("ui-tabs-container")
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private UIModifier BuildBarWindowModifier() => UIModifier.Empty
+        .Width(ModifierOrEmpty.WidthValue ?? NavigationDefaults.Tabs.BarWidth)
+        .Height(ModifierOrEmpty.HeightValue ?? NavigationDefaults.Tabs.BarHeight)
+        .MinHeight(NavigationDefaults.Tabs.BarMinHeight)
+        .Padding(ModifierOrEmpty.PaddingValue ?? NavigationDefaults.Tabs.BarPadding)
+        .BorderRadius(ModifierOrEmpty.BorderRadiusValue ?? NavigationDefaults.Tabs.DefaultBorderRadius)
+        .Background(ModifierOrEmpty.BackgroundValue ?? NavigationDefaults.Tabs.DefaultBarBackground)
+        .BorderColor(ModifierOrEmpty.BorderColorValue ?? NavigationDefaults.Tabs.DefaultBorderColor)
+        .Row()
+        .AlignItems("center");
+
+    private UIModifier BuildTabButtonModifier(bool isTabActive) => UIModifier.Empty
+        .BaseColor(ResolveTabBaseColor(isTabActive))
+        .TextColor("var(--ui-text)")
+        .Width(NavigationDefaults.Tabs.TabButtonWidth)
+        .Padding("0.35rem", "0.75rem")
+        .FontSize(NavigationDefaults.Tabs.TabButtonFontSize);
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(ActiveTabId))
+            return;
+
+        SynchronizeBreadcrumbTrailWithSelection(ActiveTabId);
+    }
+
+    internal void RegisterTab(TabPanel newTab)
+    {
+        var isAlreadyRegistered = _registeredTabs.Any(existingTab => existingTab.Id == newTab.Id);
+        if (isAlreadyRegistered)
+            return;
+
+        _registeredTabs.Add(newTab);
+
+        if (string.IsNullOrWhiteSpace(ActiveTabId))
+            SetInitialActiveTab(newTab.Id);
+
+        StateHasChanged();
+    }
+
+    public async Task SelectTabAsync(string selectedTabId)
+    {
+        SynchronizeBreadcrumbTrailWithSelection(selectedTabId);
+        ActiveTabId = selectedTabId;
+        await ActiveTabIdChanged.InvokeAsync(selectedTabId);
+        StateHasChanged();
+    }
+
+    private bool ShouldShowTrailSeparatorBefore(int tabIndex) =>
+        IsTrailMode && tabIndex > 0;
+
+    private static ActionButton.ButtonVariant ResolveTabButtonVariant(bool isTabActive) =>
+        isTabActive ? ActionButton.ButtonVariant.Solid : ActionButton.ButtonVariant.Ghost;
+
+    private string ResolveTabBaseColor(bool isTabActive)
+    {
+        var accent = ModifierOrEmpty.AccentColorValue ?? NavigationDefaults.Tabs.DefaultAccentColor;
+        return isTabActive ? accent : NavigationDefaults.Tabs.InactiveTabColor;
+    }
+
+    private void SetInitialActiveTab(string initialTabId)
+    {
+        ActiveTabId = initialTabId;
+        if (!_breadcrumbTrailTabIds.Contains(initialTabId))
+            _breadcrumbTrailTabIds.Add(initialTabId);
+    }
+
+    private void SynchronizeBreadcrumbTrailWithSelection(string selectedTabId)
+    {
+        if (!IsTrailMode || string.IsNullOrWhiteSpace(selectedTabId))
+            return;
+
+        var existingTrailIndex = _breadcrumbTrailTabIds.IndexOf(selectedTabId);
+        if (existingTrailIndex < 0)
+        {
+            _breadcrumbTrailTabIds.Add(selectedTabId);
+            return;
+        }
+
+        TrimFutureStepsAfterIndex(existingTrailIndex);
+    }
+
+    private void TrimFutureStepsAfterIndex(int targetStepIndex)
+    {
+        var firstIndexToRemove = targetStepIndex + 1;
+        var numberOfStepsToRemove = _breadcrumbTrailTabIds.Count - firstIndexToRemove;
+        if (numberOfStepsToRemove > 0)
+            _breadcrumbTrailTabIds.RemoveRange(firstIndexToRemove, numberOfStepsToRemove);
+    }
+
+    private IEnumerable<TabPanel> GetVisibleTabPanels()
+    {
+        if (!IsTrailMode)
+            return _registeredTabs;
+
+        SynchronizeBreadcrumbTrailWithSelection(ActiveTabId ?? string.Empty);
+
+        return _breadcrumbTrailTabIds
+            .Select(trailTabId => _registeredTabs.FirstOrDefault(tab => tab.Id == trailTabId))
+            .OfType<TabPanel>();
+    }
+}

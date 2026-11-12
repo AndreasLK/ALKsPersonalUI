@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="alks-ui-showcase/ALKsPersonalUI.Showcase.csproj" />
+  <Project Path="ALKsPersonalUI/ALKsPersonalUI.csproj" />
+</Solution>

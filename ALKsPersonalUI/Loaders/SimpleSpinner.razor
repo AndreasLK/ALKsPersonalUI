@@ -1,0 +1,18 @@
+﻿@inherits UIComponentBase
+
+<div class="@BuildCssClasses()" style="@BuildSpinnerInlineStyles()" @attributes="AdditionalAttributes"></div>
+
+@code {
+    private string BuildCssClasses() => new CssBuilder()
+        .Add("circular-loader")
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private string BuildSpinnerInlineStyles() => new StyleBuilder()
+        .Add("--loader-size", ModifierOrEmpty.WidthValue ?? LoaderDefaults.SimpleSpinner.DefaultSize)
+        .Add("--loader-thickness", ModifierOrEmpty.ThicknessValue ?? LoaderDefaults.SimpleSpinner.DefaultThickness)
+        .Add("--loader-color", ModifierOrEmpty.TextColorValue ?? ModifierOrEmpty.BaseColorValue ?? LoaderDefaults.SimpleSpinner.DefaultColor)
+        .Add("--loader-speed", ModifierOrEmpty.AnimationSpeedValue ?? LoaderDefaults.SimpleSpinner.DefaultSpeed)
+        .AddRaw(ModifierOrEmpty.BuildFrameExtras())
+        .Build();
+}

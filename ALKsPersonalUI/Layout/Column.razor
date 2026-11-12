@@ -1,0 +1,35 @@
+﻿@inherits UIComponentBase
+
+<div class="@BuildCssClasses()" style="@BuildStyles()" @attributes="AdditionalAttributes">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public HorizontalAlignment HorizontalAlignment { get; set; } = HorizontalAlignment.Stretch;
+    [Parameter] public Arrangement VerticalArrangement { get; set; } = Arrangement.Start;
+    [Parameter] public string? Gap { get; set; }
+
+    private string ResolvedAlignItems =>
+        ModifierOrEmpty.AlignItemsValue ?? LayoutDefaults.ToCss(HorizontalAlignment);
+
+    private string ResolvedJustifyContent =>
+        ModifierOrEmpty.JustifyContentValue ?? LayoutDefaults.ToCss(VerticalArrangement);
+
+    private string ResolvedGap =>
+        ModifierOrEmpty.GapValue ?? Gap ?? LayoutDefaults.DefaultGap;
+
+    private string BuildCssClasses() => new CssBuilder()
+        .Add("ui-column")
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private string BuildStyles() => new StyleBuilder()
+        .Add("box-sizing", "border-box")
+        .Add("display", ModifierOrEmpty.DisplayValue ?? LayoutDefaults.DefaultDisplay)
+        .Add("flex-direction", ModifierOrEmpty.FlexDirectionValue ?? "column")
+        .Add("align-items", ResolvedAlignItems)
+        .Add("justify-content", ResolvedJustifyContent)
+        .Add("gap", ResolvedGap)
+        .AddRaw(ModifierStyle)
+        .Build();
+}

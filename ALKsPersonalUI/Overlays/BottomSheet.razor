@@ -1,0 +1,67 @@
+﻿@using ALKsPersonalUI.Core
+@inherits WindowBase
+
+@if (IsOpen)
+{
+    <div class="ui-backdrop-blur sheet-backdrop"
+         tabindex="-1"
+         @onclick="CloseIfBackdropAllowed"
+         @onkeydown="CloseIfEscapePressed">
+        <div class="sheet-panel"
+             style="--_sheet-max-width: @MaxWidth;"
+             @onclick:stopPropagation="true">
+            <TitledWindow Title="@Title"
+                          Modifier="@BuildSheetWindowModifier()"
+                          role="dialog"
+                          aria-modal="true"
+                          aria-label="@Title"
+                          @attributes="AdditionalAttributes">
+                <HeaderActions>
+                    @HeaderActions
+                    <CloseButton OnClick="CloseSheetAsync" AriaLabel="Close sheet" />
+                </HeaderActions>
+                <ChildContent>
+                    @ChildContent
+                </ChildContent>
+            </TitledWindow>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public string Title { get; set; } = "Options";
+    [Parameter] public string MaxWidth { get; set; } = "680px";
+    [Parameter] public bool CloseOnBackdropClick { get; set; } = true;
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
+
+    private UIModifier BuildSheetWindowModifier()
+    {
+        var modifier = Modifier?.Clone() ?? UIModifier.Empty;
+        return modifier
+            .FillMaxWidth()
+            .Padding(modifier.PaddingValue ?? "1.25rem")
+            .BorderRadius(modifier.BorderRadiusValue ?? "16px 16px 0 0")
+            .Background(modifier.BackgroundValue ?? "var(--ui-bg-surface)")
+            .HeaderBackground(modifier.HeaderBackgroundValue ?? "var(--ui-bg-header)");
+    }
+
+    private async Task CloseSheetAsync()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private async Task CloseIfBackdropAllowed()
+    {
+        if (CloseOnBackdropClick)
+            await CloseSheetAsync();
+    }
+
+    private async Task CloseIfEscapePressed(KeyboardEventArgs e)
+    {
+        if (KeyboardKeys.IsEscape(e))
+            await CloseSheetAsync();
+    }
+}

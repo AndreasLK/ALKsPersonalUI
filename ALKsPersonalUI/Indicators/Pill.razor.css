@@ -1,0 +1,69 @@
+.ui-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border-radius: var(--ui-radius-pill);
+    padding: 0.4rem 0.9rem;
+    font: inherit;
+    font-size: 0.82rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    border: 1px solid var(--_pill-border, var(--ui-border));
+    background-color: color-mix(in srgb, var(--_pill-bg, var(--ui-bg-surface)), white 8%);
+    color: var(--_pill-text, var(--ui-text));
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+    .ui-pill.interactive {
+        cursor: pointer;
+    }
+
+@media (hover: hover) and (pointer: fine) {
+    .ui-pill.interactive:hover:not(:disabled) {
+        background-color: color-mix(in srgb, var(--_pill-bg, var(--ui-bg-surface)), white 16%);
+    }
+}
+
+.ui-pill.interactive:active:not(:disabled) {
+    transform: scale(0.93);
+}
+
+.ui-pill.interactive:focus-visible {
+    outline: 2px solid var(--_pill-accent, var(--ui-accent));
+    outline-offset: 2px;
+}
+
+.ui-pill:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ui-pill.accent,
+.ui-pill.active {
+    background-color: var(--_pill-accent, var(--ui-accent));
+    border-color: var(--_pill-accent, var(--ui-accent));
+    color: var(--ui-text);
+    font-weight: 600;
+}
+
+.ui-pill.success {
+    background-color: color-mix(in srgb, var(--ui-success), transparent 80%);
+    border-color: var(--ui-success);
+    color: color-mix(in srgb, var(--ui-success), white 45%);
+}
+
+.ui-pill.warning {
+    background-color: color-mix(in srgb, var(--ui-warning), transparent 80%);
+    border-color: var(--ui-warning);
+    color: color-mix(in srgb, var(--ui-warning), white 45%);
+}
+
+.ui-pill.danger {
+    background-color: color-mix(in srgb, var(--ui-danger), transparent 80%);
+    border-color: var(--ui-danger);
+    color: color-mix(in srgb, var(--ui-danger), white 45%);
+}

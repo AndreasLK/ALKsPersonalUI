@@ -1,0 +1,48 @@
+﻿@inject ToastService ToastService
+@implements IDisposable
+
+<div class="ui-toast-container" aria-live="polite">
+    @foreach (var toast in ToastService.GetToasts())
+    {
+        <div @key="toast.Id" class="toast-item">
+            <Window Modifier="@BuildToastModifier(toast.Variant)" role="status">
+                <div class="toast-inner">
+                    <span>@toast.Text</span>
+                    <CloseButton Shape="ActionButton.ButtonShape.Pill"
+                                 AriaLabel="@OverlayDefaults.Toast.DismissAriaLabel"
+                                 OnClick="() => ToastService.Remove(toast.Id)" />
+                </div>
+            </Window>
+        </div>
+    }
+</div>
+
+@code {
+    protected override void OnInitialized() =>
+        ToastService.OnChange += RefreshToastDisplay;
+
+    private void RefreshToastDisplay() =>
+        InvokeAsync(StateHasChanged);
+
+    private static UIModifier BuildToastModifier(ToastVariant variant) => UIModifier.Empty
+        .Width(OverlayDefaults.Toast.Width)
+        .Height(OverlayDefaults.Toast.Height)
+        .MinHeight(OverlayDefaults.Toast.MinHeight)
+        .Padding(OverlayDefaults.Toast.Padding)
+        .BorderRadius(OverlayDefaults.Toast.BorderRadius)
+        .Row()
+        .AlignItems("center")
+        .Background(OverlayDefaults.Toast.BackgroundColor)
+        .BorderColor(ResolveBorderColorForVariant(variant));
+
+    private static string ResolveBorderColorForVariant(ToastVariant variant) => variant switch
+    {
+        ToastVariant.Success => OverlayDefaults.Toast.SuccessBorderColor,
+        ToastVariant.Warning => OverlayDefaults.Toast.WarningBorderColor,
+        ToastVariant.Danger => OverlayDefaults.Toast.DangerBorderColor,
+        _ => OverlayDefaults.Toast.InfoBorderColor
+    };
+
+    public void Dispose() =>
+        ToastService.OnChange -= RefreshToastDisplay;
+}

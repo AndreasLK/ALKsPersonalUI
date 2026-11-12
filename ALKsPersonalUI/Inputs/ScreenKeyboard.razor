@@ -1,0 +1,708 @@
+﻿@inherits UIComponentBase
+
+<Window Modifier="@BuildKeyboardWindowModifier()" @attributes="AdditionalAttributes">
+    @if (ShowPreviewBar)
+    {
+        <div class="kb-preview-bar">
+            <div class="kb-preview-text">
+                @if (string.IsNullOrEmpty(Value))
+                {
+                    <span class="kb-placeholder">@Placeholder</span>
+                }
+                else
+                {
+                    <span>@FormatPreviewText()</span>
+                    <span class="kb-caret" aria-hidden="true">|</span>
+                }
+            </div>
+            <div class="kb-preview-actions">
+                @if (!string.IsNullOrEmpty(_lastMacroKeyCombo))
+                {
+                    <Pill Variant="Pill.PillVariant.Accent" Text="@($"Key: {_lastMacroKeyCombo}")" />
+                }
+                <Pill Variant="Pill.PillVariant.Neutral"
+                      Text="@GetLayoutBadgeText()"
+                      OnClick="CycleKeyboardLayout" />
+                @if (!string.IsNullOrEmpty(Value))
+                {
+                    <Pill Variant="Pill.PillVariant.Danger"
+                          Text="Clear"
+                          OnClick="ClearTextAsync" />
+                }
+            </div>
+        </div>
+    }
+
+    <div class="kb-deck">
+        @if (HasMainDeckSection)
+        {
+            <div class="kb-zone-main">
+                @if (ActiveSetup.IncludeFunctionKeys)
+                {
+                    <div class="kb-row kb-f-row">
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Variant="ActionButton.ButtonVariant.Outline"
+                                      Modifier="@BuildMacroKeyModifier(1.2)"
+                                      Text="Esc"
+                                      OnClick="@(() => FireNonPrintableKeyAsync("Escape", "Escape"))" />
+                        <div class="kb-f-spacer"></div>
+                        @for (int f = 1; f <= 12; f++)
+                        {
+                            var fKey = $"F{f}";
+                            <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                          Variant="ActionButton.ButtonVariant.Outline"
+                                          Modifier="@BuildMacroKeyModifier(1)"
+                                          Text="@fKey"
+                                          OnClick="@(() => FireNonPrintableKeyAsync(fKey, fKey))" />
+                            @if (f is 4 or 8)
+                            {
+                                <div class="kb-f-spacer"></div>
+                            }
+                        }
+                    </div>
+                }
+
+                @if (ActiveSetup.IncludeNumbers)
+                {
+                    <div class="kb-row">
+                        @if (ActiveSetup.IncludeSpecialCharacters)
+                        {
+                            var tildeChar = IsShifted ? "\u00A7" : "\u00BD";
+                            <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                          Modifier="@BuildCharKeyModifier(1)"
+                                          Text="@tildeChar"
+                                          OnClick="@(() => PressPrintableKeyAsync(tildeChar, "Backquote"))" />
+                        }
+                        @for (int i = 0; i < _numberRowDigits.Length; i++)
+                        {
+                            var digit = _numberRowDigits[i];
+                            var shiftedSymbol = _numberRowShiftedSymbols[i];
+                            var displayChar = (IsShifted && ActiveSetup.IncludeSpecialCharacters) ? shiftedSymbol : digit;
+                            <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                          Modifier="@BuildCharKeyModifier(1)"
+                                          Text="@displayChar"
+                                          OnClick="@(() => PressPrintableKeyAsync(displayChar, $"Digit{digit}"))" />
+                        }
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Variant="ActionButton.ButtonVariant.Outline"
+                                      Modifier="@BuildFunctionKeyModifier(1.6)"
+                                      Text="@InputDefaults.Symbols.Backspace"
+                                      aria-label="Backspace"
+                                      OnClick="BackspaceAsync" />
+                    </div>
+                }
+
+                @if (ActiveSetup.IncludeLetters)
+                {
+                    var rows = GetActiveAlphaRows();
+                    @for (int rowIndex = 0; rowIndex < rows.Length; rowIndex++)
+                    {
+                        var currentRow = rows[rowIndex];
+                        <div class="kb-row">
+                            @if (rowIndex == 0 && ActiveSetup.IncludePcModifiers)
+                            {
+                                <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                              Variant="ActionButton.ButtonVariant.Outline"
+                                              Modifier="@BuildFunctionKeyModifier(1.4)"
+                                              Text="@($"Tab {InputDefaults.Symbols.TabRight}")"
+                                              OnClick="@(() => FireNonPrintableKeyAsync("Tab", "Tab"))" />
+                            }
+                            @if (rowIndex == 1 && ActiveSetup.IncludePcModifiers)
+                            {
+                                <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                              Variant="@(_isCapsLocked ? ActionButton.ButtonVariant.Solid : ActionButton.ButtonVariant.Outline)"
+                                              Modifier="@BuildFunctionKeyModifier(1.65, _isCapsLocked)"
+                                              Text="Caps"
+                                              OnClick="ToggleCapsLock" />
+                            }
+                            @if (rowIndex == 2)
+                            {
+                                <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                              Variant="@(IsShifted ? ActionButton.ButtonVariant.Solid : ActionButton.ButtonVariant.Outline)"
+                                              Modifier="@BuildFunctionKeyModifier(1.8, IsShifted)"
+                                              Text="@(_isCapsLocked ? "CAPS" : $"{InputDefaults.Symbols.ShiftUp} Shift")"
+                                              OnClick="CycleShiftState" />
+                            }
+
+                            @foreach (var letter in currentRow)
+                            {
+                                var formattedLetter = FormatLetterCase(letter);
+                                <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                              Modifier="@BuildCharKeyModifier(1)"
+                                              Text="@formattedLetter"
+                                              OnClick="@(() => PressPrintableKeyAsync(formattedLetter, $"Key{letter.ToUpperInvariant()}"))" />
+                            }
+
+                            @if (rowIndex == 2 && ActiveSetup.IncludeSpecialCharacters)
+                            {
+                                @foreach (var punct in GetRowPunctuation())
+                                {
+                                    <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                                  Modifier="@BuildCharKeyModifier(1)"
+                                                  Text="@punct"
+                                                  OnClick="@(() => PressPrintableKeyAsync(punct, "Punctuation"))" />
+                                }
+                            }
+
+                            @if (rowIndex == 0 && !ActiveSetup.IncludeNumbers)
+                            {
+                                <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                              Variant="ActionButton.ButtonVariant.Outline"
+                                              Modifier="@BuildFunctionKeyModifier(1.5)"
+                                              Text="@InputDefaults.Symbols.Backspace"
+                                              aria-label="Backspace"
+                                              OnClick="BackspaceAsync" />
+                            }
+
+                            @if (rowIndex == 2)
+                            {
+                                <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                              Variant="@(IsShifted ? ActionButton.ButtonVariant.Solid : ActionButton.ButtonVariant.Outline)"
+                                              Modifier="@BuildFunctionKeyModifier(1.8, IsShifted)"
+                                              Text="@InputDefaults.Symbols.ShiftUp"
+                                              OnClick="CycleShiftState" />
+                            }
+                        </div>
+                    }
+                }
+
+                @if (_showSymbolsDrawer && ActiveSetup.IncludeSpecialCharacters)
+                {
+                    <div class="kb-row">
+                        @foreach (var sym in _extraSpecialSymbols)
+                        {
+                            <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                          Modifier="@BuildCharKeyModifier(1)"
+                                          Text="@sym"
+                                          OnClick="@(() => PressPrintableKeyAsync(sym, "Symbol"))" />
+                        }
+                    </div>
+                }
+
+                <div class="kb-row kb-bottom-row">
+                    @if (ActiveSetup.IncludePcModifiers)
+                    {
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Variant="@(_isCtrlActive ? ActionButton.ButtonVariant.Solid : ActionButton.ButtonVariant.Outline)"
+                                      Modifier="@BuildFunctionKeyModifier(1.4, _isCtrlActive)"
+                                      Text="Ctrl"
+                                      OnClick="ToggleCtrl" />
+
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Variant="@(_isAltActive ? ActionButton.ButtonVariant.Solid : ActionButton.ButtonVariant.Outline)"
+                                      Modifier="@BuildFunctionKeyModifier(1.4, _isAltActive)"
+                                      Text="Alt"
+                                      OnClick="ToggleAlt" />
+                    }
+
+                    @if (ActiveSetup.IncludeSpecialCharacters)
+                    {
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Variant="@(_showSymbolsDrawer ? ActionButton.ButtonVariant.Solid : ActionButton.ButtonVariant.Outline)"
+                                      Modifier="@BuildFunctionKeyModifier(1.5, _showSymbolsDrawer)"
+                                      Text="@(_showSymbolsDrawer ? "Hide #+=" : "#+=")"
+                                      OnClick="ToggleSymbolsDrawer" />
+                    }
+
+                    @if (ActiveSetup.IncludeLetters)
+                    {
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Modifier="@BuildSpaceKeyModifier()"
+                                      Text="Space"
+                                      OnClick="@(() => PressPrintableKeyAsync(" ", "Space"))" />
+                    }
+
+                    @if (ActiveSetup.IncludePcModifiers)
+                    {
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Variant="@(_isAltGrActive ? ActionButton.ButtonVariant.Solid : ActionButton.ButtonVariant.Outline)"
+                                      Modifier="@BuildFunctionKeyModifier(1.4, _isAltGrActive)"
+                                      Text="AltGr"
+                                      OnClick="ToggleAltGr" />
+
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Variant="@(_isCtrlActive ? ActionButton.ButtonVariant.Solid : ActionButton.ButtonVariant.Outline)"
+                                      Modifier="@BuildFunctionKeyModifier(1.4, _isCtrlActive)"
+                                      Text="Ctrl"
+                                      OnClick="ToggleCtrl" />
+                    }
+
+                    @if (OnSubmit.HasDelegate)
+                    {
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Modifier="@BuildSubmitKeyModifier()"
+                                      Text="@SubmitText"
+                                      OnClick="SubmitAsync" />
+                    }
+                    else if (ActiveSetup.IncludePcModifiers)
+                    {
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Modifier="@BuildSubmitKeyModifier()"
+                                      Text="@($"Enter {InputDefaults.Symbols.EnterReturn}")"
+                                      OnClick="@(() => FireNonPrintableKeyAsync("Enter", "Enter"))" />
+                    }
+                </div>
+            </div>
+        }
+
+        @if (HasNavigationDeckSection)
+        {
+            <div class="kb-zone-nav">
+                @if (ActiveSetup.IncludeSystemKeys)
+                {
+                    <div class="kb-nav-grid-3">
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Variant="ActionButton.ButtonVariant.Outline"
+                                      Modifier="@BuildMacroKeyModifier(1)"
+                                      Text="PrtSc"
+                                      OnClick="@(() => FireNonPrintableKeyAsync("PrintScreen", "PrintScreen"))" />
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Variant="ActionButton.ButtonVariant.Outline"
+                                      Modifier="@BuildMacroKeyModifier(1)"
+                                      Text="ScrLk"
+                                      OnClick="@(() => FireNonPrintableKeyAsync("ScrollLock", "ScrollLock"))" />
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Variant="ActionButton.ButtonVariant.Outline"
+                                      Modifier="@BuildMacroKeyModifier(1)"
+                                      Text="Pause"
+                                      OnClick="@(() => FireNonPrintableKeyAsync("Pause", "Pause"))" />
+                    </div>
+                }
+
+                @if (ActiveSetup.IncludeNavigationCluster)
+                {
+                    <div class="kb-nav-grid-3">
+                        @foreach (var navKey in _navigationClusterKeys)
+                        {
+                            <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                          Variant="ActionButton.ButtonVariant.Outline"
+                                          Modifier="@BuildMacroKeyModifier(1)"
+                                          Text="@navKey.Label"
+                                          OnClick="@(() => HandleNavClusterKeyAsync(navKey.Label, navKey.Code))" />
+                        }
+                    </div>
+                }
+
+                @if (ActiveSetup.IncludeArrowKeys)
+                {
+                    <div class="kb-arrow-cluster">
+                        <div class="kb-arrow-top">
+                            <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                          Modifier="@BuildArrowKeyModifier()"
+                                          Text="@InputDefaults.Symbols.ArrowUp"
+                                          aria-label="Up Arrow"
+                                          OnClick="@(() => FireNonPrintableKeyAsync("ArrowUp", "ArrowUp"))" />
+                        </div>
+                        <div class="kb-nav-grid-3">
+                            <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                          Modifier="@BuildArrowKeyModifier()"
+                                          Text="@InputDefaults.Symbols.ArrowLeft"
+                                          aria-label="Left Arrow"
+                                          OnClick="@(() => FireNonPrintableKeyAsync("ArrowLeft", "ArrowLeft"))" />
+                            <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                          Modifier="@BuildArrowKeyModifier()"
+                                          Text="@InputDefaults.Symbols.ArrowDown"
+                                          aria-label="Down Arrow"
+                                          OnClick="@(() => FireNonPrintableKeyAsync("ArrowDown", "ArrowDown"))" />
+                            <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                          Modifier="@BuildArrowKeyModifier()"
+                                          Text="@InputDefaults.Symbols.ArrowRight"
+                                          aria-label="Right Arrow"
+                                          OnClick="@(() => FireNonPrintableKeyAsync("ArrowRight", "ArrowRight"))" />
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        @if (ActiveSetup.IncludeNumpad)
+        {
+            <div class="kb-zone-numpad">
+                <div class="kb-numpad-grid">
+                    <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                  Variant="ActionButton.ButtonVariant.Outline"
+                                  Modifier="@BuildMacroKeyModifier(1)"
+                                  Text="Num"
+                                  OnClick="@(() => FireNonPrintableKeyAsync("NumLock", "NumLock"))" />
+                    @if (ActiveSetup.IncludeSpecialCharacters)
+                    {
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Variant="ActionButton.ButtonVariant.Outline"
+                                      Modifier="@BuildMacroKeyModifier(1)"
+                                      Text="/"
+                                      OnClick="@(() => PressPrintableKeyAsync("/", "NumpadDivide"))" />
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Variant="ActionButton.ButtonVariant.Outline"
+                                      Modifier="@BuildMacroKeyModifier(1)"
+                                      Text="*"
+                                      OnClick="@(() => PressPrintableKeyAsync("*", "NumpadMultiply"))" />
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Variant="ActionButton.ButtonVariant.Outline"
+                                      Modifier="@BuildMacroKeyModifier(1)"
+                                      Text="-"
+                                      OnClick="@(() => PressPrintableKeyAsync("-", "NumpadSubtract"))" />
+                    }
+                    else
+                    {
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Variant="ActionButton.ButtonVariant.Outline"
+                                      Modifier="@BuildMacroKeyModifier(1)"
+                                      Text="C"
+                                      OnClick="ClearTextAsync" />
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Variant="ActionButton.ButtonVariant.Outline"
+                                      Modifier="@BuildMacroKeyModifier(1)"
+                                      Text="@InputDefaults.Symbols.Backspace"
+                                      OnClick="BackspaceAsync" />
+                        <div></div>
+                    }
+
+                    @foreach (var npDigit in _numpadDigits)
+                    {
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Modifier="@BuildCharKeyModifier(1)"
+                                      Text="@npDigit"
+                                      OnClick="@(() => PressPrintableKeyAsync(npDigit, $"Numpad{npDigit}"))" />
+                    }
+
+                    <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                  Modifier="@BuildCharKeyModifier(1)"
+                                  Text="0"
+                                  OnClick="@(() => PressPrintableKeyAsync("0", "Numpad0"))" />
+
+                    @if (ActiveSetup.IncludeSpecialCharacters)
+                    {
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Modifier="@BuildCharKeyModifier(1)"
+                                      Text="."
+                                      OnClick="@(() => PressPrintableKeyAsync(".", "NumpadDecimal"))" />
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Variant="ActionButton.ButtonVariant.Outline"
+                                      Modifier="@BuildMacroKeyModifier(1)"
+                                      Text="+"
+                                      OnClick="@(() => PressPrintableKeyAsync("+", "NumpadAdd"))" />
+                    }
+                    else
+                    {
+                        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                                      Variant="ActionButton.ButtonVariant.Outline"
+                                      Modifier="@BuildMacroKeyModifier(1)"
+                                      Text="@InputDefaults.Symbols.EnterReturn"
+                                      OnClick="@(() => FireNonPrintableKeyAsync("Enter", "NumpadEnter"))" />
+                        <div></div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</Window>
+
+@code {
+    private static readonly string[] _numberRowDigits = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+    private static readonly string[] _numberRowShiftedSymbols = ["!", "\"", "#", "\u00A4", "%", "&", "/", "(", ")", "="];
+    private static readonly string[] _numpadDigits = ["7", "8", "9", "4", "5", "6", "1", "2", "3"];
+    private static readonly string[] _extraSpecialSymbols = ["@", "$", "{", "[", "]", "}", "\\", "|", "~", "^", "*", "+", "?", "_"];
+
+    private static readonly (string Label, string Code)[] _navigationClusterKeys =
+    [
+        ("Ins", "Insert"), ("Home", "Home"), ("PgUp", "PageUp"),
+        ("Del", "Delete"), ("End", "End"), ("PgDn", "PageDown")
+    ];
+
+    // Nordic: å = \u00E5, æ = \u00E6, ø = \u00F8
+    private static readonly string[][] _nordicAlphaRows =
+    [
+        ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "\u00E5"],
+        ["a", "s", "d", "f", "g", "h", "j", "k", "l", "\u00E6", "\u00F8"],
+        ["z", "x", "c", "v", "b", "n", "m"]
+    ];
+
+    private static readonly string[][] _qwertyUsAlphaRows =
+    [
+        ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
+        ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
+        ["z", "x", "c", "v", "b", "n", "m"]
+    ];
+
+    // German: ü = \u00FC, ö = \u00F6, ä = \u00E4
+    private static readonly string[][] _qwertzDeAlphaRows =
+    [
+        ["q", "w", "e", "r", "t", "z", "u", "i", "o", "p", "\u00FC"],
+        ["a", "s", "d", "f", "g", "h", "j", "k", "l", "\u00F6", "\u00E4"],
+        ["y", "x", "c", "v", "b", "n", "m"]
+    ];
+
+    private static readonly string[][] _azertyFrAlphaRows =
+    [
+        ["a", "z", "e", "r", "t", "y", "u", "i", "o", "p"],
+        ["q", "s", "d", "f", "g", "h", "j", "k", "l", "m"],
+        ["w", "x", "c", "v", "b", "n"]
+    ];
+
+    private readonly KeyboardSetup _fallbackSetup = KeyboardSetup.TouchStandard;
+
+    [Parameter] public KeyboardSetup? Setup { get; set; }
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public EventCallback<VirtualKeyEventArgs> OnKeyPress { get; set; }
+
+    [Parameter] public bool ShowPreviewBar { get; set; } = true;
+    [Parameter] public bool IsPassword { get; set; }
+    [Parameter] public int MaxLength { get; set; } = 256;
+    [Parameter] public string Placeholder { get; set; } = "Tap keys to type...";
+    [Parameter] public string SubmitText { get; set; } = "Done \u2713";
+    [Parameter] public EventCallback<string?> OnSubmit { get; set; }
+
+    private KeyboardSetup ActiveSetup => Setup ?? _fallbackSetup;
+
+    private bool _isShiftActive = true;
+    private bool _isCapsLocked;
+    private bool _isCtrlActive;
+    private bool _isAltActive;
+    private bool _isAltGrActive;
+    private bool _showSymbolsDrawer;
+    private string? _lastMacroKeyCombo;
+
+    private bool IsShifted => _isShiftActive || _isCapsLocked;
+
+    private bool HasMainDeckSection =>
+        ActiveSetup.IncludeLetters ||
+        ActiveSetup.IncludeNumbers ||
+        ActiveSetup.IncludeFunctionKeys ||
+        ActiveSetup.IncludeSpecialCharacters;
+
+    private bool HasNavigationDeckSection =>
+        ActiveSetup.IncludeSystemKeys ||
+        ActiveSetup.IncludeNavigationCluster ||
+        ActiveSetup.IncludeArrowKeys;
+
+    private string[][] GetActiveAlphaRows() => ActiveSetup.LayoutValue switch
+    {
+        KeyboardLayout.QwertyUS => _qwertyUsAlphaRows,
+        KeyboardLayout.QwertzDE => _qwertzDeAlphaRows,
+        KeyboardLayout.AzertyFR => _azertyFrAlphaRows,
+        _ => _nordicAlphaRows
+    };
+
+    private string[] GetRowPunctuation() =>
+        IsShifted ? [";", ":", "_"] : [",", ".", "-"];
+
+    private string GetLayoutBadgeText() => ActiveSetup.LayoutValue switch
+    {
+        KeyboardLayout.Nordic => "DA (\u00C6\u00D8\u00C5)",
+        KeyboardLayout.QwertyUS => "EN (US)",
+        KeyboardLayout.QwertzDE => "DE (\u00C4\u00D6\u00DC)",
+        KeyboardLayout.AzertyFR => "FR (AZERTY)",
+        _ => "DA"
+    };
+
+    private void CycleKeyboardLayout()
+    {
+        var nextLayout = ActiveSetup.LayoutValue switch
+        {
+            KeyboardLayout.Nordic => KeyboardLayout.QwertyUS,
+            KeyboardLayout.QwertyUS => KeyboardLayout.QwertzDE,
+            KeyboardLayout.QwertzDE => KeyboardLayout.AzertyFR,
+            _ => KeyboardLayout.Nordic
+        };
+        ActiveSetup.Layout(nextLayout);
+    }
+
+    private string FormatLetterCase(string rawKey) =>
+        IsShifted ? rawKey.ToUpperInvariant() : rawKey.ToLowerInvariant();
+
+    private string FormatPreviewText()
+    {
+        if (string.IsNullOrEmpty(Value))
+            return string.Empty;
+
+        return IsPassword ? new string('\u25CF', Value.Length) : Value;
+    }
+
+    private UIModifier BuildKeyboardWindowModifier() => UIModifier.Empty
+        .Width(ModifierOrEmpty.WidthValue ?? "100%")
+        .Padding(ModifierOrEmpty.PaddingValue ?? "0.9rem")
+        .Gap("0.65rem")
+        .Background(ModifierOrEmpty.BackgroundValue ?? "var(--ui-bg-surface)")
+        .BorderColor(ModifierOrEmpty.BorderColorValue ?? "var(--ui-border)")
+        .BorderRadius(ModifierOrEmpty.BorderRadiusValue ?? "var(--ui-radius-lg)")
+        .RawStyle(ModifierOrEmpty.BuildFrameExtras())
+        .Class(ModifierClass);
+
+    private UIModifier BuildCharKeyModifier(double weight) => UIModifier.Empty
+        .Weight(weight)
+        .MinHeight("2.95rem")
+        .Padding("0.45rem", "0.2rem")
+        .FontSize("1rem")
+        .BaseColor(ModifierOrEmpty.BaseColorValue ?? "var(--ui-bg-elevated)")
+        .TextColor(ModifierOrEmpty.TextColorValue ?? "var(--ui-text)")
+        .PressScale(0.90);
+
+    private UIModifier BuildFunctionKeyModifier(double weight, bool isHighlighted = false) => UIModifier.Empty
+        .Weight(weight)
+        .MinHeight("2.95rem")
+        .Padding("0.45rem", "0.35rem")
+        .FontSize("0.88rem")
+        .BaseColor(isHighlighted ? "var(--ui-accent)" : "var(--ui-text-muted)")
+        .TextColor("var(--ui-text)")
+        .PressScale(0.92);
+
+    private UIModifier BuildMacroKeyModifier(double weight) => UIModifier.Empty
+        .Weight(weight)
+        .MinHeight("2.55rem")
+        .Padding("0.35rem", "0.25rem")
+        .FontSize("0.78rem")
+        .BaseColor("var(--ui-accent)")
+        .TextColor("var(--ui-text)")
+        .PressScale(0.91);
+
+    private UIModifier BuildArrowKeyModifier() => UIModifier.Empty
+        .FillMaxWidth()
+        .MinHeight("2.75rem")
+        .Padding("0.4rem", "0")
+        .FontSize("1rem")
+        .BaseColor("var(--ui-bg-elevated)")
+        .TextColor("var(--ui-accent)")
+        .PressScale(0.90);
+
+    private UIModifier BuildSpaceKeyModifier() => UIModifier.Empty
+        .Weight(4.5)
+        .MinHeight("2.95rem")
+        .Padding("0.45rem", "1rem")
+        .FontSize("0.92rem")
+        .BaseColor("var(--ui-bg-elevated)")
+        .TextColor("var(--ui-text-muted)")
+        .PressScale(0.95);
+
+    private UIModifier BuildSubmitKeyModifier() => UIModifier.Empty
+        .Weight(1.8)
+        .MinHeight("2.95rem")
+        .Padding("0.45rem", "0.75rem")
+        .FontSize("0.92rem")
+        .BaseColor("var(--ui-success)")
+        .TextColor("#111111")
+        .PressScale(0.92);
+
+    private void CycleShiftState()
+    {
+        if (!_isShiftActive && !_isCapsLocked)
+            _isShiftActive = true;
+        else if (_isShiftActive && !_isCapsLocked)
+        {
+            _isShiftActive = false;
+            _isCapsLocked = true;
+        }
+        else
+        {
+            _isShiftActive = false;
+            _isCapsLocked = false;
+        }
+    }
+
+    private void ToggleCapsLock()
+    {
+        _isCapsLocked = !_isCapsLocked;
+        _isShiftActive = false;
+    }
+
+    private void ToggleCtrl() => _isCtrlActive = !_isCtrlActive;
+    private void ToggleAlt() => _isAltActive = !_isAltActive;
+    private void ToggleAltGr() => _isAltGrActive = !_isAltGrActive;
+    private void ToggleSymbolsDrawer() => _showSymbolsDrawer = !_showSymbolsDrawer;
+
+    private async Task PressPrintableKeyAsync(string keyText, string code)
+    {
+        var eventArgs = CreateKeyEventArgs(keyText, code, isPrintable: true);
+        RecordKeyComboDisplay(eventArgs);
+
+        var isShortcutCombo = _isCtrlActive || _isAltActive;
+        if (!isShortcutCombo)
+        {
+            var current = Value ?? string.Empty;
+            if (current.Length + keyText.Length <= MaxLength)
+            {
+                Value = current + keyText;
+                await ValueChanged.InvokeAsync(Value);
+            }
+        }
+
+        ResetOneShotModifiers();
+        if (OnKeyPress.HasDelegate)
+            await OnKeyPress.InvokeAsync(eventArgs);
+    }
+
+    private async Task HandleNavClusterKeyAsync(string label, string code)
+    {
+        if (code == "Delete" && !_isCtrlActive && !_isAltActive)
+            await ClearTextAsync();
+
+        await FireNonPrintableKeyAsync(label, code);
+    }
+
+    private async Task FireNonPrintableKeyAsync(string key, string code)
+    {
+        var eventArgs = CreateKeyEventArgs(key, code, isPrintable: false);
+        RecordKeyComboDisplay(eventArgs);
+        ResetOneShotModifiers();
+
+        if (OnKeyPress.HasDelegate)
+            await OnKeyPress.InvokeAsync(eventArgs);
+    }
+
+    private VirtualKeyEventArgs CreateKeyEventArgs(string key, string code, bool isPrintable) =>
+        new(
+            Key: key,
+            Code: code,
+            Shift: IsShifted,
+            Ctrl: _isCtrlActive,
+            Alt: _isAltActive || _isAltGrActive,
+            IsPrintable: isPrintable);
+
+    private void RecordKeyComboDisplay(VirtualKeyEventArgs e)
+    {
+        var parts = new List<string>();
+        if (e.Ctrl) parts.Add("Ctrl");
+        if (e.Alt) parts.Add("Alt");
+        if (e.Shift && !e.IsPrintable) parts.Add("Shift");
+        parts.Add(e.Key == " " ? "Space" : e.Key);
+        _lastMacroKeyCombo = string.Join(" + ", parts);
+    }
+
+    private void ResetOneShotModifiers()
+    {
+        if (_isShiftActive && !_isCapsLocked)
+            _isShiftActive = false;
+
+        _isCtrlActive = false;
+        _isAltActive = false;
+        _isAltGrActive = false;
+    }
+
+    private async Task BackspaceAsync()
+    {
+        var eventArgs = CreateKeyEventArgs("Backspace", "Backspace", isPrintable: false);
+        RecordKeyComboDisplay(eventArgs);
+
+        if (!string.IsNullOrEmpty(Value))
+        {
+            Value = Value[..^1];
+            if (string.IsNullOrEmpty(Value))
+                _isShiftActive = true;
+
+            await ValueChanged.InvokeAsync(Value);
+        }
+
+        if (OnKeyPress.HasDelegate)
+            await OnKeyPress.InvokeAsync(eventArgs);
+    }
+
+    private async Task ClearTextAsync()
+    {
+        Value = string.Empty;
+        _isShiftActive = true;
+        await ValueChanged.InvokeAsync(Value);
+    }
+
+    private async Task SubmitAsync() =>
+        await OnSubmit.InvokeAsync(Value);
+}

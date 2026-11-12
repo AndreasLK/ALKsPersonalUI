@@ -1,0 +1,71 @@
+﻿@using ALKsPersonalUI.Core
+@inherits WindowBase
+
+@if (IsOpen)
+{
+    <div class="ui-backdrop-blur modal-backdrop"
+         tabindex="-1"
+         @onclick="CloseIfBackdropClickAllowed"
+         @onkeydown="CloseIfEscapeKeyPressed">
+        <div class="modal-wrapper" @onclick:stopPropagation="true">
+            <TitledWindow Title="@Title"
+                          Modifier="@BuildModalWindowModifier()"
+                          role="dialog"
+                          aria-modal="true"
+                          aria-label="@Title"
+                          @attributes="AdditionalAttributes">
+                <HeaderActions>
+                    <CloseButton OnClick="CloseModalAsync" AriaLabel="@OverlayDefaults.Modal.CloseAriaLabel" />
+                </HeaderActions>
+                <ChildContent>
+                    @ChildContent
+                    @if (HasFooterContent)
+                    {
+                        <div class="modal-footer">@FooterContent</div>
+                    }
+                </ChildContent>
+            </TitledWindow>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public string Title { get; set; } = OverlayDefaults.Modal.DefaultTitle;
+    [Parameter] public bool CloseOnBackdropClick { get; set; } = true;
+    [Parameter] public RenderFragment? FooterContent { get; set; }
+
+    private bool HasFooterContent => FooterContent is not null;
+
+    private UIModifier BuildModalWindowModifier()
+    {
+        var modifier = Modifier?.Clone() ?? UIModifier.Empty;
+        return modifier
+            .Width(modifier.WidthValue ?? OverlayDefaults.Modal.DefaultWidth)
+            .Padding(modifier.PaddingValue ?? OverlayDefaults.Modal.DefaultPadding)
+            .HeaderBackground(modifier.HeaderBackgroundValue ?? OverlayDefaults.Modal.DefaultHeaderBackground);
+    }
+
+    private async Task CloseModalAsync()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private async Task CloseIfBackdropClickAllowed()
+    {
+        if (!CloseOnBackdropClick)
+            return;
+
+        await CloseModalAsync();
+    }
+
+    private async Task CloseIfEscapeKeyPressed(KeyboardEventArgs keyboardEvent)
+    {
+        if (!KeyboardKeys.IsEscape(keyboardEvent))
+            return;
+
+        await CloseModalAsync();
+    }
+}

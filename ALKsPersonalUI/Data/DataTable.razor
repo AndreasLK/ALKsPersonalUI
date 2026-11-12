@@ -1,0 +1,265 @@
+﻿@typeparam TItem
+@inherits UIComponentBase
+
+<Window Modifier="@BuildTableWindowModifier()">
+    <div class="table-toolbar">
+        <Dropdown TItem="string"
+                  Items="GetFilterableColumnTitles()"
+                  @bind-Value="_selectedFilterColumnTitle"
+                  TextSelector="FormatColumnDropdownLabel"
+                  AriaLabel="@DataTableDefaults.ColumnFilterAriaLabel" />
+        <TextInput @bind-Value="_searchFilterText"
+                   Placeholder="@DataTableDefaults.SearchPlaceholder" />
+    </div>
+
+    @if (Columns is not null)
+    {
+        @foreach (var quickFilterColumn in Columns.Where(column => column.ShowQuickFilters))
+        {
+            <div class="quick-filter-bar" role="group" aria-label="@($"Quick filter by {quickFilterColumn.Title}")">
+                <Pill Active="@IsSearchFilterEmpty"
+                      OnClick="ClearSearchFilter">
+                    @DataTableDefaults.AllColumnsKey
+                </Pill>
+                @foreach (var distinctCategoryValue in GetQuickFilterValuesForColumn(quickFilterColumn))
+                {
+                    <Pill Active="@IsQuickFilterSelected(quickFilterColumn, distinctCategoryValue)"
+                          OnClick="() => ToggleQuickFilter(quickFilterColumn, distinctCategoryValue)">
+                        @distinctCategoryValue
+                    </Pill>
+                }
+            </div>
+        }
+    }
+
+    <table class="data-table" @attributes="AdditionalAttributes">
+        <thead>
+            <tr>
+                @if (Columns is not null)
+                {
+                    @foreach (var column in Columns)
+                    {
+                        <th scope="col" aria-sort="@GetAriaSortDirection(column)">
+                            @if (IsColumnSortable(column))
+                            {
+                                <button type="button" class="sort-button" @onclick="() => ToggleSortByColumn(column)">
+                                    <span>@column.Title</span>
+                                    <span class="sort-icon" aria-hidden="true">
+                                        @GetSortIndicatorIcon(column)
+                                    </span>
+                                </button>
+                            }
+                            else
+                            {
+                                @column.Title
+                            }
+                        </th>
+                    }
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @if (Columns is not null)
+            {
+                @foreach (var rowItem in GetFilteredAndSortedItems())
+                {
+                    <tr @key="rowItem">
+                        @foreach (var column in Columns)
+                        {
+                            <td>
+                                @if (column.Template is not null)
+                                {
+                                    @column.Template(rowItem)
+                                }
+                                else if (column.GetValue is not null)
+                                {
+                                    @column.GetValue(rowItem)
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</Window>
+
+@code {
+    public record Column(
+        string Title,
+        Func<TItem, IComparable?>? GetValue = null,
+        RenderFragment<TItem>? Template = null,
+        string? AlwaysIncludeValue = null,
+        bool ShowQuickFilters = false
+    );
+
+    [Parameter] public IEnumerable<TItem>? Items { get; set; }
+    [Parameter] public List<Column>? Columns { get; set; }
+
+    private Column? _activeSortColumn;
+    private bool _isSortedAscending = true;
+    private string? _searchFilterText;
+    private string _selectedFilterColumnTitle = DataTableDefaults.AllColumnsKey;
+
+    private bool IsSearchFilterEmpty => string.IsNullOrWhiteSpace(_searchFilterText);
+    private static bool IsColumnSortable(Column column) => column.GetValue is not null;
+
+    private UIModifier BuildTableWindowModifier() => UIModifier.Empty
+        .Width(ModifierOrEmpty.WidthValue ?? DataTableDefaults.DefaultWidth)
+        .Height(ModifierOrEmpty.HeightValue ?? DataTableDefaults.DefaultHeight)
+        .Padding(WindowDefaults.ZeroPadding)
+        .Gap(WindowDefaults.ZeroPadding)
+        .AlignItems("stretch")
+        .Overflow(ModifierOrEmpty.OverflowValue ?? "auto")
+        .Background(ModifierOrEmpty.BackgroundValue ?? WindowDefaults.DefaultBackground)
+        .BorderColor(ModifierOrEmpty.BorderColorValue ?? WindowDefaults.DefaultBorderColor)
+        .BorderRadius(ModifierOrEmpty.BorderRadiusValue ?? WindowDefaults.DefaultBorderRadius)
+        .RawStyle(ModifierOrEmpty.BuildFrameExtras())
+        .Class(ModifierClass);
+
+    private static string FormatColumnDropdownLabel(string columnTitle) =>
+        columnTitle == DataTableDefaults.AllColumnsKey
+            ? DataTableDefaults.AllColumnsDisplayText
+            : columnTitle;
+
+    private void ClearSearchFilter()
+    {
+        _selectedFilterColumnTitle = DataTableDefaults.AllColumnsKey;
+        _searchFilterText = string.Empty;
+    }
+
+    private void ToggleSortByColumn(Column clickedColumn)
+    {
+        if (_activeSortColumn == clickedColumn)
+        {
+            _isSortedAscending = !_isSortedAscending;
+            return;
+        }
+
+        _activeSortColumn = clickedColumn;
+        _isSortedAscending = true;
+    }
+
+    private string GetSortIndicatorIcon(Column column)
+    {
+        if (_activeSortColumn != column)
+            return DataTableDefaults.SortNeutralIcon;
+
+        return _isSortedAscending
+            ? DataTableDefaults.SortAscendingIcon
+            : DataTableDefaults.SortDescendingIcon;
+    }
+
+    private string GetAriaSortDirection(Column column)
+    {
+        if (_activeSortColumn != column)
+            return DataTableDefaults.AriaSortNone;
+
+        return _isSortedAscending
+            ? DataTableDefaults.AriaSortAscending
+            : DataTableDefaults.AriaSortDescending;
+    }
+
+    private IEnumerable<TItem> GetFilteredAndSortedItems()
+    {
+        var rowsWithPinnedItemsLast = GetMatchingRows().OrderBy(IsAlwaysIncludedRow);
+        if (_activeSortColumn?.GetValue is null)
+            return rowsWithPinnedItemsLast;
+
+        return _isSortedAscending
+            ? rowsWithPinnedItemsLast.ThenBy(_activeSortColumn.GetValue)
+            : rowsWithPinnedItemsLast.ThenByDescending(_activeSortColumn.GetValue);
+    }
+
+    private bool IsAlwaysIncludedRow(TItem rowItem)
+    {
+        if (Columns is null)
+            return false;
+
+        return Columns
+            .Where(column => column.AlwaysIncludeValue is not null && column.GetValue is not null)
+            .Any(column => DoesCellMatchAlwaysIncludeValue(rowItem, column));
+    }
+
+    private static bool DoesCellMatchAlwaysIncludeValue(TItem rowItem, Column column)
+    {
+        var cellText = column.GetValue?.Invoke(rowItem)?.ToString();
+        return string.Equals(cellText, column.AlwaysIncludeValue, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private IEnumerable<TItem> GetMatchingRows()
+    {
+        if (Items is null)
+            return Enumerable.Empty<TItem>();
+
+        if (IsSearchFilterEmpty || Columns is null)
+            return Items;
+
+        return Items.Where(DoesRowMatchActiveSearchFilter);
+    }
+
+    private bool DoesRowMatchActiveSearchFilter(TItem rowItem) =>
+        IsAlwaysIncludedRow(rowItem) ||
+        GetColumnsTargetedByFilter().Any(column => DoesCellMatchActiveSearchFilter(rowItem, column));
+
+    private bool DoesCellMatchActiveSearchFilter(TItem rowItem, Column column)
+    {
+        var cellText = column.GetValue?.Invoke(rowItem)?.ToString();
+        if (cellText is null || _searchFilterText is null)
+            return false;
+
+        return cellText.Contains(_searchFilterText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private IEnumerable<Column> GetColumnsTargetedByFilter()
+    {
+        if (Columns is null)
+            return Enumerable.Empty<Column>();
+
+        var searchableColumns = Columns.Where(IsColumnSortable);
+        var isSearchingAllColumns = _selectedFilterColumnTitle == DataTableDefaults.AllColumnsKey;
+
+        return isSearchingAllColumns
+            ? searchableColumns
+            : searchableColumns.Where(column => column.Title == _selectedFilterColumnTitle);
+    }
+
+    private IEnumerable<string> GetFilterableColumnTitles()
+    {
+        if (Columns is null)
+            return [DataTableDefaults.AllColumnsKey];
+
+        var sortableTitles = Columns
+            .Where(IsColumnSortable)
+            .Select(column => column.Title);
+
+        return new[] { DataTableDefaults.AllColumnsKey }.Concat(sortableTitles);
+    }
+
+    private IEnumerable<string> GetQuickFilterValuesForColumn(Column column)
+    {
+        if (Items is null || column.GetValue is null)
+            return Enumerable.Empty<string>();
+
+        return Items
+            .Select(rowItem => column.GetValue(rowItem)?.ToString())
+            .Where(cellText => !string.IsNullOrWhiteSpace(cellText) && cellText != column.AlwaysIncludeValue)
+            .Distinct()!;
+    }
+
+    private bool IsQuickFilterSelected(Column column, string filterValue) =>
+        _selectedFilterColumnTitle == column.Title && _searchFilterText == filterValue;
+
+    private void ToggleQuickFilter(Column column, string filterValue)
+    {
+        if (IsQuickFilterSelected(column, filterValue))
+        {
+            _selectedFilterColumnTitle = DataTableDefaults.AllColumnsKey;
+            _searchFilterText = string.Empty;
+            return;
+        }
+
+        _selectedFilterColumnTitle = column.Title;
+        _searchFilterText = filterValue;
+    }
+}

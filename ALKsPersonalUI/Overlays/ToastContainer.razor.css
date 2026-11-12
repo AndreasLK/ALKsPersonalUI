@@ -1,0 +1,48 @@
+/* CSS for ToastContainer component */
+.ui-toast-container {
+    position: fixed;
+    bottom: 1.25rem;
+    right: 1.25rem;
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    pointer-events: none;
+}
+
+.toast-item {
+    pointer-events: auto;
+    animation: toast-slide-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-inner {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    color: #ffffff;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+    .ui-toast-container {
+        top: 1rem;
+        bottom: auto;
+        right: 1rem;
+        left: 1rem;
+        align-items: center;
+    }
+}
+
+@keyframes toast-slide-in {
+    from {
+        transform: translateY(10px) scale(0.95);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}

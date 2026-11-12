@@ -1,0 +1,176 @@
+﻿@typeparam TValue where TValue : struct, System.Numerics.INumber<TValue>
+@using System.Globalization
+@inherits UIComponentBase
+@inject UIThemeService ThemeService
+
+<Window Modifier="@BuildContainerWindowModifier()"
+        @attributes="AdditionalAttributes">
+    <ActionButton Modifier="@BuildStepButtonModifier()"
+                  AutoRepeat="true"
+                  IsDisabled="@IsDecrementDisabled"
+                  OnClick="DecrementValueAsync"
+                  aria-label="Decrease value">
+        @InputDefaults.NumberInput.DecrementSymbol
+    </ActionButton>
+
+    <div class="number-field-wrapper" @onpointerdown="HandleFieldPointerDown">
+        <input type="number"
+               inputmode="decimal"
+               class="number-native"
+               readonly="@IsUsingTouchOverlay"
+               value="@FormatNumberInvariant(Value)"
+               step="any"
+               min="@FormatNullableNumberInvariant(Min)"
+               max="@FormatNullableNumberInvariant(Max)"
+               disabled="@Disabled"
+               aria-label="@AriaLabel"
+               @onchange="OnTextInputChangedAsync" />
+
+        @if (HasSuffixText)
+        {
+            <span class="number-suffix">@Suffix</span>
+        }
+
+        @if (ResolvedTouchMode != TouchInputMode.None && !Disabled)
+        {
+            <button type="button"
+                    class="numpad-trigger-btn"
+                    aria-label="Open touch numpad"
+                    @onclick="OpenNumpadSheet">
+                @InputDefaults.NumberInput.KeypadSymbol
+            </button>
+        }
+    </div>
+
+    <ActionButton Modifier="@BuildStepButtonModifier()"
+                  AutoRepeat="true"
+                  IsDisabled="@IsIncrementDisabled"
+                  OnClick="IncrementValueAsync"
+                  aria-label="Increase value">
+        @InputDefaults.NumberInput.IncrementSymbol
+    </ActionButton>
+</Window>
+
+<BottomSheet @bind-IsOpen="_isNumpadOpen"
+             Title="@(AriaLabel ?? "Enter Number")"
+             MaxWidth="360px">
+    <Box ContentAlignment="BoxAlignment.Center" Modifier="@(UIModifier.New.FillMaxWidth())">
+        <TouchNumpad TValue="TValue"
+                     Value="@Value"
+                     ValueChanged="SetClampedValueAsync"
+                     Min="@Min"
+                     Max="@Max"
+                     Suffix="@Suffix"
+                     OnConfirm="@(_ => _isNumpadOpen = false)"
+                     Modifier="@(UIModifier.New.FillMaxWidth())" />
+    </Box>
+</BottomSheet>
+
+@code {
+    [Parameter] public TValue Value { get; set; } = TValue.Zero;
+    [Parameter] public EventCallback<TValue> ValueChanged { get; set; }
+    [Parameter] public TValue Step { get; set; } = TValue.One;
+    [Parameter] public TValue? Min { get; set; }
+    [Parameter] public TValue? Max { get; set; }
+    [Parameter] public string? Suffix { get; set; }
+    [Parameter] public string? AriaLabel { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public TouchInputMode? TouchMode { get; set; }
+
+    private bool _isNumpadOpen;
+    private bool _isLastPointerTouch;
+
+    private TouchInputMode ResolvedTouchMode =>
+        TouchMode ?? ThemeService.Current.DefaultTouchInputMode;
+
+    private bool IsUsingTouchOverlay =>
+        ResolvedTouchMode == TouchInputMode.Always ||
+        (ResolvedTouchMode == TouchInputMode.Auto && _isLastPointerTouch);
+
+    private bool HasSuffixText => !string.IsNullOrWhiteSpace(Suffix);
+    private bool IsIncrementDisabled => Disabled || !CanIncrementValue();
+    private bool IsDecrementDisabled => Disabled || !CanDecrementValue();
+
+    private UIModifier BuildContainerWindowModifier() => UIModifier.Empty
+        .Width(ModifierOrEmpty.WidthValue ?? InputDefaults.NumberInput.ContainerWidth)
+        .MaxWidth("100%")
+        .Height(ModifierOrEmpty.HeightValue ?? WindowDefaults.DefaultHeight)
+        .MinHeight(InputDefaults.NumberInput.ContainerMinHeight)
+        .Padding(ModifierOrEmpty.PaddingValue ?? InputDefaults.NumberInput.ContainerPadding)
+        .BorderRadius(ModifierOrEmpty.BorderRadiusValue ?? InputDefaults.NumberInput.ContainerBorderRadius)
+        .Background(ModifierOrEmpty.BackgroundValue ?? WindowDefaults.DefaultBackground)
+        .BorderColor(ModifierOrEmpty.BorderColorValue ?? WindowDefaults.DefaultBorderColor)
+        .Row()
+        .AlignItems("center")
+        .JustifyContent("space-between")
+        .Gap("0.25rem")
+        .RawStyle(ModifierOrEmpty.BuildFrameExtras())
+        .Class(ModifierClass);
+
+    private UIModifier BuildStepButtonModifier() => UIModifier.Empty
+        .Width(InputDefaults.NumberInput.StepButtonWidth)
+        .Padding("0.3rem", "0")
+        .BaseColor(ModifierOrEmpty.BaseColorValue ?? InputDefaults.NumberInput.DefaultButtonColor)
+        .TextColor(ModifierOrEmpty.TextColorValue ?? InputDefaults.NumberInput.DefaultButtonTextColor)
+        .Depth(ModifierOrEmpty.DepthValue ?? InputDefaults.NumberInput.StepButtonDepth);
+
+    private void HandleFieldPointerDown(PointerEventArgs e)
+    {
+        if (Disabled)
+            return;
+
+        _isLastPointerTouch = e.PointerType is "touch" or "pen";
+        if (ResolvedTouchMode == TouchInputMode.Always ||
+            (ResolvedTouchMode == TouchInputMode.Auto && _isLastPointerTouch))
+        {
+            _isNumpadOpen = true;
+        }
+    }
+
+    private void OpenNumpadSheet()
+    {
+        if (!Disabled)
+            _isNumpadOpen = true;
+    }
+
+    private Task IncrementValueAsync() => SetClampedValueAsync(Value + Step);
+    private Task DecrementValueAsync() => SetClampedValueAsync(Value - Step);
+
+    private bool CanIncrementValue() => !Max.HasValue || Value < Max.Value;
+    private bool CanDecrementValue() => !Min.HasValue || Value > Min.Value;
+
+    private async Task OnTextInputChangedAsync(ChangeEventArgs changeEvent)
+    {
+        var normalizedDecimalText = changeEvent.Value?.ToString()?.Replace(',', '.');
+        if (string.IsNullOrWhiteSpace(normalizedDecimalText))
+        {
+            await SetClampedValueAsync(TValue.Zero);
+            return;
+        }
+
+        if (TValue.TryParse(normalizedDecimalText, CultureInfo.InvariantCulture, out var parsedNumber))
+            await SetClampedValueAsync(parsedNumber);
+    }
+
+    private async Task SetClampedValueAsync(TValue proposedValue)
+    {
+        Value = ClampValueWithinBounds(proposedValue);
+        await ValueChanged.InvokeAsync(Value);
+    }
+
+    private TValue ClampValueWithinBounds(TValue proposedValue)
+    {
+        if (Min.HasValue && proposedValue < Min.Value)
+            return Min.Value;
+        if (Max.HasValue && proposedValue > Max.Value)
+            return Max.Value;
+
+        return proposedValue;
+    }
+
+    private static string FormatNumberInvariant(TValue numericValue) =>
+        numericValue.ToString(null, CultureInfo.InvariantCulture);
+
+    private static string? FormatNullableNumberInvariant(TValue? nullableNumericValue) =>
+        nullableNumericValue.HasValue ? FormatNumberInvariant(nullableNumericValue.Value) : null;
+}

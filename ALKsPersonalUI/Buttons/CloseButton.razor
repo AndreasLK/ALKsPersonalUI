@@ -1,0 +1,26 @@
+﻿@inherits UIComponentBase
+
+<ActionButton Variant="ActionButton.ButtonVariant.Ghost"
+              Shape="@Shape"
+              Modifier="@BuildCloseButtonModifier()"
+              OnClick="OnClick"
+              aria-label="@AriaLabel"
+              @attributes="AdditionalAttributes">
+    @ButtonDefaults.Close.IconSymbol
+</ActionButton>
+
+@code {
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+    [Parameter] public string AriaLabel { get; set; } = ButtonDefaults.Close.DefaultAriaLabel;
+    [Parameter] public ActionButton.ButtonShape Shape { get; set; } = ActionButton.ButtonShape.Rounded;
+
+    private UIModifier BuildCloseButtonModifier()
+    {
+        var modifier = Modifier?.Clone() ?? UIModifier.Empty;
+        return modifier
+            .BaseColor(modifier.BaseColorValue ?? ButtonDefaults.Close.BaseColor)
+            .Width(modifier.WidthValue ?? ButtonDefaults.Close.Width)
+            .Padding(modifier.PaddingVerticalValue ?? "0.2rem", modifier.PaddingHorizontalValue ?? "0.5rem")
+            .FontSize(modifier.FontSizeValue ?? ButtonDefaults.Close.FontSize);
+    }
+}

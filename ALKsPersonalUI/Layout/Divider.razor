@@ -1,0 +1,34 @@
+﻿@inherits UIComponentBase
+
+<div class="@BuildCssClasses()"
+     style="@BuildStyles()"
+     role="separator"
+     aria-orientation="@AriaOrientation"
+     @attributes="AdditionalAttributes"></div>
+
+@code {
+    [Parameter] public bool Vertical { get; set; }
+    [Parameter] public string? Color { get; set; }
+    [Parameter] public string? Thickness { get; set; }
+
+    private string AriaOrientation => Vertical ? "vertical" : "horizontal";
+
+    private string ResolvedColor =>
+        Color ?? ModifierOrEmpty.BorderColorValue ?? LayoutDefaults.Divider.DefaultColor;
+
+    private string ResolvedThickness =>
+        Thickness ?? ModifierOrEmpty.ThicknessValue ?? LayoutDefaults.Divider.DefaultThickness;
+
+    private string BuildCssClasses() => new CssBuilder()
+        .Add("ui-divider")
+        .Add("vertical", when: Vertical)
+        .Add("horizontal", when: !Vertical)
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private string BuildStyles() => new StyleBuilder()
+        .Add("--_div-color", ResolvedColor)
+        .Add("--_div-thickness", ResolvedThickness)
+        .AddRaw(ModifierStyle)
+        .Build();
+}

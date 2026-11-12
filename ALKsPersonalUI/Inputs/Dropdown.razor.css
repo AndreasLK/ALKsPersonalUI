@@ -1,0 +1,114 @@
+.ui-select-container {
+    position: relative;
+    display: inline-block;
+    width: var(--_dd-width, auto);
+    font-family: inherit;
+    color: var(--_dd-text, var(--ui-text));
+}
+
+.select-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: transparent;
+}
+
+.select-trigger {
+    position: relative;
+    z-index: 91;
+    width: 100%;
+    min-width: 8.5rem;
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    background-color: var(--_dd-bg, var(--ui-bg-surface));
+    color: inherit;
+    border: 1px solid var(--_dd-border, var(--ui-border));
+    border-radius: var(--_dd-radius, var(--ui-radius-md));
+    padding: 0.5rem 0.8rem;
+    font: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .select-trigger:hover:not(:disabled),
+    .select-trigger.open {
+        border-color: var(--_dd-accent, var(--ui-accent));
+    }
+
+    .select-trigger:active:not(:disabled) {
+        transform: scale(0.98);
+    }
+
+    .select-trigger:focus-visible {
+        outline: 2px solid var(--_dd-accent, var(--ui-accent));
+        outline-offset: 2px;
+    }
+
+.select-chevron {
+    font-size: 0.7em;
+    opacity: 0.7;
+    transition: transform 0.2s ease;
+}
+
+.select-trigger.open .select-chevron {
+    transform: rotate(180deg);
+}
+
+.select-menu {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    z-index: 950;
+    min-width: 100%;
+    max-height: 15rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    margin: 0;
+    padding: 0.35rem;
+    list-style: none;
+    background-color: var(--_dd-menu-bg, var(--ui-bg-elevated));
+    border: 1px solid var(--_dd-border, var(--ui-border));
+    border-radius: var(--_dd-radius, var(--ui-radius-md));
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.55);
+    box-sizing: border-box;
+}
+
+.select-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.92rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.12s ease;
+}
+
+@media (pointer: coarse) {
+    .select-option {
+        padding: 0.8rem 0.85rem;
+        font-size: 1rem;
+    }
+}
+
+.select-option:hover {
+    background-color: color-mix(in srgb, var(--_dd-text, var(--ui-text)), transparent 90%);
+}
+
+.select-option.selected {
+    background-color: color-mix(in srgb, var(--_dd-accent, var(--ui-accent)), transparent 80%);
+    color: #93c5fd;
+    font-weight: 600;
+}
+
+.option-check {
+    font-size: 0.85em;
+}

@@ -1,0 +1,20 @@
+﻿@inherits UIComponentBase
+
+<div class="@BuildCssClasses()" style="@BuildStyles()" aria-hidden="true" @attributes="AdditionalAttributes"></div>
+
+@code {
+    private bool HasExplicitDimensions =>
+        !string.IsNullOrWhiteSpace(ModifierOrEmpty.WidthValue) ||
+        !string.IsNullOrWhiteSpace(ModifierOrEmpty.HeightValue);
+
+    private string BuildCssClasses() => new CssBuilder()
+        .Add("ui-spacer")
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private string BuildStyles() => new StyleBuilder()
+        .Add("flex-shrink", "0")
+        .AddIf(!HasExplicitDimensions, "flex-grow", "1")
+        .AddRaw(ModifierStyle)
+        .Build();
+}

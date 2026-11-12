@@ -1,0 +1,137 @@
+.kb-preview-bar {
+    width: 100%;
+    box-sizing: border-box;
+    background-color: var(--ui-bg-header, #1a1a1a);
+    border: 1px solid var(--ui-border, #333333);
+    border-radius: var(--ui-radius-md, 10px);
+    padding: 0.55rem 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.kb-preview-text {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--ui-text, #ffffff);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kb-placeholder {
+    color: var(--ui-text-muted, #a1a1aa);
+    font-style: italic;
+    font-weight: 400;
+}
+
+.kb-caret {
+    color: var(--ui-accent, #3b82f6);
+    font-weight: 700;
+    margin-left: 1px;
+    animation: kb-blink 1s step-end infinite;
+}
+
+.kb-preview-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}
+
+.kb-deck {
+    display: flex;
+    align-items: stretch;
+    gap: 0.85rem;
+    width: 100%;
+    overflow-x: auto;
+}
+
+.kb-zone-main {
+    flex: 3.2 1 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.kb-zone-nav {
+    flex: 0.9 0 155px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.55rem;
+    padding-left: 0.65rem;
+    border-left: 1px solid var(--ui-border, #333333);
+}
+
+.kb-zone-numpad {
+    flex: 1.1 0 185px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding-left: 0.65rem;
+    border-left: 1px solid var(--ui-border, #333333);
+}
+
+.kb-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.32rem;
+    width: 100%;
+}
+
+.kb-f-row {
+    margin-bottom: 0.25rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px dashed var(--ui-border, #333333);
+}
+
+.kb-f-spacer {
+    width: 0.55rem;
+    flex-shrink: 0;
+}
+
+.kb-nav-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.32rem;
+    width: 100%;
+}
+
+.kb-arrow-cluster {
+    display: flex;
+    flex-direction: column;
+    gap: 0.32rem;
+    width: 100%;
+    margin-top: auto;
+}
+
+.kb-arrow-top {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.32rem;
+    width: 100%;
+}
+
+    .kb-arrow-top > :first-child {
+        grid-column: 2;
+    }
+
+.kb-numpad-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.32rem;
+    width: 100%;
+}
+
+@keyframes kb-blink {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+}

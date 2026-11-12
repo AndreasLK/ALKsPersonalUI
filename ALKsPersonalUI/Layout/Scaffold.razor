@@ -1,0 +1,54 @@
+﻿@inject UIThemeService ThemeService
+@implements IDisposable
+@inherits UIComponentBase
+
+<div class="@BuildCssClasses()" style="@BuildRootStyles()" @attributes="AdditionalAttributes">
+    @if (TopBar is not null)
+    {
+        <div class="scaffold-top-bar">@TopBar</div>
+    }
+
+    <main class="scaffold-content" style="@ModifierStyle">
+        @ChildContent
+    </main>
+
+    @if (BottomBar is not null)
+    {
+        <div class="scaffold-bottom-bar">@BottomBar</div>
+    }
+
+    @if (FloatingAction is not null)
+    {
+        <div class="scaffold-fab">@FloatingAction</div>
+    }
+
+    @if (EnableToasts)
+    {
+        <ToastContainer />
+    }
+</div>
+
+@code {
+    [Parameter] public RenderFragment? TopBar { get; set; }
+    [Parameter] public RenderFragment? BottomBar { get; set; }
+    [Parameter] public RenderFragment? FloatingAction { get; set; }
+    [Parameter] public bool EnableToasts { get; set; } = true;
+
+    protected override void OnInitialized() =>
+        ThemeService.OnChange += RefreshTheme;
+
+    private void RefreshTheme() =>
+        InvokeAsync(StateHasChanged);
+
+    private string BuildCssClasses() => new CssBuilder()
+        .Add("ui-scaffold")
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private string BuildRootStyles() => new StyleBuilder()
+        .AddRaw(ThemeService.Current.ToCssVariables())
+        .Build();
+
+    public void Dispose() =>
+        ThemeService.OnChange -= RefreshTheme;
+}

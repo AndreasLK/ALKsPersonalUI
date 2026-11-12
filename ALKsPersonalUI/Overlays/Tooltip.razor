@@ -1,0 +1,53 @@
+﻿@inherits UIComponentBase
+
+<div class="@BuildWrapperCssClasses()"
+     @onclick="ToggleTouchTooltip"
+     @attributes="AdditionalAttributes">
+    @if (_isTouchOpen)
+    {
+        <div class="tooltip-touch-backdrop" @onclick="CloseTouchTooltip" @onclick:stopPropagation="true"></div>
+    }
+    <div class="tooltip-trigger" aria-describedby="@_uniqueTooltipElementId">
+        @ChildContent
+    </div>
+    @if (HasTooltipText)
+    {
+        <div id="@_uniqueTooltipElementId" class="tooltip-bubble" role="tooltip">
+            <Window Modifier="@BuildBubbleModifier()">
+                <span class="tooltip-text">@Text</span>
+            </Window>
+        </div>
+    }
+</div>
+
+@code {
+    public enum TooltipPosition { Top, Bottom, Left, Right }
+
+    [Parameter, EditorRequired] public string Text { get; set; } = string.Empty;
+    [Parameter] public TooltipPosition Position { get; set; } = TooltipPosition.Top;
+
+    private readonly string _uniqueTooltipElementId = $"{OverlayDefaults.Tooltip.IdPrefix}{Guid.NewGuid():N}";
+    private bool _isTouchOpen;
+
+    private bool HasTooltipText => !string.IsNullOrWhiteSpace(Text);
+
+    private void ToggleTouchTooltip() => _isTouchOpen = !_isTouchOpen;
+    private void CloseTouchTooltip() => _isTouchOpen = false;
+
+    private UIModifier BuildBubbleModifier() => UIModifier.Empty
+        .Width(ModifierOrEmpty.WidthValue ?? OverlayDefaults.Tooltip.Width)
+        .Height(ModifierOrEmpty.HeightValue ?? OverlayDefaults.Tooltip.Height)
+        .MinWidth(OverlayDefaults.Tooltip.MinDimension)
+        .MinHeight(OverlayDefaults.Tooltip.MinDimension)
+        .Padding(ModifierOrEmpty.PaddingValue ?? OverlayDefaults.Tooltip.Padding)
+        .BorderRadius(ModifierOrEmpty.BorderRadiusValue ?? OverlayDefaults.Tooltip.BorderRadius)
+        .Background(ModifierOrEmpty.BackgroundValue ?? OverlayDefaults.Tooltip.DefaultBackgroundColor)
+        .BorderColor(ModifierOrEmpty.BorderColorValue ?? OverlayDefaults.Tooltip.DefaultBorderColor);
+
+    private string BuildWrapperCssClasses() => new CssBuilder()
+        .Add("ui-tooltip-wrapper")
+        .Add($"pos-{Position.ToString().ToLowerInvariant()}")
+        .Add("touch-open", when: _isTouchOpen)
+        .AddRaw(ModifierClass)
+        .Build();
+}

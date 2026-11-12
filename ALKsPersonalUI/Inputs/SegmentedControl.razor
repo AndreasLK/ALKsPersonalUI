@@ -1,0 +1,74 @@
+﻿@typeparam TItem
+@inherits UIComponentBase
+
+<Window Modifier="@BuildContainerModifier()" role="radiogroup" @attributes="AdditionalAttributes">
+    @if (Items is not null)
+    {
+        @foreach (var item in Items)
+        {
+            var isSelected = IsSelected(item);
+            <ActionButton Variant="@(isSelected ? ActionButton.ButtonVariant.Solid : ActionButton.ButtonVariant.Ghost)"
+                          PressEffect="ButtonPressEffect.InwardScale"
+                          IsDisabled="@Disabled"
+                          Modifier="@BuildSegmentButtonModifier(isSelected)"
+                          role="radio"
+                          aria-checked="@isSelected"
+                          Text="@FormatItemText(item)"
+                          OnClick="@(() => SelectItemAsync(item))" />
+        }
+    }
+</Window>
+
+@code {
+    [Parameter] public IEnumerable<TItem>? Items { get; set; }
+    [Parameter] public TItem? Value { get; set; }
+    [Parameter] public EventCallback<TItem?> ValueChanged { get; set; }
+    [Parameter] public Func<TItem, string>? TextSelector { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+
+    private UIModifier BuildContainerModifier() => UIModifier.Empty
+        .Width(ModifierOrEmpty.WidthValue ?? "fit-content")
+        .MaxWidth("100%")
+        .Padding(ModifierOrEmpty.PaddingValue ?? "0.28rem")
+        .Gap("0.28rem")
+        .Row()
+        .Wrap()
+        .AlignItems("center")
+        .Background(ModifierOrEmpty.BackgroundValue ?? "var(--ui-bg-header)")
+        .BorderColor(ModifierOrEmpty.BorderColorValue ?? "var(--ui-border)")
+        .BorderRadius(ModifierOrEmpty.BorderRadiusValue ?? "var(--ui-radius-lg)")
+        .RawStyle(ModifierOrEmpty.BuildFrameExtras())
+        .Class(ModifierClass);
+
+    private UIModifier BuildSegmentButtonModifier(bool isSelected) => UIModifier.Empty
+        .Weight(1)
+        .Padding("0.45rem", "0.75rem")
+        .FontSize(ModifierOrEmpty.FontSizeValue ?? "0.85rem")
+        .BaseColor(isSelected
+            ? (ModifierOrEmpty.AccentColorValue ?? "var(--ui-accent)")
+            : "var(--ui-text-muted)")
+        .TextColor("var(--ui-text)")
+        .PressScale(0.94);
+
+    private bool IsSelected(TItem candidate) =>
+        EqualityComparer<TItem>.Default.Equals(candidate, Value);
+
+    private string FormatItemText(TItem item)
+    {
+        if (item is null)
+            return string.Empty;
+
+        return TextSelector is not null
+            ? TextSelector(item)
+            : (item.ToString() ?? string.Empty);
+    }
+
+    private async Task SelectItemAsync(TItem selected)
+    {
+        if (Disabled || IsSelected(selected))
+            return;
+
+        Value = selected;
+        await ValueChanged.InvokeAsync(selected);
+    }
+}

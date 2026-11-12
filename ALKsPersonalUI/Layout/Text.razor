@@ -1,0 +1,44 @@
+﻿@inherits UIComponentBase
+
+<span class="@BuildCssClasses()" style="@BuildStyles()" @attributes="AdditionalAttributes">
+    @if (ChildContent is not null)
+    {
+        @ChildContent
+    }
+    else
+    {
+        @Value
+    }
+</span>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public TypographyVariant Variant { get; set; } = TypographyVariant.Body;
+    [Parameter] public FontWeight? Weight { get; set; }
+    [Parameter] public TextAlignment Align { get; set; } = TextAlignment.Start;
+    [Parameter] public string? Color { get; set; }
+    [Parameter] public bool Muted { get; set; }
+    [Parameter] public bool Wrap { get; set; } = true;
+    [Parameter] public int? MaxLines { get; set; }
+
+    private bool HasLineClamp => MaxLines is > 0;
+
+    private string ResolvedColor =>
+        Color ?? ModifierOrEmpty.TextColorValue ?? (Muted ? LayoutDefaults.Text.MutedColor : LayoutDefaults.Text.DefaultColor);
+
+    private string BuildCssClasses() => new CssBuilder()
+        .Add("ui-text")
+        .Add($"variant-{Variant.ToString().ToLowerInvariant()}")
+        .Add("no-wrap", when: !Wrap && !HasLineClamp)
+        .Add("line-clamp", when: HasLineClamp)
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private string BuildStyles() => new StyleBuilder()
+        .Add("color", ResolvedColor)
+        .Add("text-align", LayoutDefaults.ToCss(Align))
+        .AddIf(Weight.HasValue, "font-weight", Weight.HasValue ? LayoutDefaults.ToCss(Weight.Value) : null)
+        .AddIf(HasLineClamp, "-webkit-line-clamp", MaxLines?.ToString())
+        .AddRaw(ModifierStyle)
+        .Build();
+}

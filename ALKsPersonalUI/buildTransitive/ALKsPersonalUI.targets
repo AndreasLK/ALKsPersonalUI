@@ -1,0 +1,12 @@
+﻿<Project>
+  <PropertyGroup>
+    <StaticWebAssetsFingerprintContent>false</StaticWebAssetsFingerprintContent>
+    <StaticWebAssetFingerprintingEnabled>false</StaticWebAssetFingerprintingEnabled>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(ImplicitUsings)' == 'enable' Or '$(ImplicitUsings)' == 'true'">
+    <Using Include="ALKsPersonalUI" />
+    <Using Include="ALKsPersonalUI.Core" />
+    <Using Include="ALKsPersonalUI.Overlays" />
+  </ItemGroup>
+</Project>

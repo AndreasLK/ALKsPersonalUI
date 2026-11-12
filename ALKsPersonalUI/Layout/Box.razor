@@ -1,0 +1,26 @@
+﻿@inherits UIComponentBase
+
+<div class="@BuildCssClasses()" style="@BuildStyles()" @attributes="AdditionalAttributes">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public BoxAlignment ContentAlignment { get; set; } = BoxAlignment.Center;
+
+    private (string AlignItems, string JustifyContent) ResolvedBoxAlignment =>
+        LayoutDefaults.ToCss(ContentAlignment);
+
+    private string BuildCssClasses() => new CssBuilder()
+        .Add("ui-box")
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private string BuildStyles() => new StyleBuilder()
+        .Add("box-sizing", "border-box")
+        .Add("position", "relative")
+        .Add("display", ModifierOrEmpty.DisplayValue ?? LayoutDefaults.DefaultDisplay)
+        .Add("align-items", ModifierOrEmpty.AlignItemsValue ?? ResolvedBoxAlignment.AlignItems)
+        .Add("justify-content", ModifierOrEmpty.JustifyContentValue ?? ResolvedBoxAlignment.JustifyContent)
+        .AddRaw(ModifierStyle)
+        .Build();
+}

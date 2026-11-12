@@ -1,0 +1,32 @@
+﻿@inherits UIComponentBase
+
+<div class="@BuildCssClasses()" style="@BuildStyles()" @attributes="AdditionalAttributes">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public int Columns { get; set; } = LayoutDefaults.Grid.DefaultColumns;
+    [Parameter] public string MinColumnWidth { get; set; } = LayoutDefaults.Grid.DefaultMinColumnWidth;
+    [Parameter] public string? Gap { get; set; }
+
+    private string ResolvedTemplateColumns => Columns > 0
+        ? $"repeat({Columns}, minmax(0, 1fr))"
+        : $"repeat(auto-fill, minmax(min({MinColumnWidth}, 100%), 1fr))";
+
+    private string ResolvedGap =>
+        ModifierOrEmpty.GapValue ?? Gap ?? LayoutDefaults.Grid.DefaultGap;
+
+    private string BuildCssClasses() => new CssBuilder()
+        .Add("ui-grid")
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private string BuildStyles() => new StyleBuilder()
+        .Add("box-sizing", "border-box")
+        .Add("width", ModifierOrEmpty.WidthValue ?? "100%")
+        .Add("display", LayoutDefaults.GridDisplay)
+        .Add("grid-template-columns", ResolvedTemplateColumns)
+        .Add("gap", ResolvedGap)
+        .AddRaw(ModifierStyle)
+        .Build();
+}

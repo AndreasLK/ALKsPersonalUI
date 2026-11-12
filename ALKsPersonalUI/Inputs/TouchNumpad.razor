@@ -1,0 +1,253 @@
+@typeparam TValue where TValue : struct, System.Numerics.INumber<TValue>
+@using System.Globalization
+@inherits UIComponentBase
+
+<Window Modifier="@BuildContainerModifier()" @attributes="AdditionalAttributes">
+    @if (ShowDisplayScreen)
+    {
+        <div class="numpad-screen">
+            @if (!string.IsNullOrWhiteSpace(Label))
+            {
+                <span class="numpad-label">@Label</span>
+            }
+            <div class="numpad-readout-row">
+                <span class="numpad-value">@FormatDisplayReadout()</span>
+                @if (!string.IsNullOrWhiteSpace(Suffix) && !IsPinMode)
+                {
+                    <span class="numpad-suffix">@Suffix</span>
+                }
+            </div>
+        </div>
+    }
+
+    @if (QuickSteps is { Count: > 0 } && !IsPinMode)
+    {
+        <div class="numpad-quick-row">
+            @foreach (var stepDelta in QuickSteps)
+            {
+                <Pill Variant="Pill.PillVariant.Neutral"
+                      Modifier="@(UIModifier.New.Weight(1))"
+                      Text="@FormatQuickStep(stepDelta)"
+                      OnClick="@(() => ApplyQuickStepAsync(stepDelta))" />
+            }
+        </div>
+    }
+
+    <div class="numpad-grid">
+        @foreach (var digit in _standardDigits)
+        {
+            <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                          Modifier="@BuildKeyModifier()"
+                          Text="@digit"
+                          OnClick="@(() => AppendDigitAsync(digit))" />
+        }
+
+        @if (AllowDecimal && !IsPinMode)
+        {
+            <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                          Variant="ActionButton.ButtonVariant.Outline"
+                          Modifier="@BuildSecondaryKeyModifier()"
+                          Text="."
+                          OnClick="AppendDecimalAsync" />
+        }
+        else if (AllowNegative && !IsPinMode)
+        {
+            <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                          Variant="ActionButton.ButtonVariant.Outline"
+                          Modifier="@BuildSecondaryKeyModifier()"
+                          Text="@InputDefaults.Symbols.PlusMinus"
+                          OnClick="ToggleSignAsync" />
+        }
+        else
+        {
+            <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                          Variant="ActionButton.ButtonVariant.Outline"
+                          Modifier="@BuildDangerKeyModifier()"
+                          Text="C"
+                          OnClick="ClearAsync" />
+        }
+
+        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                      Modifier="@BuildKeyModifier()"
+                      Text="0"
+                      OnClick="@(() => AppendDigitAsync("0"))" />
+
+        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                      Variant="ActionButton.ButtonVariant.Outline"
+                      Modifier="@BuildSecondaryKeyModifier()"
+                      Text="@InputDefaults.Symbols.Backspace"
+                      aria-label="Backspace"
+                      OnClick="BackspaceAsync" />
+    </div>
+
+    <div class="numpad-footer">
+        <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                      Variant="ActionButton.ButtonVariant.Ghost"
+                      Modifier="@(UIModifier.New.Weight(1).Padding(12, 16).BaseColor("var(--ui-danger)"))"
+                      Text="Clear"
+                      OnClick="ClearAsync" />
+
+        @if (OnConfirm.HasDelegate)
+        {
+            <ActionButton PressEffect="ButtonPressEffect.InwardScale"
+                          Modifier="@(UIModifier.New.Weight(2).Padding(12, 20).BaseColor("var(--ui-success)").TextColor("#111111"))"
+                          Text="@ConfirmText"
+                          OnClick="ConfirmAsync" />
+        }
+    </div>
+</Window>
+
+@code {
+    private static readonly string[] _standardDigits = ["7", "8", "9", "4", "5", "6", "1", "2", "3"];
+
+    [Parameter] public TValue Value { get; set; } = TValue.Zero;
+    [Parameter] public EventCallback<TValue> ValueChanged { get; set; }
+    [Parameter] public TValue? Min { get; set; }
+    [Parameter] public TValue? Max { get; set; }
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Suffix { get; set; }
+    [Parameter] public bool ShowDisplayScreen { get; set; } = true;
+    [Parameter] public bool AllowDecimal { get; set; } = true;
+    [Parameter] public bool AllowNegative { get; set; }
+    [Parameter] public bool IsPinMode { get; set; }
+    [Parameter] public int MaxPinLength { get; set; } = 6;
+    [Parameter] public List<TValue>? QuickSteps { get; set; }
+    [Parameter] public string ConfirmText { get; set; } = "Enter \u21B5";
+    [Parameter] public EventCallback<TValue> OnConfirm { get; set; }
+
+    private string _rawBuffer = "0";
+    private TValue _lastSyncedValue = TValue.Zero;
+
+    protected override void OnParametersSet()
+    {
+        if (!EqualityComparer<TValue>.Default.Equals(Value, _lastSyncedValue))
+        {
+            _lastSyncedValue = Value;
+            _rawBuffer = Value.ToString(null, CultureInfo.InvariantCulture);
+        }
+    }
+
+    private UIModifier BuildContainerModifier() => UIModifier.Empty
+        .Width(ModifierOrEmpty.WidthValue ?? "290px")
+        .Padding(ModifierOrEmpty.PaddingValue ?? "1rem")
+        .Gap("0.65rem")
+        .Background(ModifierOrEmpty.BackgroundValue ?? "var(--ui-bg-surface)")
+        .BorderColor(ModifierOrEmpty.BorderColorValue ?? "var(--ui-border)")
+        .BorderRadius(ModifierOrEmpty.BorderRadiusValue ?? "var(--ui-radius-lg)")
+        .RawStyle(ModifierOrEmpty.BuildFrameExtras())
+        .Class(ModifierClass);
+
+    private UIModifier BuildKeyModifier() => UIModifier.Empty
+        .FillMaxWidth()
+        .MinHeight("3.25rem")
+        .Padding("0.65rem", "0")
+        .FontSize("1.2rem")
+        .BaseColor(ModifierOrEmpty.BaseColorValue ?? "var(--ui-bg-elevated)")
+        .TextColor(ModifierOrEmpty.TextColorValue ?? "var(--ui-text)")
+        .PressScale(0.91);
+
+    private UIModifier BuildSecondaryKeyModifier() => UIModifier.Empty
+        .FillMaxWidth()
+        .MinHeight("3.25rem")
+        .Padding("0.65rem", "0")
+        .FontSize("1.15rem")
+        .BaseColor(ModifierOrEmpty.AccentColorValue ?? "var(--ui-accent)")
+        .TextColor("var(--ui-text)")
+        .PressScale(0.91);
+
+    private UIModifier BuildDangerKeyModifier() => UIModifier.Empty
+        .FillMaxWidth()
+        .MinHeight("3.25rem")
+        .Padding("0.65rem", "0")
+        .FontSize("1.1rem")
+        .BaseColor("var(--ui-danger)")
+        .TextColor("var(--ui-text)")
+        .PressScale(0.91);
+
+    private string FormatDisplayReadout()
+    {
+        if (IsPinMode)
+        {
+            var pinChars = _rawBuffer == "0" ? 0 : _rawBuffer.Length;
+            return pinChars == 0 ? "\u2022\u2022\u2022\u2022" : new string('\u25CF', pinChars);
+        }
+        return string.IsNullOrEmpty(_rawBuffer) ? "0" : _rawBuffer;
+    }
+
+    private static string FormatQuickStep(TValue delta) =>
+        delta >= TValue.Zero
+            ? $"+{delta.ToString(null, CultureInfo.InvariantCulture)}"
+            : delta.ToString(null, CultureInfo.InvariantCulture);
+
+    private async Task AppendDigitAsync(string digit)
+    {
+        if (IsPinMode && _rawBuffer.Length >= MaxPinLength && _rawBuffer != "0")
+            return;
+
+        _rawBuffer = _rawBuffer == "0" ? digit : _rawBuffer + digit;
+        await ParseAndCommitBufferAsync();
+    }
+
+    private async Task AppendDecimalAsync()
+    {
+        if (!AllowDecimal || _rawBuffer.Contains('.'))
+            return;
+
+        _rawBuffer = string.IsNullOrEmpty(_rawBuffer) ? "0." : _rawBuffer + ".";
+        await ParseAndCommitBufferAsync();
+    }
+
+    private async Task ToggleSignAsync()
+    {
+        if (!AllowNegative || _rawBuffer == "0")
+            return;
+
+        _rawBuffer = _rawBuffer.StartsWith('-') ? _rawBuffer[1..] : "-" + _rawBuffer;
+        await ParseAndCommitBufferAsync();
+    }
+
+    private async Task BackspaceAsync()
+    {
+        if (_rawBuffer.Length <= 1 || (_rawBuffer.Length == 2 && _rawBuffer.StartsWith('-')))
+            _rawBuffer = "0";
+        else
+            _rawBuffer = _rawBuffer[..^1];
+
+        await ParseAndCommitBufferAsync();
+    }
+
+    private async Task ClearAsync()
+    {
+        _rawBuffer = "0";
+        await CommitValueAsync(TValue.Zero);
+    }
+
+    private async Task ApplyQuickStepAsync(TValue delta)
+    {
+        var target = Value + delta;
+        await CommitValueAsync(target);
+        _rawBuffer = Value.ToString(null, CultureInfo.InvariantCulture);
+    }
+
+    private async Task ParseAndCommitBufferAsync()
+    {
+        var parseTarget = _rawBuffer.EndsWith('.') ? _rawBuffer[..^1] : _rawBuffer;
+        if (TValue.TryParse(parseTarget, CultureInfo.InvariantCulture, out var parsed))
+            await CommitValueAsync(parsed);
+    }
+
+    private async Task CommitValueAsync(TValue proposed)
+    {
+        if (Min.HasValue && proposed < Min.Value)
+            proposed = Min.Value;
+        if (Max.HasValue && proposed > Max.Value)
+            proposed = Max.Value;
+
+        Value = proposed;
+        _lastSyncedValue = proposed;
+        await ValueChanged.InvokeAsync(Value);
+    }
+
+    private async Task ConfirmAsync() =>
+        await OnConfirm.InvokeAsync(Value);
+}

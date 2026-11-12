@@ -1,0 +1,89 @@
+.ui-tooltip-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tooltip-touch-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1199;
+    background: transparent;
+}
+
+.tooltip-trigger {
+    display: inline-flex;
+    align-items: center;
+}
+
+.tooltip-bubble {
+    position: absolute;
+    z-index: 1200;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45));
+}
+
+.tooltip-text {
+    color: var(--ui-text, #ffffff);
+    font-size: 0.78rem;
+    font-weight: 500;
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+.ui-tooltip-wrapper:hover .tooltip-bubble,
+.ui-tooltip-wrapper:focus-within .tooltip-bubble,
+.ui-tooltip-wrapper.touch-open .tooltip-bubble {
+    opacity: 1;
+}
+
+.pos-top .tooltip-bubble {
+    bottom: calc(100% + 0.45rem);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+}
+
+.pos-top:hover .tooltip-bubble,
+.pos-top:focus-within .tooltip-bubble,
+.pos-top.touch-open .tooltip-bubble {
+    transform: translateX(-50%) translateY(0);
+}
+
+.pos-bottom .tooltip-bubble {
+    top: calc(100% + 0.45rem);
+    left: 50%;
+    transform: translateX(-50%) translateY(-4px);
+}
+
+.pos-bottom:hover .tooltip-bubble,
+.pos-bottom:focus-within .tooltip-bubble,
+.pos-bottom.touch-open .tooltip-bubble {
+    transform: translateX(-50%) translateY(0);
+}
+
+.pos-left .tooltip-bubble {
+    right: calc(100% + 0.45rem);
+    top: 50%;
+    transform: translateY(-50%) translateX(4px);
+}
+
+.pos-left:hover .tooltip-bubble,
+.pos-left:focus-within .tooltip-bubble,
+.pos-left.touch-open .tooltip-bubble {
+    transform: translateY(-50%) translateX(0);
+}
+
+.pos-right .tooltip-bubble {
+    left: calc(100% + 0.45rem);
+    top: 50%;
+    transform: translateY(-50%) translateX(-4px);
+}
+
+.pos-right:hover .tooltip-bubble,
+.pos-right:focus-within .tooltip-bubble,
+.pos-right.touch-open .tooltip-bubble {
+    transform: translateY(-50%) translateX(0);
+}

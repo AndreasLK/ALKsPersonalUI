@@ -1,0 +1,169 @@
+﻿@inherits UIComponentBase
+
+<div class="@BuildPlanetCssClasses()" style="@BuildPlanetInlineStyles()" @attributes="AdditionalAttributes">
+    @foreach (var surfaceFeature in _generatedSurfaceFeatures)
+    {
+        <div class="@(surfaceFeature.IsColonyBuilding ? "building-base" : "crater")"
+             style="@BuildSurfaceFeatureStyles(surfaceFeature, surfaceFeature.DiameterPercentage)">
+        </div>
+    }
+    <div class="planet-lighting"></div>
+    @foreach (var colonyBuilding in GetColonyBuildings())
+    {
+        <div class="building-light"
+             style="@BuildSurfaceFeatureStyles(colonyBuilding, WindowLightSize)">
+        </div>
+    }
+</div>
+
+@code {
+    private readonly List<PlanetarySurfaceFeature> _generatedSurfaceFeatures = new();
+
+    [CascadingParameter(Name = "GlobalScale")] public double Scale { get; set; } = LoaderDefaults.Mars.DefaultScale;
+    [CascadingParameter(Name = "FillParent")] public bool FillParent { get; set; }
+
+    [Parameter] public double PlanetSize { get; set; } = LoaderDefaults.Mars.DefaultPlanetSizePixels;
+    [Parameter] public double DayDuration { get; set; } = LoaderDefaults.Mars.DefaultDayDurationSeconds;
+    [Parameter] public int MinFeatures { get; set; } = LoaderDefaults.Mars.DefaultMinFeatures;
+    [Parameter] public int MaxFeatures { get; set; } = LoaderDefaults.Mars.DefaultMaxFeatures;
+    [Parameter] public double ColonyProbability { get; set; } = LoaderDefaults.Mars.DefaultColonyProbability;
+    [Parameter] public double ColonySize { get; set; } = LoaderDefaults.Mars.DefaultColonySizePercent;
+    [Parameter] public double MinCraterSize { get; set; } = LoaderDefaults.Mars.DefaultMinCraterSizePercent;
+    [Parameter] public double MaxCraterSize { get; set; } = LoaderDefaults.Mars.DefaultMaxCraterSizePercent;
+    [Parameter] public double WindowLightSize { get; set; } = LoaderDefaults.Mars.DefaultWindowLightSizePercent;
+    [Parameter] public string PlanetColor { get; set; } = LoaderDefaults.Mars.DefaultPlanetColor;
+    [Parameter] public string NightShadowColor { get; set; } = LoaderDefaults.Mars.DefaultNightShadowColor;
+    [Parameter] public string CraterColor { get; set; } = LoaderDefaults.Mars.DefaultCraterColor;
+    [Parameter] public string CraterRimColor { get; set; } = LoaderDefaults.Mars.DefaultCraterRimColor;
+    [Parameter] public string BuildingDayColor { get; set; } = LoaderDefaults.Mars.DefaultBuildingDayColor;
+    [Parameter] public string BuildingNightColor { get; set; } = LoaderDefaults.Mars.DefaultBuildingNightColor;
+    [Parameter] public string WindowLightColor { get; set; } = LoaderDefaults.Mars.DefaultWindowLightColor;
+    [Parameter] public string WindowGlowColor { get; set; } = LoaderDefaults.Mars.DefaultWindowGlowColor;
+
+    protected override void OnInitialized()
+    {
+        var randomGenerator = new Random();
+        var targetFeatureCount = randomGenerator.Next(MinFeatures, MaxFeatures + 1);
+        var candidateFeatures = Enumerable
+            .Range(0, LoaderDefaults.Mars.CandidateGenerationPoolSize)
+            .Select(_ => GenerateRandomCandidateFeature(randomGenerator));
+
+        foreach (var candidateFeature in candidateFeatures)
+        {
+            if (_generatedSurfaceFeatures.Count >= targetFeatureCount)
+                break;
+
+            TryAddNonOverlappingFeature(candidateFeature);
+        }
+    }
+
+    private string BuildPlanetCssClasses() => new CssBuilder()
+        .Add("planet")
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private IEnumerable<PlanetarySurfaceFeature> GetColonyBuildings() =>
+        _generatedSurfaceFeatures.Where(feature => feature.IsColonyBuilding);
+
+    private void TryAddNonOverlappingFeature(PlanetarySurfaceFeature candidateFeature)
+    {
+        var overlapsAnyExistingFeature = _generatedSurfaceFeatures.Any(
+            existingFeature => AreFeaturesOverlapping(candidateFeature, existingFeature));
+
+        if (!overlapsAnyExistingFeature)
+            _generatedSurfaceFeatures.Add(candidateFeature);
+    }
+
+    private static bool AreFeaturesOverlapping(
+        PlanetarySurfaceFeature firstFeature,
+        PlanetarySurfaceFeature secondFeature)
+    {
+        var horizontalDistance = (firstFeature.UnitCircleX - secondFeature.UnitCircleX)
+            * LoaderDefaults.Mars.PlanetVirtualRadiusPercent;
+        var verticalDistance = (firstFeature.UnitCircleY - secondFeature.UnitCircleY)
+            * LoaderDefaults.Mars.PlanetVirtualRadiusPercent;
+
+        var distanceBetweenCenters = GeometryMath.CalculateEuclideanDistance(horizontalDistance, verticalDistance);
+        var combinedRadiiWithPadding =
+            (firstFeature.DiameterPercentage / GeometryMath.HalfDivisor) +
+            (secondFeature.DiameterPercentage / GeometryMath.HalfDivisor) +
+            LoaderDefaults.Mars.MinimumFeatureSeparationPercent;
+
+        return distanceBetweenCenters < combinedRadiiWithPadding;
+    }
+
+    private PlanetarySurfaceFeature GenerateRandomCandidateFeature(Random randomGenerator)
+    {
+        var isColonyBuilding = randomGenerator.NextDouble() < ColonyProbability;
+        var diameterPercent = GenerateFeatureDiameter(isColonyBuilding, randomGenerator);
+        var distanceFromCenterFraction = GenerateRadialDistanceFraction(isColonyBuilding, randomGenerator);
+        var angleInRadians = randomGenerator.NextDouble() * GeometryMath.FullCircleRadians;
+
+        var unitCircleX = distanceFromCenterFraction * Math.Cos(angleInRadians);
+        var unitCircleY = distanceFromCenterFraction * Math.Sin(angleInRadians);
+
+        return new PlanetarySurfaceFeature(
+            IsColonyBuilding: isColonyBuilding,
+            DiameterPercentage: diameterPercent,
+            LeftPercentage: GeometryMath.CenterPercentage + (unitCircleX * LoaderDefaults.Mars.PlanetVirtualRadiusPercent),
+            TopPercentage: GeometryMath.CenterPercentage + (unitCircleY * LoaderDefaults.Mars.PlanetVirtualRadiusPercent),
+            AngleInDegrees: GeometryMath.RadiansToDegrees(angleInRadians),
+            SphericalForeshorteningScale: CalculateSphericalForeshortening(distanceFromCenterFraction),
+            UnitCircleX: unitCircleX,
+            UnitCircleY: unitCircleY
+        );
+    }
+
+    private double GenerateFeatureDiameter(bool isColonyBuilding, Random randomGenerator) =>
+        isColonyBuilding
+            ? ColonySize
+            : MinCraterSize + (randomGenerator.NextDouble() * (MaxCraterSize - MinCraterSize));
+
+    private static double GenerateRadialDistanceFraction(bool isColonyBuilding, Random randomGenerator) =>
+        isColonyBuilding
+            ? LoaderDefaults.Mars.ColonyMinRadialFraction + (randomGenerator.NextDouble() * LoaderDefaults.Mars.ColonyRadialSpanFraction)
+            : Math.Sqrt(randomGenerator.NextDouble()) * LoaderDefaults.Mars.CraterMaxRadialFraction;
+
+    private static double CalculateSphericalForeshortening(double distanceFromCenterFraction) =>
+        Math.Sqrt(GeometryMath.NormalizedMax - (distanceFromCenterFraction * distanceFromCenterFraction));
+
+    private string BuildPlanetInlineStyles() => new StyleBuilder()
+        .Add("--planet-size", FillParent ? LoaderDefaults.Mars.ResponsivePlanetSize : $"{GeometryMath.FormatInvariant(PlanetSize * Scale)}px")
+        .Add("--day-duration", $"{GeometryMath.FormatInvariant(DayDuration)}s")
+        .Add("--color-planet-core", PlanetColor)
+        .Add("--color-night-shadow", NightShadowColor)
+        .Add("--color-crater", CraterColor)
+        .Add("--color-crater-rim", CraterRimColor)
+        .Add("--color-building-day", BuildingDayColor)
+        .Add("--color-building-night", BuildingNightColor)
+        .Add("--color-window-core", WindowLightColor)
+        .Add("--color-window-glow", WindowGlowColor)
+        .AddRaw(ModifierStyle)
+        .Build();
+
+    private static string BuildSurfaceFeatureStyles(PlanetarySurfaceFeature feature, double sizePercentage)
+    {
+        var formattedSize = GeometryMath.FormatInvariant(sizePercentage);
+        var formattedAngle = GeometryMath.FormatInvariant(feature.AngleInDegrees);
+        var formattedSquash = GeometryMath.FormatInvariant(feature.SphericalForeshorteningScale);
+
+        return new StyleBuilder()
+            .Add("width", $"{formattedSize}%")
+            .Add("height", $"{formattedSize}%")
+            .Add("left", $"{GeometryMath.FormatInvariant(feature.LeftPercentage)}%")
+            .Add("top", $"{GeometryMath.FormatInvariant(feature.TopPercentage)}%")
+            .Add("--feature-angle", formattedAngle)
+            .Add("transform", $"translate(-50%, -50%) rotate({formattedAngle}deg) scaleX({formattedSquash})")
+            .Build();
+    }
+
+    private sealed record PlanetarySurfaceFeature(
+        bool IsColonyBuilding,
+        double DiameterPercentage,
+        double LeftPercentage,
+        double TopPercentage,
+        double AngleInDegrees,
+        double SphericalForeshorteningScale,
+        double UnitCircleX,
+        double UnitCircleY);
+}

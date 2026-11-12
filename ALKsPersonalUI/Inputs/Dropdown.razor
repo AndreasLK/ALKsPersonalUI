@@ -1,0 +1,155 @@
+﻿@typeparam TItem
+@inherits UIComponentBase
+
+<div class="@BuildContainerCssClasses()" style="@BuildContainerStyles()" @attributes="AdditionalAttributes">
+    @if (_isMenuOpen)
+    {
+        <div class="select-backdrop" @onclick="CloseDropdownMenu"></div>
+    }
+
+    <button type="button"
+            class="@BuildTriggerButtonCssClasses()"
+            disabled="@Disabled"
+            aria-haspopup="listbox"
+            aria-expanded="@_isMenuOpen"
+            aria-label="@AriaLabel"
+            @onclick="ToggleDropdownMenu"
+            @onkeydown="HandleKeyboardNavigationAsync">
+        <span class="select-label">@FormatItemDisplayText(CurrentValue)</span>
+        <span class="select-chevron" aria-hidden="true">@InputDefaults.Dropdown.ChevronSymbol</span>
+    </button>
+
+    @if (ShouldRenderMenuItems)
+    {
+        <ul class="select-menu" role="listbox">
+            @foreach (var optionItem in Items!)
+            {
+                var isOptionSelected = IsOptionCurrentlySelected(optionItem);
+                <li role="option"
+                    aria-selected="@isOptionSelected"
+                    class="@BuildOptionCssClasses(isOptionSelected)"
+                    @onclick="() => SelectOptionAsync(optionItem)">
+                    <span>@FormatItemDisplayText(optionItem)</span>
+                    @if (isOptionSelected)
+                    {
+                        <span class="option-check" aria-hidden="true">
+                            @InputDefaults.Dropdown.SelectedCheckmarkSymbol
+                        </span>
+                    }
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    [Parameter] public IEnumerable<TItem>? Items { get; set; }
+    [Parameter] public TItem? Value { get; set; }
+    [Parameter] public EventCallback<TItem?> ValueChanged { get; set; }
+    [Parameter] public TItem? SelectedValue { get; set; }
+    [Parameter] public EventCallback<TItem?> SelectedValueChanged { get; set; }
+    [Parameter] public Func<TItem, string>? TextSelector { get; set; }
+    [Parameter] public string Placeholder { get; set; } = InputDefaults.Dropdown.DefaultPlaceholder;
+    [Parameter] public string? AriaLabel { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+
+    private bool _isMenuOpen;
+    private TItem? CurrentValue => Value ?? SelectedValue;
+    private bool ShouldRenderMenuItems => _isMenuOpen && Items is not null;
+
+    private string BuildContainerCssClasses() => new CssBuilder()
+        .Add("ui-select-container")
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private string BuildContainerStyles() => new StyleBuilder()
+        .Add("--_dd-width", ModifierOrEmpty.WidthValue ?? InputDefaults.Dropdown.DefaultWidth)
+        .Add("--_dd-bg", ModifierOrEmpty.BackgroundValue ?? "var(--ui-bg-surface)")
+        .Add("--_dd-menu-bg", "var(--ui-bg-elevated)")
+        .Add("--_dd-border", ModifierOrEmpty.BorderColorValue ?? "var(--ui-border)")
+        .Add("--_dd-radius", ModifierOrEmpty.BorderRadiusValue ?? "var(--ui-radius-md)")
+        .Add("--_dd-text", ModifierOrEmpty.TextColorValue ?? "var(--ui-text)")
+        .Add("--_dd-accent", ModifierOrEmpty.AccentColorValue ?? "var(--ui-accent)")
+        .AddRaw(ModifierOrEmpty.BuildFrameExtras())
+        .Build();
+
+    private string BuildTriggerButtonCssClasses() => new CssBuilder()
+        .Add("select-trigger")
+        .Add("open", when: _isMenuOpen)
+        .Build();
+
+    private static string BuildOptionCssClasses(bool isSelected) => new CssBuilder()
+        .Add("select-option")
+        .Add("selected", when: isSelected)
+        .Build();
+
+    private void ToggleDropdownMenu()
+    {
+        if (Disabled)
+            return;
+
+        _isMenuOpen = !_isMenuOpen;
+    }
+
+    private void CloseDropdownMenu() => _isMenuOpen = false;
+
+    private async Task SelectOptionAsync(TItem selectedOption)
+    {
+        Value = selectedOption;
+        SelectedValue = selectedOption;
+        _isMenuOpen = false;
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(selectedOption);
+
+        if (SelectedValueChanged.HasDelegate)
+            await SelectedValueChanged.InvokeAsync(selectedOption);
+    }
+
+    private bool IsOptionCurrentlySelected(TItem candidateOption) =>
+        EqualityComparer<TItem>.Default.Equals(candidateOption, CurrentValue);
+
+    private string FormatItemDisplayText(TItem? item)
+    {
+        if (item is null)
+            return Placeholder;
+
+        if (TextSelector is not null)
+            return TextSelector(item);
+
+        return item.ToString() ?? Placeholder;
+    }
+
+    private async Task HandleKeyboardNavigationAsync(KeyboardEventArgs keyboardEvent)
+    {
+        if (KeyboardKeys.IsEscape(keyboardEvent))
+        {
+            CloseDropdownMenu();
+            return;
+        }
+
+        if (keyboardEvent.Key == KeyboardKeys.ArrowDown)
+            await StepSelectionByOffsetAsync(InputDefaults.Dropdown.NextItemStep);
+
+        if (keyboardEvent.Key == KeyboardKeys.ArrowUp)
+            await StepSelectionByOffsetAsync(InputDefaults.Dropdown.PreviousItemStep);
+    }
+
+    private async Task StepSelectionByOffsetAsync(int indexOffset)
+    {
+        if (Items is null)
+            return;
+
+        var availableOptions = Items.ToList();
+        if (availableOptions.Count == 0)
+            return;
+
+        var currentIndex = CurrentValue is null
+            ? InputDefaults.Dropdown.NoSelectionIndex
+            : availableOptions.IndexOf(CurrentValue);
+
+        var lastValidIndex = availableOptions.Count - 1;
+        var nextIndex = Math.Clamp(currentIndex + indexOffset, 0, lastValidIndex);
+        await SelectOptionAsync(availableOptions[nextIndex]);
+    }
+}

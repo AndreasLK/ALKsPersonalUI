@@ -1,0 +1,17 @@
+.ui-divider {
+    background-color: var(--_div-color, var(--ui-border));
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+    .ui-divider.horizontal {
+        width: 100%;
+        height: var(--_div-thickness, 1px);
+    }
+
+    .ui-divider.vertical {
+        width: var(--_div-thickness, 1px);
+        height: 100%;
+        min-height: 1rem;
+        align-self: stretch;
+    }

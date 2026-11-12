@@ -1,0 +1,222 @@
+﻿@inherits UIComponentBase
+@inject UIThemeService ThemeService
+
+<div class="@BuildWrapperCssClasses()" style="@BuildWrapperStyles()" @attributes="AdditionalAttributes">
+    @if (!string.IsNullOrWhiteSpace(Label))
+    {
+        <label class="input-label">@Label</label>
+    }
+
+    <Window Modifier="@BuildInnerWindowModifier()">
+        <input class="custom-input"
+               type="@ResolvedHtmlInputType"
+               readonly="@IsUsingTouchOverlay"
+               maxlength="@MaxLength"
+               placeholder="@Placeholder"
+               value="@_currentInputText"
+               @onpointerdown="HandleInputPointerDown"
+               @oninput="OnInputTextChangedAsync" />
+
+        @if (ShowClearButton && !string.IsNullOrEmpty(_currentInputText))
+        {
+            <button type="button"
+                    class="input-icon-btn"
+                    @onclick="ClearInputAsync"
+                    aria-label="Clear text">
+                @InputDefaults.TextInput.ClearSymbol
+            </button>
+        }
+
+        @if (IsPassword)
+        {
+            <button type="button"
+                    class="password-toggle"
+                    @onclick="TogglePasswordVisibility"
+                    aria-label="@PasswordToggleAriaLabel">
+                @if (_isPasswordRevealed)
+                {
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                    </svg>
+                }
+                else
+                {
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                }
+            </button>
+        }
+
+        @if (ResolvedTouchMode != TouchInputMode.None)
+        {
+            <button type="button"
+                    class="input-icon-btn"
+                    @onclick="OpenKeyboardSheet"
+                    aria-label="Open screen keyboard">
+                @InputDefaults.TextInput.KeyboardSymbol
+            </button>
+        }
+    </Window>
+
+    @foreach (var validationErrorMessage in GetFailedValidationMessages())
+    {
+        <span class="input-error" role="alert" aria-live="polite">@validationErrorMessage</span>
+    }
+</div>
+
+<BottomSheet @bind-IsOpen="_isKeyboardOpen"
+             Title="@(Label ?? Placeholder ?? "Keyboard")"
+             MaxWidth="860px">
+    <ScreenKeyboard Value="@_currentInputText"
+                    ValueChanged="UpdateTextAndNotifyAsync"
+                    Setup="@KeyboardSetup"
+                    IsPassword="@(IsPassword && !_isPasswordRevealed)"
+                    MaxLength="@MaxLength"
+                    Placeholder="@(Placeholder ?? "Tap keys to type...")"
+                    OnSubmit="@(_ => _isKeyboardOpen = false)" />
+</BottomSheet>
+
+@code {
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public int MaxLength { get; set; } = InputDefaults.TextInput.DefaultMaxLength;
+    [Parameter] public List<ValidationRule>? Rules { get; set; }
+    [Parameter] public bool IsPassword { get; set; }
+    [Parameter] public bool ShowClearButton { get; set; } = true;
+    [Parameter] public TouchInputMode? TouchMode { get; set; }
+    [Parameter] public KeyboardSetup? KeyboardSetup { get; set; }
+
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+
+    [Parameter] public SecretString SecretValue { get; set; }
+    [Parameter] public EventCallback<SecretString> SecretValueChanged { get; set; }
+
+    private string _currentInputText = string.Empty;
+    private bool _isPasswordRevealed;
+    private bool _isKeyboardOpen;
+    private bool _isLastPointerTouch;
+
+    private TouchInputMode ResolvedTouchMode =>
+        TouchMode ?? ThemeService.Current.DefaultTouchInputMode;
+
+    private bool IsUsingTouchOverlay =>
+        ResolvedTouchMode == TouchInputMode.Always ||
+        (ResolvedTouchMode == TouchInputMode.Auto && _isLastPointerTouch);
+
+    private string ResolvedHtmlInputType =>
+        IsPassword && !_isPasswordRevealed ? "password" : "text";
+
+    private string PasswordToggleAriaLabel =>
+        _isPasswordRevealed ? "Hide password" : "Show password";
+
+    private UIModifier BuildInnerWindowModifier() => UIModifier.Empty
+        .FillMaxWidth()
+        .MinWidth(InputDefaults.TextInput.ContainerDimensionAuto)
+        .MinHeight(InputDefaults.TextInput.ContainerDimensionAuto)
+        .Row()
+        .AlignItems("center")
+        .Gap("0.5rem")
+        .Padding(ModifierOrEmpty.PaddingValue ?? InputDefaults.TextInput.ContainerPadding)
+        .Background(ModifierOrEmpty.BackgroundValue ?? WindowDefaults.DefaultBackground)
+        .BorderColor(ModifierOrEmpty.BorderColorValue ?? WindowDefaults.DefaultBorderColor)
+        .BorderRadius(ModifierOrEmpty.BorderRadiusValue ?? WindowDefaults.DefaultBorderRadius);
+
+    private string BuildWrapperCssClasses() => new CssBuilder()
+        .Add("input-wrapper")
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private string BuildWrapperStyles() => new StyleBuilder()
+        .Add("--_ti-width", ModifierOrEmpty.WidthValue ?? "fit-content")
+        .Add("--_ti-text", ModifierOrEmpty.TextColorValue ?? "var(--ui-text)")
+        .Add("--_ti-font-size", ModifierOrEmpty.FontSizeValue ?? "1rem")
+        .Add("--_ti-error", "var(--ui-danger)")
+        .AddRaw(ModifierOrEmpty.BuildFrameExtras())
+        .Build();
+
+    protected override void OnParametersSet()
+    {
+        if (!IsPassword || Value is not null)
+        {
+            var incomingText = Value ?? string.Empty;
+            if (incomingText != _currentInputText)
+                _currentInputText = incomingText;
+        }
+
+        var wasSecretResetExternally = IsPassword
+            && SecretValue.IsEmpty
+            && string.IsNullOrEmpty(Value)
+            && !string.IsNullOrEmpty(_currentInputText)
+            && !GetFailedValidationMessages().Any();
+
+        if (wasSecretResetExternally)
+            _currentInputText = string.Empty;
+    }
+
+    private void HandleInputPointerDown(PointerEventArgs e)
+    {
+        _isLastPointerTouch = e.PointerType is "touch" or "pen";
+        if (ResolvedTouchMode == TouchInputMode.Always ||
+            (ResolvedTouchMode == TouchInputMode.Auto && _isLastPointerTouch))
+        {
+            _isKeyboardOpen = true;
+        }
+    }
+
+    private void OpenKeyboardSheet() => _isKeyboardOpen = true;
+
+    private void TogglePasswordVisibility() =>
+        _isPasswordRevealed = !_isPasswordRevealed;
+
+    private Task ClearInputAsync() =>
+        UpdateTextAndNotifyAsync(string.Empty);
+
+    private Task OnInputTextChangedAsync(ChangeEventArgs changeEvent) =>
+        UpdateTextAndNotifyAsync(changeEvent.Value?.ToString() ?? string.Empty);
+
+    private async Task UpdateTextAndNotifyAsync(string? rawInputText)
+    {
+        _currentInputText = TruncateToMaxLength(rawInputText ?? string.Empty);
+        Value = _currentInputText;
+        await ValueChanged.InvokeAsync(Value);
+
+        if (!IsPassword)
+            return;
+
+        var passesAllValidationRules = !GetFailedValidationMessages().Any();
+        SecretValue = passesAllValidationRules
+            ? new SecretString(_currentInputText)
+            : new SecretString(string.Empty);
+
+        await SecretValueChanged.InvokeAsync(SecretValue);
+    }
+
+    private string TruncateToMaxLength(string text) =>
+        text.Length > MaxLength ? text[..MaxLength] : text;
+
+    private IEnumerable<string> GetFailedValidationMessages()
+    {
+        if (Rules is null || string.IsNullOrEmpty(_currentInputText))
+            return Enumerable.Empty<string>();
+
+        return Rules
+            .Where(validationRule => !DoesCurrentTextPassRule(validationRule))
+            .Select(validationRule => validationRule.ErrorMessage);
+    }
+
+    private bool DoesCurrentTextPassRule(ValidationRule validationRule)
+    {
+        try
+        {
+            return validationRule.IsValid(_currentInputText);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+}

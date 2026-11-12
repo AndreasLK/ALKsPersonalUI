@@ -1,0 +1,106 @@
+.data-table {
+    width: 100%;
+    max-width: 100%;
+    align-self: stretch;
+    border-collapse: collapse;
+    color: var(--ui-text, #ffffff);
+    font-family: inherit;
+    font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+    line-height: 1.5;
+    text-align: left;
+}
+
+    .data-table th,
+    .data-table td {
+        padding: 0.85rem 1.15rem;
+        border-bottom: 1px solid var(--ui-border, #333333);
+        vertical-align: middle;
+        overflow-wrap: anywhere;
+    }
+
+        .data-table th:first-child,
+        .data-table td:first-child {
+            width: 1%;
+            white-space: nowrap;
+            padding-left: 1.25rem;
+            padding-right: 0.85rem;
+        }
+
+        .data-table td:nth-child(3) {
+            white-space: nowrap;
+        }
+
+    .data-table th {
+        background-color: color-mix(in srgb, var(--ui-bg-surface, #2c2c2c), black 20%);
+        font-weight: 600;
+        font-size: 0.88em;
+        letter-spacing: 0.03em;
+        white-space: nowrap;
+    }
+
+    .data-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .data-table tbody tr:hover {
+        background-color: color-mix(in srgb, var(--ui-text, #ffffff), transparent 95%);
+    }
+
+    .data-table tbody tr:has(.checkbox-native:checked) {
+        background-color: rgba(0, 0, 0, 0.22);
+        opacity: 0.5;
+        filter: grayscale(100%);
+        transition: opacity 0.15s ease, filter 0.15s ease, background-color 0.15s ease;
+    }
+
+        .data-table tbody tr:has(.checkbox-native:checked):hover {
+            opacity: 0.68;
+        }
+
+.table-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.9rem 1.25rem;
+    width: 100%;
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--ui-border, #333333);
+    align-items: center;
+    align-self: stretch;
+}
+
+.sort-button {
+    background: transparent;
+    border: none;
+    padding: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.sort-icon {
+    font-size: 0.75em;
+    opacity: 0.6;
+}
+
+.sort-button:hover .sort-icon,
+.sort-button:focus-visible .sort-icon {
+    opacity: 1;
+}
+
+.quick-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    width: 100%;
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--ui-border, #333333);
+    align-self: stretch;
+}

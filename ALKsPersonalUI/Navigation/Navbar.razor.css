@@ -1,0 +1,57 @@
+.ui-navbar-wrapper {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 0.75rem;
+}
+
+.navbar-inner {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.navbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: var(--ui-text, #ffffff);
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.navbar-links-desktop {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.navbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.navbar-burger-mobile {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .navbar-links-desktop {
+        display: none;
+    }
+
+    .navbar-burger-mobile {
+        display: inline-flex;
+    }
+}

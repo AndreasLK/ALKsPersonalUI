@@ -1,0 +1,124 @@
+﻿@inherits SliderBase
+
+<div class="@BuildRootCssClasses()"
+     style="@BuildRootStyles()"
+     @attributes="AdditionalAttributes">
+
+    <div class="radio-scale">
+        <svg viewBox="@SliderDefaults.RotaryDial.SvgViewBox" class="scale-graphics">
+            @for (int tickIndex = 0; tickIndex <= TotalTicks; tickIndex++)
+            {
+                double tickValue = CalculateTickValue(tickIndex);
+                string tickRotationTransform = BuildTickRotationTransform(tickIndex);
+
+                <g transform="@tickRotationTransform">
+                    @if (TickTemplate is not null)
+                    {
+                        @TickTemplate(tickValue)
+                    }
+                    else
+                    {
+                        <line x1="@SliderDefaults.RotaryDial.SvgCenterCoordinate"
+                              y1="@SliderDefaults.RotaryDial.TickOuterY"
+                              x2="@SliderDefaults.RotaryDial.SvgCenterCoordinate"
+                              y2="@SliderDefaults.RotaryDial.TickInnerY"
+                              stroke="var(--_rs-tick-color, currentColor)"
+                              stroke-width="@SliderDefaults.RotaryDial.TickStrokeWidth" />
+                    }
+                </g>
+            }
+        </svg>
+    </div>
+
+    <button class="@BuildDialButtonCssClasses()"
+            type="button"
+            role="slider"
+            aria-valuemin="@MinValue"
+            aria-valuemax="@MaxValue"
+            aria-valuenow="@SelectedValue"
+            @onkeydown="HandleKeyDown"
+            @onwheel="HandleMouseWheel"
+            @onwheel:preventDefault
+            @onpointerdown="HandlePointerDown"
+            @onpointermove="HandlePointerMove"
+            @onpointerup="HandlePointerUp"
+            @onpointercancel="HandlePointerUp">
+
+        <span class="dial-front">
+            <span class="@BuildIndicatorCssClasses()"
+                  style="--_rs-rotation: @(GeometryMath.FormatInvariant(CurrentRotationDegrees))deg;"></span>
+
+            @if (ShowSelectedValue)
+            {
+                <span class="dial-readout">@SelectedValue@SelectionUnit</span>
+            }
+
+            <span class="dial-hit-area" onpointerdown="this.setPointerCapture(event.pointerId)"></span>
+        </span>
+    </button>
+</div>
+
+@code {
+    [Parameter] public double DialPixelSize { get; set; } = 250.0;
+    [Parameter] public int MaxAngle { get; set; } = SliderDefaults.RotaryDial.DefaultMaxAngleDegrees;
+    [Parameter] public double? CustomStartAngle { get; set; }
+
+    private double StartingAngleOffsetDegrees =>
+        CustomStartAngle ?? -(MaxAngle / GeometryMath.HalfDivisor);
+
+    private double DegreesPerTick =>
+        MaxAngle / (double)Math.Max(1, TotalTicks);
+
+    private double CurrentRotationDegrees =>
+        StartingAngleOffsetDegrees + (ValuePercentage * MaxAngle);
+
+    private double CalculateTickValue(int tickIndex) =>
+        MinValue + (tickIndex * Step);
+
+    private string BuildRootCssClasses() => new CssBuilder()
+        .Add("radio-slider")
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private string BuildRootStyles() => new StyleBuilder()
+        .Add("--_rs-size", ModifierOrEmpty.WidthValue ?? $"{GeometryMath.FormatInvariant(DialPixelSize)}px")
+        .AddRaw(ModifierOrEmpty.BuildFrameExtras())
+        .Build();
+
+    private string BuildTickRotationTransform(int tickIndex)
+    {
+        var tickAngleDegrees = StartingAngleOffsetDegrees + (tickIndex * DegreesPerTick);
+        var formattedAngle = GeometryMath.FormatInvariant(tickAngleDegrees);
+        var center = GeometryMath.FormatInvariant(SliderDefaults.RotaryDial.SvgCenterCoordinate);
+        return $"rotate({formattedAngle}, {center}, {center})";
+    }
+
+    private string BuildDialButtonCssClasses() => new CssBuilder()
+        .Add("radio-button")
+        .Add("dragging", when: IsDragging)
+        .Build();
+
+    private string BuildIndicatorCssClasses() => new CssBuilder()
+        .Add("dial-indicator")
+        .Add("dragging", when: IsDragging)
+        .Build();
+
+    protected override async Task UpdateValueFromPointer(PointerEventArgs pointerEvent)
+    {
+        if (!HasValidRange || MaxAngle <= 0)
+            return;
+
+        var buttonRadius = (DialPixelSize * 0.70) / GeometryMath.HalfDivisor;
+        var deltaX = pointerEvent.OffsetX - buttonRadius;
+        var deltaY = pointerEvent.OffsetY - buttonRadius;
+
+        var pointerAngleDegrees = GeometryMath.CalculatePointerAngleInDegrees(deltaX, deltaY);
+        var normalizedProgress = Math.Clamp(
+            (pointerAngleDegrees - StartingAngleOffsetDegrees) / MaxAngle,
+            GeometryMath.NormalizedMin,
+            GeometryMath.NormalizedMax);
+
+        var targetValue = MinValue + (normalizedProgress * ValueRange);
+        await UpdateSelectedValue(targetValue);
+    }
+}

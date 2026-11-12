@@ -1,0 +1,88 @@
+﻿@inherits UIComponentBase
+
+<div class="@ModifierClass" style="@BuildLiquidWrapperStyles()" @attributes="AdditionalAttributes">
+    <div class="spinner-container" style="@BuildOrbitalSystemStyles()">
+        <div class="planetary-system">
+            @if (HasCenterPayload)
+            {
+                <div class="payload-stabilizer">
+                    <CascadingValue TValue="double" Value="Scale" Name="GlobalScale">
+                        <CascadingValue TValue="bool" Value="FillParent" Name="FillParent">
+                            @ChildContent
+                        </CascadingValue>
+                    </CascadingValue>
+                </div>
+            }
+
+            <div class="orbit-plane">
+                @for (int satelliteIndex = 0; satelliteIndex < SatelliteCount; satelliteIndex++)
+                {
+                    <div class="sat-orbit" style="@BuildSatelliteDelayStyle(satelliteIndex)">
+                        <div class="sat-translate">
+                            <div class="sat-counter">
+                                <div class="sat-model"></div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (HasLoadingText)
+        {
+            <span class="spinner-text">@LoadingText</span>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string LoadingText { get; set; } = LoaderDefaults.Orbital.DefaultLoadingText;
+    [Parameter] public bool FillParent { get; set; }
+    [Parameter] public double Scale { get; set; } = LoaderDefaults.Orbital.DefaultScale;
+    [Parameter] public int SystemSize { get; set; } = LoaderDefaults.Orbital.DefaultSystemSizePixels;
+    [Parameter] public double OrbitTilt { get; set; } = LoaderDefaults.Orbital.DefaultOrbitTiltDegrees;
+    [Parameter] public int SatelliteCount { get; set; } = LoaderDefaults.Orbital.DefaultSatelliteCount;
+    [Parameter] public int SatelliteSize { get; set; } = LoaderDefaults.Orbital.DefaultSatelliteSizePixels;
+    [Parameter] public double OrbitDuration { get; set; } = LoaderDefaults.Orbital.DefaultOrbitDurationSeconds;
+    [Parameter] public double PrecessionDuration { get; set; } = LoaderDefaults.Orbital.DefaultPrecessionDurationSeconds;
+    [Parameter] public string BaseColor { get; set; } = LoaderDefaults.Orbital.DefaultBaseColor;
+    [Parameter] public string TintBlueshift { get; set; } = LoaderDefaults.Orbital.DefaultBlueshiftColor;
+    [Parameter] public string TintRedshift { get; set; } = LoaderDefaults.Orbital.DefaultRedshiftColor;
+    [Parameter] public int ShiftIntensity { get; set; } = LoaderDefaults.Orbital.DefaultShiftIntensityPercent;
+
+    private bool HasCenterPayload => ChildContent is not null;
+    private bool HasLoadingText => !string.IsNullOrWhiteSpace(LoadingText);
+
+    private string ResolvedSystemSizeCss => FillParent
+        ? LoaderDefaults.Orbital.ResponsiveSystemSize
+        : $"{GeometryMath.FormatInvariant(SystemSize * Scale)}px";
+
+    private string ResolvedSatelliteSizeCss => FillParent
+        ? LoaderDefaults.Orbital.ResponsiveSatelliteSize
+        : $"{GeometryMath.FormatInvariant(SatelliteSize * Scale)}px";
+
+    private string BuildLiquidWrapperStyles() => new StyleBuilder()
+        .AddIf(FillParent, "container-type", "size")
+        .AddIf(FillParent, "width", "100%")
+        .AddIf(FillParent, "height", "100%")
+        .AddIf(FillParent, "display", "flex")
+        .AddIf(FillParent, "align-items", "center")
+        .AddIf(FillParent, "justify-content", "center")
+        .AddRaw(ModifierStyle)
+        .Build();
+
+    private string BuildOrbitalSystemStyles() => new StyleBuilder()
+        .Add("--system-size", ResolvedSystemSizeCss)
+        .Add("--orbit-tilt", $"{GeometryMath.FormatInvariant(OrbitTilt)}deg")
+        .Add("--sat-size", ResolvedSatelliteSizeCss)
+        .Add("--orbit-duration", $"{GeometryMath.FormatInvariant(OrbitDuration)}s")
+        .Add("--precession-duration", $"{GeometryMath.FormatInvariant(PrecessionDuration)}s")
+        .Add("--base-color", BaseColor)
+        .Add("--tint-blueshift", TintBlueshift)
+        .Add("--tint-redshift", TintRedshift)
+        .Add("--shift-intensity", $"{ShiftIntensity}%")
+        .Build();
+
+    private string BuildSatelliteDelayStyle(int satelliteIndex) =>
+        $"--delay: calc(var(--orbit-duration) * -1 * {satelliteIndex} / {SatelliteCount});";
+}

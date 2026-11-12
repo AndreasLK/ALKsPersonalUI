@@ -1,0 +1,104 @@
+.radio-slider {
+    width: var(--_rs-size, 250px);
+    aspect-ratio: 1 / 1;
+    container-type: inline-size;
+    display: grid;
+    place-items: center;
+}
+
+.radio-scale {
+    grid-area: 1 / 1;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.scale-graphics {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.radio-button {
+    position: relative;
+    grid-area: 1 / 1;
+    width: 70%;
+    aspect-ratio: 1 / 1;
+    border-radius: 9999px;
+    z-index: 2;
+    cursor: grab;
+    border: none;
+    outline: none;
+    background: transparent;
+    box-sizing: border-box;
+    padding-bottom: 4px;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    touch-action: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .radio-button.dragging {
+        cursor: grabbing;
+    }
+
+    .radio-button:active .dial-front {
+        transform: translateY(6px);
+        box-shadow: 0 0px 0 var(--_rs-shadow), 0 2px 4px rgba(0, 0, 0, 0.05);
+        filter: brightness(0.96);
+    }
+
+.dial-front {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    border-radius: 9999px;
+    background: #ffffff;
+    --_rs-shadow: color-mix(in srgb, #ffffff, black 25%);
+    box-shadow: 0 6px 0 var(--_rs-shadow), 0 10px 15px rgba(0, 0, 0, 0.05);
+    position: relative;
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.1s cubic-bezier(0.4, 0, 0.2, 1), filter 0.1s;
+}
+
+.dial-indicator {
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    pointer-events: none;
+    transform: rotate(var(--_rs-rotation, 0deg));
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+    .dial-indicator.dragging {
+        transition: none;
+    }
+
+    .dial-indicator::after {
+        content: '';
+        position: absolute;
+        top: 8%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 6%;
+        height: 15%;
+        border-radius: 9999px;
+        background: var(--ui-accent, #007bff);
+    }
+
+.dial-readout {
+    user-select: none;
+    pointer-events: none;
+    font-weight: 600;
+    font-size: 8cqw;
+    color: var(--ui-text-inverse, #111111);
+}
+
+.dial-hit-area {
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    z-index: 3;
+}
