@@ -1,0 +1,896 @@
+﻿@page "/playground"
+@using System.Globalization
+@using System.Text.RegularExpressions
+@inject ToastService Toast
+@inject IJSRuntime JS
+
+<PageTitle>ALK's Personal UI - Live UI Playground & Autocomplete Sandbox</PageTitle>
+
+<Column Modifier="@(UIModifier.New.FillMaxWidth())" Gap="1.5rem">
+    <TitledWindow Title="Live Client-Side UI Playground (Real Blazor Components + Autocomplete)"
+                  Modifier="@ShowcaseStyles.SectionWindow">
+        <HeaderActions>
+            <Pill Variant="Pill.PillVariant.Success" Text="100% Client-Side WASM" />
+            <Pill Variant="Pill.PillVariant.Accent" Text="Live AST + IntelliSense" />
+        </HeaderActions>
+        <ChildContent>
+            <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Body"
+                                        Muted="true"
+                                        Value="Type ALKsPersonalUI Razor markup below. The sandbox parses your component tree and UIModifier chains live in the browser and mounts real interactive Blazor components on the right. Type '<' for components, Space inside a tag for parameters, or '.' inside UIModifier.New for fluent methods." />
+
+            @* STARTER TEMPLATES BAR *@
+            <Window Modifier="@(UIModifier.New.FillMaxWidth().Padding(12, 16).Background("var(--ui-bg-header)"))">
+                <Row HorizontalArrangement="Arrangement.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Wrap="true" Gap="0.75rem" Modifier="@(UIModifier.New.FillMaxWidth())">
+                    <Row Gap="0.45rem" Wrap="true" VerticalAlignment="VerticalAlignment.Center">
+                        <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Caption" Weight="FontWeight.Bold" Value="Load Starter Template:" />
+                        @foreach (var template in _templates)
+                        {
+                            <Pill Active="@(_activeTemplateName == template.Name)"
+                                  Text="@template.Name"
+                                  OnClick="@(() => LoadTemplate(template))" />
+                        }
+                    </Row>
+                    <Row Gap="0.5rem" VerticalAlignment="VerticalAlignment.Center">
+                        <ActionButton Size="ActionButton.ButtonSize.Small"
+                                      Variant="ActionButton.ButtonVariant.Outline"
+                                      Modifier="@ShowcaseStyles.CopyButton"
+                                      Text="Copy Razor Markup"
+                                      OnClick="@(() => ShowcaseStyles.CopyAsync(JS, Toast, _markupCode, "Playground markup"))" />
+                    </Row>
+                </Row>
+            </Window>
+
+            <Grid MinColumnWidth="440px" Gap="1.5rem">
+                @* LEFT: CODE EDITOR + AUTOCOMPLETE BAR *@
+                <Window Modifier="@ShowcaseStyles.FullHeightCardWindow">
+                    <Column Gap="0.65rem" Modifier="@(UIModifier.New.FillMaxWidth().Weight(1))">
+                        <Row HorizontalArrangement="Arrangement.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Modifier="@(UIModifier.New.FillMaxWidth())">
+                            <Row Gap="0.5rem" VerticalAlignment="VerticalAlignment.Center">
+                                <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Subtitle" Weight="FontWeight.Bold" Value="1. Live Razor & UIModifier Editor" />
+                                <Pill Variant="Pill.PillVariant.Neutral" Text="@($"Context: {_activeContextLabel}")" />
+                            </Row>
+                            <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Caption" Muted="true" Value="Click any suggestion below or press Tab/Alt+Enter" />
+                        </Row>
+
+                        @* INTELLISENSE / AUTOCOMPLETE SUGGESTION DECK *@
+                        <Window Modifier="@(UIModifier.New.FillMaxWidth().Padding(10, 12).Gap(8).Background("var(--ui-bg-header)").BorderColor("var(--ui-accent)"))">
+                            <Row HorizontalArrangement="Arrangement.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Modifier="@(UIModifier.New.FillMaxWidth())">
+                                <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Caption" Weight="FontWeight.Bold" Color="var(--ui-accent)" Value="@($"Autocomplete Suggestions ({_suggestions.Count})")" />
+                                <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Caption" Muted="true" Value="@(_suggestions.Count > 0 ? _suggestions[_selectedSuggestionIndex].Description : string.Empty)" />
+                            </Row>
+                            <Row Gap="0.35rem" Wrap="true" Modifier="@(UIModifier.New.FillMaxWidth().MaxHeight(92).VerticalScroll())">
+                                @if (_suggestions.Count == 0)
+                                {
+                                    <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Caption" Muted="true" Value="Move cursor inside a <Tag> or UIModifier.New. chain to see completions..." />
+                                }
+                                else
+                                {
+                                    @for (int index = 0; index < _suggestions.Count; index++)
+                                    {
+                                        var capturedIndex = index;
+                                        var item = _suggestions[index];
+                                        <Pill Active="@(capturedIndex == _selectedSuggestionIndex)"
+                                              Text="@item.DisplayLabel"
+                                              OnClick="@(() => ApplySuggestionAsync(item))" />
+                                    }
+                                }
+                            </Row>
+                        </Window>
+
+                        <textarea @ref="_editorRef"
+                                  value="@_markupCode"
+                                  @oninput="HandleEditorInputAsync"
+                                  @onkeyup="HandleEditorCursorMoveAsync"
+                                  @onclick="HandleEditorCursorMoveAsync"
+                                  @onkeydown="HandleEditorKeyDownAsync"
+                                  spellcheck="false"
+                                  style="width: 100%; min-height: 360px; flex: 1 1 auto; resize: vertical; box-sizing: border-box; background-color: var(--ui-bg-header); color: #93c5fd; border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); padding: 14px 16px; font-family: monospace; font-size: 0.9rem; line-height: 1.55; outline: none;"></textarea>
+
+                        @if (!string.IsNullOrWhiteSpace(_parseWarning))
+                        {
+                            <Window Modifier="@(UIModifier.New.FillMaxWidth().Padding(10, 14).Background("rgba(239, 68, 68, 0.12)").BorderColor("var(--ui-danger)"))">
+                                <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Caption" Color="var(--ui-danger)" Value="@_parseWarning" />
+                            </Window>
+                        }
+                    </Column>
+                </Window>
+
+                @* RIGHT: LIVE INTERACTIVE RENDER STAGE + COMPONENT EXPLAINER *@
+                <Window Modifier="@ShowcaseStyles.FullHeightCardWindow">
+                    <Column Gap="0.85rem" Modifier="@(UIModifier.New.FillMaxWidth())">
+                        <Row HorizontalArrangement="Arrangement.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Wrap="true" Modifier="@(UIModifier.New.FillMaxWidth())">
+                            <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Subtitle" Weight="FontWeight.Bold" Value="2. Live Interactive Blazor Output" />
+                            <ActionButton Size="ActionButton.ButtonSize.Small"
+                                          Variant="ActionButton.ButtonVariant.Ghost"
+                                          Modifier="@(UIModifier.New.BaseColor("var(--ui-text-muted)").Padding(4, 10))"
+                                          Text="Reset Bound State"
+                                          OnClick="ResetInteractiveState" />
+                        </Row>
+
+                        <Box ContentAlignment="BoxAlignment.Center"
+                             Modifier="@(UIModifier.New.FillMaxWidth().MinHeight(280).Padding(20).Background("var(--ui-bg-app)").BorderRadius("var(--ui-radius-md)").Border(1, "var(--ui-border)"))">
+                            @RenderParsedTree(_parsedRootNodes)
+                        </Box>
+                    </Column>
+
+                    <Divider />
+
+                    @* SELF-EXPLAINING AST & MODIFIER BREAKDOWN *@
+                    <Column Gap="0.5rem" Modifier="@(UIModifier.New.FillMaxWidth())">
+                        <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Caption" Weight="FontWeight.Bold" Color="var(--ui-accent)" Value="3. Live Architecture Breakdown (What Your Code Is Doing):" />
+                        <Window Modifier="@(UIModifier.New.FillMaxWidth().MaxHeight(180).Padding(12, 14).Gap(6).Background("var(--ui-bg-header)").VerticalScroll())">
+                            @foreach (var explanation in _liveExplanations)
+                            {
+                                <Row Gap="0.5rem" VerticalAlignment="VerticalAlignment.Center">
+                                    <Pill Variant="Pill.PillVariant.Neutral" Text="@explanation.Tag" />
+                                    <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Caption" Muted="true" Value="@explanation.Summary" />
+                                </Row>
+                            }
+                        </Window>
+                    </Column>
+                </Window>
+            </Grid>
+        </ChildContent>
+    </TitledWindow>
+</Column>
+
+@code {
+    private sealed record PlaygroundTemplate(string Name, string Code);
+    private sealed record AutocompleteItem(string DisplayLabel, string InsertText, string Description, int CursorBackOffset = 0);
+    private sealed record NodeExplanation(string Tag, string Summary);
+
+    private sealed class ParsedUiNode
+    {
+        public string TagName { get; set; } = string.Empty;
+        public Dictionary<string, string> Attributes { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        public List<ParsedUiNode> Children { get; set; } = new();
+        public string? InnerText { get; set; }
+    }
+
+    private ElementReference _editorRef;
+    private string _activeTemplateName = "Kiosk Order Card";
+    private string _markupCode = string.Empty;
+    private string? _parseWarning;
+    private string _activeContextLabel = "Components (<)";
+    private int _caretIndex;
+    private int _tokenStartIndex;
+    private int _tokenEndIndex;
+    private int _selectedSuggestionIndex;
+
+    private List<ParsedUiNode> _parsedRootNodes = new();
+    private List<NodeExplanation> _liveExplanations = new();
+    private List<AutocompleteItem> _suggestions = new();
+
+    private readonly Dictionary<string, string?> _stringState = new();
+    private readonly Dictionary<string, double> _numberState = new();
+    private readonly Dictionary<string, bool> _boolState = new();
+
+    private static readonly PlaygroundTemplate[] _templates =
+    [
+        new("Kiosk Order Card", @"<TitledWindow Title=""Self-Service Kiosk #4"" Modifier=""@(UIModifier.New.FillMaxWidth().Padding(20).Gap(14))"">
+    <Row HorizontalArrangement=""SpaceBetween"" Modifier=""@(UIModifier.New.FillMaxWidth())"">
+        <Text Variant=""H3"" Value=""Customize Your Espresso"" />
+        <Pill Variant=""Success"" Text=""Ready in 45s"" />
+    </Row>
+
+    <SegmentedControl Items=""Single,Double,Triple,Iced"" />
+
+    <TextInput Label=""Cup Name (Tap to test keyboard)"" Placeholder=""Enter your name..."" TouchMode=""Always"" Modifier=""@(UIModifier.New.FillMaxWidth())"" />
+
+    <Row HorizontalArrangement=""SpaceBetween"" Modifier=""@(UIModifier.New.FillMaxWidth())"">
+        <NumberInput Step=""1"" Min=""1"" Max=""10"" Suffix=""cups"" />
+        <Checkbox RenderAsToggleSwitch=""true"" Label=""Oat Milk (+4 kr.)"" />
+    </Row>
+
+    <Divider />
+
+    <Row HorizontalArrangement=""End"" Gap=""0.75rem"" Modifier=""@(UIModifier.New.FillMaxWidth())"">
+        <ActionButton Variant=""Outline"" Text=""Cancel"" Modifier=""@(UIModifier.New.BaseColor(""var(--ui-danger)""))"" />
+        <ActionButton Variant=""Solid"" HoldToConfirmDurationMilliseconds=""600"" Text=""Hold 600ms to Pay"" Modifier=""@(UIModifier.New.BaseColor(""#22c55e"").TextColor(""#111111"").ButtonExtrusionDepth(4))"" />
+    </Row>
+</TitledWindow>"),
+
+        new("Smart Home Dial Panel", @"<TitledWindow Title=""Climate & Acoustic Zone"" Modifier=""@(UIModifier.New.FillMaxWidth().Padding(22).Gap(16))"">
+    <Grid MinColumnWidth=""200px"" Gap=""1.25rem"">
+        <Window Modifier=""@(UIModifier.New.FillMaxWidth().Padding(16).Gap(10).CenterContent().Background(""var(--ui-bg-elevated)""))"">
+            <Text Variant=""Subtitle"" Weight=""Bold"" Value=""Cabin Temp (°C)"" />
+            <RadioSlider DialSizePx=""175"" MinValue=""16"" MaxValue=""30"" Step=""1"" MaxAngle=""240"" SelectionUnit=""°C"" />
+        </Window>
+
+        <Window Modifier=""@(UIModifier.New.FillMaxWidth().Padding(16).Gap(12).Background(""var(--ui-bg-elevated)""))"">
+            <Text Variant=""Subtitle"" Weight=""Bold"" Value=""Ambient Lighting"" />
+            <RangeSlider TrackWidthPx=""220"" MinValue=""0"" MaxValue=""100"" Step=""10"" SelectionUnit=""%"" />
+            <Checkbox RenderAsToggleSwitch=""true"" Label=""Adaptive Night Mode"" />
+            <ActionButton Size=""Small"" Text=""Apply Scene"" Modifier=""@(UIModifier.New.FillMaxWidth().BaseColor(""var(--ui-accent)"").TextColor(""#ffffff""))"" />
+        </Window>
+    </Grid>
+</TitledWindow>"),
+
+        new("Mars Telemetry Card", @"<TitledWindow Title=""Ares Colony Telemetry"" Modifier=""@(UIModifier.New.FillMaxWidth().Padding(20).Gap(16))"">
+    <Row HorizontalArrangement=""SpaceBetween"" Modifier=""@(UIModifier.New.FillMaxWidth())"">
+        <Column Gap=""0.4rem"">
+            <Text Variant=""H2"" Value=""Sector 7 Uplink"" />
+            <Text Variant=""Caption"" Muted=""true"" Value=""Doppler-shifted orbital relay active"" />
+            <Row Gap=""0.5rem"">
+                <Pill Variant=""Accent"" Text=""9 Satellites"" />
+                <Pill Variant=""Warning"" Text=""Dust Storm Warning"" />
+            </Row>
+        </Column>
+        <OrbitalLoader SystemSize=""105"" SatelliteCount=""9"" OrbitTilt=""76"" LoadingText=""Syncing..."">
+            <Mars PlanetSize=""46"" ColonyProbability=""0.35"" />
+        </OrbitalLoader>
+    </Row>
+</TitledWindow>")
+    ];
+
+    private static readonly AutocompleteItem[] _componentSuggestions =
+    [
+        new("<TitledWindow>", "<TitledWindow Title=\"Window Title\" Modifier=\"@(UIModifier.New.FillMaxWidth().Padding(20).Gap(12))\">\n    \n</TitledWindow>", "Window card with top title bar & frame/body modifier routing", -16),
+        new("<Window>", "<Window Modifier=\"@(UIModifier.New.FillMaxWidth().Padding(16).Gap(10).Background(\"var(--ui-bg-elevated)\"))\">\n    \n</Window>", "Bordered surface container card", -10),
+        new("<Row>", "<Row Gap=\"0.75rem\" HorizontalArrangement=\"SpaceBetween\" Modifier=\"@(UIModifier.New.FillMaxWidth())\">\n    \n</Row>", "Horizontal flex container", -7),
+        new("<Column>", "<Column Gap=\"0.75rem\" Modifier=\"@(UIModifier.New.FillMaxWidth())\">\n    \n</Column>", "Vertical flex container", -10),
+        new("<Grid>", "<Grid MinColumnWidth=\"220px\" Gap=\"1rem\">\n    \n</Grid>", "Auto-responsive CSS Grid container", -8),
+        new("<ActionButton />", "<ActionButton Variant=\"Solid\" Shape=\"Rounded\" Text=\"Click Me\" Modifier=\"@(UIModifier.New.BaseColor(\"var(--ui-action)\").ButtonExtrusionDepth(3))\" />", "Auto-adaptive 3D/touch button with Hold & AutoRepeat"),
+        new("<TextInput />", "<TextInput Label=\"Field Label\" Placeholder=\"Type here...\" TouchMode=\"Auto\" Modifier=\"@(UIModifier.New.FillMaxWidth())\" />", "Text input with automatic touch ScreenKeyboard popup"),
+        new("<NumberInput />", "<NumberInput Step=\"1\" Min=\"0\" Max=\"100\" Suffix=\"stk\" />", "Numeric stepper with hold-to-repeat and touch numpad"),
+        new("<Checkbox />", "<Checkbox RenderAsToggleSwitch=\"true\" Label=\"Enable Option\" />", "SVG checkbox or sliding pill toggle switch"),
+        new("<SegmentedControl />", "<SegmentedControl Items=\"Option A,Option B,Option C\" />", "Touch-friendly single-select button bar"),
+        new("<Dropdown />", "<Dropdown Items=\"Rema 1000,Netto,Lidl,Bilka\" />", "Accessible dropdown select menu"),
+        new("<RangeSlider />", "<RangeSlider TrackWidthPx=\"260\" MinValue=\"0\" MaxValue=\"100\" Step=\"10\" SelectionUnit=\"%\" />", "Linear range slider with pointer capture"),
+        new("<RadioSlider />", "<RadioSlider DialSizePx=\"190\" MinValue=\"0\" MaxValue=\"100\" Step=\"10\" MaxAngle=\"240\" SelectionUnit=\"%\" />", "3D tactile rotary dial slider"),
+        new("<Pill />", "<Pill Variant=\"Accent\" Text=\"Status Badge\" />", "Semantic status badge or interactive filter chip"),
+        new("<Text />", "<Text Variant=\"Body\" Value=\"Sample text\" />", "Typography primitive (Display, H1, H2, H3, Title, Body, Caption, Mono)"),
+        new("<Divider />", "<Divider Color=\"var(--ui-border)\" Thickness=\"1px\" />", "Horizontal or vertical separator line"),
+        new("<Spacer />", "<Spacer />", "Expanding flex spacer that pushes sibling items apart"),
+        new("<SimpleSpinner />", "<SimpleSpinner Modifier=\"@(UIModifier.New.Width(36).StrokeThickness(4).BaseColor(\"var(--ui-accent)\"))\" />", "Conic velocity ring loader"),
+        new("<OrbitalLoader>", "<OrbitalLoader SystemSize=\"110\" SatelliteCount=\"8\" LoadingText=\"Loading...\">\n    <Mars PlanetSize=\"48\" />\n</OrbitalLoader>", "3D Doppler-shifted orbital system loader")
+    ];
+
+    private static readonly AutocompleteItem[] _modifierSuggestions =
+    [
+        new(".FillMaxWidth()", "FillMaxWidth()", "Sets width: 100%"),
+        new(".FillMaxSize()", "FillMaxSize()", "Sets width: 100% and height: 100%"),
+        new(".Width(px)", "Width(320)", "Sets explicit width in px or CSS units", -1),
+        new(".Height(px)", "Height(180)", "Sets explicit height in px or CSS units", -1),
+        new(".Padding(px)", "Padding(20)", "Sets uniform inner padding (routes to body on TitledWindow)", -1),
+        new(".Padding(v, h)", "Padding(12, 20)", "Sets vertical and horizontal padding in px", -1),
+        new(".Gap(px)", "Gap(12)", "Sets flex/grid gap between child elements", -1),
+        new(".Background(color)", "Background(\"var(--ui-bg-elevated)\")", "Sets container background color", -2),
+        new(".HeaderBackground(color)", "HeaderBackground(\"var(--ui-bg-header)\")", "Sets TitledWindow title bar background", -2),
+        new(".BorderColor(color)", "BorderColor(\"var(--ui-accent)\")", "Sets container border color", -2),
+        new(".BorderRadius(px)", "BorderRadius(14)", "Sets corner border radius in px", -1),
+        new(".BaseColor(color)", "BaseColor(\"#22c55e\")", "Sets ActionButton or SimpleSpinner primary color", -2),
+        new(".TextColor(color)", "TextColor(\"#111111\")", "Sets text foreground color", -2),
+        new(".AccentColor(color)", "AccentColor(\"#f97316\")", "Sets accent color for Checkbox, Dropdown, Tabs, or SegmentedControl", -2),
+        new(".ButtonExtrusionDepth(px)", "ButtonExtrusionDepth(4)", "Sets 3D button bottom shadow depth in px (v3 rename of .Depth)", -1),
+        new(".InwardPressScaleFactor(ratio)", "InwardPressScaleFactor(0.92)", "Sets touch inward squish scale factor (v3 rename of .PressScale)", -1),
+        new(".PressAnimationDuration(time)", "PressAnimationDuration(\"0.08s\")", "Sets button transition or spinner rotation speed", -2),
+        new(".StrokeThickness(px)", "StrokeThickness(4)", "Sets SimpleSpinner ring or Divider thickness in px", -1),
+        new(".CenterContent()", "CenterContent()", "Centers children horizontally and vertically"),
+        new(".Row()", "Row()", "Sets display: flex; flex-direction: row"),
+        new(".Column()", "Column()", "Sets display: flex; flex-direction: column")
+    ];
+
+    private static readonly Dictionary<string, AutocompleteItem[]> _attributeSuggestionsByTag = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["TitledWindow"] =
+        [
+            new("Title=\"...\"", "Title=\"Window Title\"", "Header bar title text", -1),
+            new("Modifier=\"@(UIModifier.New...)\"", "Modifier=\"@(UIModifier.New.FillMaxWidth().Padding(20).Gap(12))\"", "Frame & Body styling modifier", -2)
+        ],
+        ["ActionButton"] =
+        [
+            new("Text=\"...\"", "Text=\"Button Label\"", "Button text label", -1),
+            new("Variant=\"Solid|Outline|Ghost\"", "Variant=\"Solid\"", "Visual button style variant", -1),
+            new("Shape=\"Rounded|Rectangle|Pill\"", "Shape=\"Rounded\"", "Corner geometry shape", -1),
+            new("Size=\"Small|Medium|Large\"", "Size=\"Medium\"", "Preset padding & font size", -1),
+            new("PressEffect=\"Auto|Down3D|InwardScale|ConcaveInset\"", "PressEffect=\"Auto\"", "Desktop 3D vs touch squish physics", -1),
+            new("HoldToConfirmDurationMilliseconds=\"600\"", "HoldToConfirmDurationMilliseconds=\"600\"", "Requires holding button for N ms before triggering", -1),
+            new("AutoRepeat=\"true\"", "AutoRepeat=\"true\"", "Continuously triggers OnClick while held down"),
+            new("IsLoading=\"true\"", "IsLoading=\"true\"", "Replaces text with SimpleSpinner and blocks clicks"),
+            new("Modifier=\"@(UIModifier.New...)\"", "Modifier=\"@(UIModifier.New.BaseColor(\"var(--ui-action)\").ButtonExtrusionDepth(3))\"", "Custom color, padding, and 3D depth", -2)
+        ],
+        ["TextInput"] =
+        [
+            new("Label=\"...\"", "Label=\"Field Label\"", "Top input label text", -1),
+            new("Placeholder=\"...\"", "Placeholder=\"Type here...\"", "Placeholder hint text", -1),
+            new("TouchMode=\"Auto|Always|None\"", "TouchMode=\"Always\"", "Opens built-in ScreenKeyboard BottomSheet on tap", -1),
+            new("IsPassword=\"true\"", "IsPassword=\"true\"", "Masks characters and enables reveal toggle"),
+            new("Modifier=\"@(UIModifier.New...)\"", "Modifier=\"@(UIModifier.New.FillMaxWidth())\"", "Width and frame styling", -2)
+        ],
+        ["NumberInput"] =
+        [
+            new("Step=\"1\"", "Step=\"1\"", "Increment/decrement step value", -1),
+            new("Min=\"0\"", "Min=\"0\"", "Minimum clamped value", -1),
+            new("Max=\"100\"", "Max=\"100\"", "Maximum clamped value", -1),
+            new("Suffix=\"kr.\"", "Suffix=\"kr.\"", "Unit label displayed inside field", -1),
+            new("TouchMode=\"Always\"", "TouchMode=\"Always\"", "Opens TouchNumpad BottomSheet on click/tap")
+        ],
+        ["Checkbox"] =
+        [
+            new("Label=\"...\"", "Label=\"Option Label\"", "Text label next to checkbox/switch", -1),
+            new("RenderAsToggleSwitch=\"true\"", "RenderAsToggleSwitch=\"true\"", "Renders a sliding pill switch instead of a checkmark box (v3 rename of IsSwitch)"),
+            new("Modifier=\"@(UIModifier.New...)\"", "Modifier=\"@(UIModifier.New.AccentColor(\"#22c55e\"))\"", "Custom active switch/checkbox color", -2)
+        ],
+        ["RangeSlider"] =
+        [
+            new("TrackWidthPx=\"260\"", "TrackWidthPx=\"260\"", "Slider track width in px (v3 rename of TrackPixelWidth)", -1),
+            new("MinValue=\"0\"", "MinValue=\"0\"", "Minimum slider value", -1),
+            new("MaxValue=\"100\"", "MaxValue=\"100\"", "Maximum slider value", -1),
+            new("Step=\"10\"", "Step=\"10\"", "Tick interval step", -1),
+            new("SelectionUnit=\"%\"", "SelectionUnit=\"%\"", "Unit suffix shown inside thumb readout", -1)
+        ],
+        ["RadioSlider"] =
+        [
+            new("DialSizePx=\"200\"", "DialSizePx=\"200\"", "Rotary dial diameter in px (v3 rename of DialPixelSize)", -1),
+            new("MaxAngle=\"240\"", "MaxAngle=\"240\"", "Total rotational sweep angle in degrees", -1),
+            new("MinValue=\"0\"", "MinValue=\"0\"", "Minimum dial value", -1),
+            new("MaxValue=\"100\"", "MaxValue=\"100\"", "Maximum dial value", -1),
+            new("SelectionUnit=\"%\"", "SelectionUnit=\"%\"", "Unit suffix shown on dial face", -1)
+        ],
+        ["Text"] =
+        [
+            new("Variant=\"Display|H1|H2|H3|Title|Subtitle|Body|Caption|Mono\"", "Variant=\"H3\"", "Typography scale variant", -1),
+            new("Value=\"...\"", "Value=\"Text content\"", "Rendered text string", -1),
+            new("Muted=\"true\"", "Muted=\"true\"", "Uses --ui-text-muted color"),
+            new("Weight=\"Bold|SemiBold|Medium|Regular\"", "Weight=\"Bold\"", "Font weight override", -1)
+        ],
+        ["Pill"] =
+        [
+            new("Variant=\"Neutral|Accent|Success|Warning|Danger\"", "Variant=\"Accent\"", "Semantic color variant", -1),
+            new("Text=\"...\"", "Text=\"Badge Text\"", "Pill label text", -1),
+            new("Active=\"true\"", "Active=\"true\"", "Highlights pill with accent color")
+        ]
+    };
+
+    protected override void OnInitialized()
+    {
+        LoadTemplate(_templates[0]);
+        UpdateAutocompleteSuggestions(0);
+    }
+
+    private void LoadTemplate(PlaygroundTemplate template)
+    {
+        _activeTemplateName = template.Name;
+        _markupCode = template.Code;
+        ParseMarkupAndExplain();
+    }
+
+    private void ResetInteractiveState()
+    {
+        _stringState.Clear();
+        _numberState.Clear();
+        _boolState.Clear();
+        Toast.ShowInfo("Playground component state reset!");
+    }
+
+    private async Task HandleEditorInputAsync(ChangeEventArgs changeEvent)
+    {
+        _markupCode = changeEvent.Value?.ToString() ?? string.Empty;
+        ParseMarkupAndExplain();
+        var caret = await JS.InvokeAsync<int>("alkPlayground.getCaretIndex", _editorRef);
+        UpdateAutocompleteSuggestions(caret);
+    }
+
+    private async Task HandleEditorCursorMoveAsync()
+    {
+        var caret = await JS.InvokeAsync<int>("alkPlayground.getCaretIndex", _editorRef);
+        UpdateAutocompleteSuggestions(caret);
+    }
+
+    private async Task HandleEditorKeyDownAsync(KeyboardEventArgs keyEvent)
+    {
+        if (_suggestions.Count == 0)
+            return;
+
+        if (keyEvent.Key == "Tab" || (keyEvent.AltKey && keyEvent.Key == "Enter"))
+        {
+            await ApplySuggestionAsync(_suggestions[_selectedSuggestionIndex]);
+        }
+    }
+
+    private async Task ApplySuggestionAsync(AutocompleteItem suggestion)
+    {
+        _markupCode = await JS.InvokeAsync<string>(
+            "alkPlayground.replaceTokenAtCaret",
+            _editorRef,
+            _tokenStartIndex,
+            _tokenEndIndex,
+            suggestion.InsertText,
+            suggestion.CursorBackOffset);
+
+        ParseMarkupAndExplain();
+        var caret = await JS.InvokeAsync<int>("alkPlayground.getCaretIndex", _editorRef);
+        UpdateAutocompleteSuggestions(caret);
+    }
+
+    private void UpdateAutocompleteSuggestions(int caretIndex)
+    {
+        _caretIndex = Math.Clamp(caretIndex, 0, _markupCode.Length);
+        _selectedSuggestionIndex = 0;
+
+        var textBeforeCaret = _markupCode[.._caretIndex];
+
+        var lastModifierStart = textBeforeCaret.LastIndexOf("UIModifier.New", StringComparison.Ordinal);
+        if (lastModifierStart >= 0)
+        {
+            var sliceSinceModifier = textBeforeCaret[lastModifierStart..];
+            if (!sliceSinceModifier.Contains("\")") && !sliceSinceModifier.Contains("))\""))
+            {
+                var lastDot = textBeforeCaret.LastIndexOf('.');
+                if (lastDot >= lastModifierStart)
+                {
+                    var partialMethod = textBeforeCaret[(lastDot + 1)..];
+                    _tokenStartIndex = lastDot + 1;
+                    _tokenEndIndex = _caretIndex;
+                    _activeContextLabel = "UIModifier Methods (.)";
+                    _suggestions = _modifierSuggestions
+                        .Where(m => m.InsertText.StartsWith(partialMethod, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    return;
+                }
+            }
+        }
+
+        var lastOpenBracket = textBeforeCaret.LastIndexOf('<');
+        var lastCloseBracket = textBeforeCaret.LastIndexOf('>');
+        if (lastOpenBracket > lastCloseBracket)
+        {
+            var insideTagText = textBeforeCaret[(lastOpenBracket + 1)..];
+            if (!insideTagText.Contains(' ') && !insideTagText.Contains('\n'))
+            {
+                _tokenStartIndex = lastOpenBracket;
+                _tokenEndIndex = _caretIndex;
+                _activeContextLabel = "Component Tags (<)";
+                _suggestions = _componentSuggestions
+                    .Where(c => c.DisplayLabel.TrimStart('<').StartsWith(insideTagText, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                return;
+            }
+
+            var tagNameMatch = Regex.Match(insideTagText, @"^([A-Za-z0-9]+)");
+            if (tagNameMatch.Success)
+            {
+                var currentTag = tagNameMatch.Groups[1].Value;
+                var lastWhitespace = insideTagText.LastIndexOfAny([' ', '\n', '\r', '\t']);
+                var partialAttr = lastWhitespace >= 0 ? insideTagText[(lastWhitespace + 1)..] : string.Empty;
+
+                _tokenStartIndex = lastOpenBracket + 1 + (lastWhitespace + 1);
+                _tokenEndIndex = _caretIndex;
+                _activeContextLabel = $"<{currentTag}> Parameters";
+
+                if (_attributeSuggestionsByTag.TryGetValue(currentTag, out var tagAttrs))
+                {
+                    _suggestions = tagAttrs
+                        .Where(a => a.DisplayLabel.StartsWith(partialAttr, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    if (_suggestions.Count > 0)
+                        return;
+                }
+
+                _suggestions =
+                [
+                    new("Modifier=\"@(UIModifier.New...)\"", "Modifier=\"@(UIModifier.New.FillMaxWidth().Padding(16))\"", "Attach a UIModifier chain", -2),
+                    new("Gap=\"0.75rem\"", "Gap=\"0.75rem\"", "Spacing between child items", -1)
+                ];
+                return;
+            }
+        }
+
+        _tokenStartIndex = _caretIndex;
+        _tokenEndIndex = _caretIndex;
+        _activeContextLabel = "Insert Component";
+        _suggestions = _componentSuggestions.Take(10).ToList();
+    }
+
+    private void ParseMarkupAndExplain()
+    {
+        _parseWarning = null;
+        _liveExplanations.Clear();
+
+        try
+        {
+            _parsedRootNodes = ParseNodes(_markupCode);
+            foreach (var node in FlattenNodes(_parsedRootNodes))
+            {
+                _liveExplanations.Add(DescribeNode(node));
+            }
+        }
+        catch (Exception ex)
+        {
+            _parseWarning = $"Markup syntax note: {ex.Message}";
+        }
+    }
+
+    private static IEnumerable<ParsedUiNode> FlattenNodes(IEnumerable<ParsedUiNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            yield return node;
+            foreach (var child in FlattenNodes(node.Children))
+                yield return child;
+        }
+    }
+
+    private static NodeExplanation DescribeNode(ParsedUiNode node)
+    {
+        var modText = node.Attributes.TryGetValue("Modifier", out var rawMod) ? $" with {rawMod}" : " (using default theme tokens)";
+        return node.TagName switch
+        {
+            "TitledWindow" => new("<TitledWindow>", $"Routes outer sizing/borders to Frame and Padding/Gap to inner Body{modText}."),
+            "Window" => new("<Window>", $"Scoped surface container (--_w-bg, --_w-padding) with zero CSS bleed{modText}."),
+            "ActionButton" => new("<ActionButton>", $"Auto-adaptive 3D/Touch button{modText}."),
+            "TextInput" => new("<TextInput>", $"Form input wrapped in Window with TouchInputMode support{modText}."),
+            "NumberInput" => new("<NumberInput>", $"Generic INumber<T> stepper with auto-repeat buttons & TouchNumpad sheet."),
+            "RangeSlider" or "RadioSlider" => new($"<{node.TagName}>", $"Pointer-captured slider inheriting SliderBase."),
+            _ => new($"<{node.TagName}>", $"Composed layout/UI element{modText}.")
+        };
+    }
+
+    private static List<ParsedUiNode> ParseNodes(string markup)
+    {
+        var rootNodes = new List<ParsedUiNode>();
+        var stack = new Stack<ParsedUiNode>();
+        var tagRegex = new Regex(@"<(/?)([A-Za-z0-9]+)([^>]*?)(/?)>", RegexOptions.Singleline);
+
+        foreach (Match match in tagRegex.Matches(markup))
+        {
+            bool isClosing = match.Groups[1].Value == "/";
+            string tagName = match.Groups[2].Value;
+            string attrChunk = match.Groups[3].Value;
+            bool isSelfClosing = match.Groups[4].Value == "/" ||
+                                 tagName is "Divider" or "Spacer" or "ActionButton" or "TextInput" or "NumberInput"
+                                     or "Checkbox" or "SegmentedControl" or "Dropdown" or "RangeSlider" or "RadioSlider"
+                                     or "Pill" or "Text" or "SimpleSpinner" or "Mars" or "TouchNumpad" or "ScreenKeyboard";
+
+            if (isClosing)
+            {
+                if (stack.Count > 0 && string.Equals(stack.Peek().TagName, tagName, StringComparison.OrdinalIgnoreCase))
+                    stack.Pop();
+                continue;
+            }
+
+            var node = new ParsedUiNode
+            {
+                TagName = tagName,
+                Attributes = ParseAttributes(attrChunk)
+            };
+
+            if (stack.Count > 0)
+                stack.Peek().Children.Add(node);
+            else
+                rootNodes.Add(node);
+
+            if (!isSelfClosing)
+                stack.Push(node);
+        }
+
+        return rootNodes;
+    }
+
+    private static Dictionary<string, string> ParseAttributes(string rawAttributes)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var attrRegex = new Regex(@"([A-Za-z0-9\-]+)\s*=\s*""(@\([^""]*\)|[^""]*)""");
+
+        foreach (Match m in attrRegex.Matches(rawAttributes))
+        {
+            result[m.Groups[1].Value] = m.Groups[2].Value;
+        }
+
+        var modMatch = Regex.Match(rawAttributes, @"Modifier\s*=\s*""@?\((UIModifier\.New.*?)\)\""");
+        if (modMatch.Success)
+            result["Modifier"] = modMatch.Groups[1].Value;
+
+        return result;
+    }
+
+    private static UIModifier ParseModifierChain(string? rawModifier)
+    {
+        var modifier = UIModifier.New;
+        if (string.IsNullOrWhiteSpace(rawModifier))
+            return modifier;
+
+        var callRegex = new Regex(@"\.([A-Za-z0-9]+)\(([^)]*)\)");
+        foreach (Match call in callRegex.Matches(rawModifier))
+        {
+            var method = call.Groups[1].Value;
+            var args = call.Groups[2].Value
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(a => a.Trim().Trim('"'))
+                .ToArray();
+
+            switch (method)
+            {
+                case "FillMaxWidth": modifier.FillMaxWidth(); break;
+                case "FillMaxHeight": modifier.FillMaxHeight(); break;
+                case "FillMaxSize": modifier.FillMaxSize(); break;
+                case "CenterContent": modifier.CenterContent(); break;
+                case "Row": modifier.Row(); break;
+                case "Column": modifier.Column(); break;
+                case "Wrap": modifier.Wrap(); break;
+                case "Width" when args.Length == 1:
+                    if (double.TryParse(args[0], CultureInfo.InvariantCulture, out var w)) modifier.Width(w);
+                    else modifier.Width(args[0]);
+                    break;
+                case "Height" when args.Length == 1:
+                    if (double.TryParse(args[0], CultureInfo.InvariantCulture, out var h)) modifier.Height(h);
+                    else modifier.Height(args[0]);
+                    break;
+                case "Padding" when args.Length == 1:
+                    if (double.TryParse(args[0], CultureInfo.InvariantCulture, out var p)) modifier.Padding(p);
+                    else modifier.Padding(args[0]);
+                    break;
+                case "Padding" when args.Length == 2:
+                    if (double.TryParse(args[0], CultureInfo.InvariantCulture, out var pv) &&
+                        double.TryParse(args[1], CultureInfo.InvariantCulture, out var ph))
+                        modifier.Padding(pv, ph);
+                    break;
+                case "Gap" when args.Length == 1:
+                    if (double.TryParse(args[0], CultureInfo.InvariantCulture, out var g)) modifier.Gap(g);
+                    else modifier.Gap(args[0]);
+                    break;
+                case "Background" when args.Length == 1: modifier.Background(args[0]); break;
+                case "HeaderBackground" when args.Length == 1: modifier.HeaderBackground(args[0]); break;
+                case "BorderColor" when args.Length == 1: modifier.BorderColor(args[0]); break;
+                case "BorderRadius" when args.Length == 1:
+                    if (double.TryParse(args[0], CultureInfo.InvariantCulture, out var r)) modifier.BorderRadius(r);
+                    else modifier.BorderRadius(args[0]);
+                    break;
+                case "BaseColor" when args.Length == 1: modifier.BaseColor(args[0]); break;
+                case "TextColor" when args.Length == 1: modifier.TextColor(args[0]); break;
+                case "AccentColor" when args.Length == 1: modifier.AccentColor(args[0]); break;
+                case "ButtonExtrusionDepth" or "Depth" when args.Length == 1:
+                    if (double.TryParse(args[0], CultureInfo.InvariantCulture, out var d)) modifier.ButtonExtrusionDepth(d);
+                    break;
+                case "InwardPressScaleFactor" or "PressScale" when args.Length == 1:
+                    if (double.TryParse(args[0], CultureInfo.InvariantCulture, out var s)) modifier.InwardPressScaleFactor(s);
+                    break;
+                case "PressAnimationDuration" or "AnimationSpeed" when args.Length == 1:
+                    modifier.PressAnimationDuration(args[0]);
+                    break;
+                case "StrokeThickness" or "Thickness" when args.Length == 1:
+                    if (double.TryParse(args[0], CultureInfo.InvariantCulture, out var t)) modifier.StrokeThickness(t);
+                    else modifier.StrokeThickness(args[0]);
+                    break;
+            }
+        }
+
+        return modifier;
+    }
+
+    private RenderFragment RenderParsedTree(List<ParsedUiNode> nodes) => __builder =>
+    {
+        <Column Gap="1rem" Modifier="@(UIModifier.New.FillMaxWidth())">
+            @foreach (var (node, index) in nodes.Select((n, i) => (n, i)))
+            {
+                @RenderSingleNode(node, $"root_{index}")
+            }
+        </Column>
+    };
+
+    private RenderFragment RenderSingleNode(ParsedUiNode node, string stateKey) => __builder =>
+    {
+        var modifier = ParseModifierChain(node.Attributes.GetValueOrDefault("Modifier"));
+
+        switch (node.TagName)
+        {
+            case "TitledWindow":
+                <TitledWindow Title="@node.Attributes.GetValueOrDefault("Title", "TitledWindow")"
+                              Modifier="@modifier">
+                    @foreach (var (child, idx) in node.Children.Select((c, i) => (c, i)))
+                    {
+                        @RenderSingleNode(child, $"{stateKey}_{idx}")
+                    }
+                </TitledWindow>
+                break;
+
+            case "Window":
+                <Window Modifier="@modifier">
+                    @foreach (var (child, idx) in node.Children.Select((c, i) => (c, i)))
+                    {
+                        @RenderSingleNode(child, $"{stateKey}_{idx}")
+                    }
+                </Window>
+                break;
+
+            case "Row":
+                var rowArr = Enum.TryParse<Arrangement>(node.Attributes.GetValueOrDefault("HorizontalArrangement"), true, out var parsedArr)
+                    ? parsedArr : Arrangement.Start;
+                <Row Gap="@node.Attributes.GetValueOrDefault("Gap", "0.65rem")"
+                     HorizontalArrangement="@rowArr"
+                     Wrap="true"
+                     Modifier="@modifier">
+                    @foreach (var (child, idx) in node.Children.Select((c, i) => (c, i)))
+                    {
+                        @RenderSingleNode(child, $"{stateKey}_{idx}")
+                    }
+                </Row>
+                break;
+
+            case "Column":
+                <Column Gap="@node.Attributes.GetValueOrDefault("Gap", "0.65rem")"
+                        Modifier="@modifier">
+                    @foreach (var (child, idx) in node.Children.Select((c, i) => (c, i)))
+                    {
+                        @RenderSingleNode(child, $"{stateKey}_{idx}")
+                    }
+                </Column>
+                break;
+
+            case "Grid":
+                <Grid MinColumnWidth="@node.Attributes.GetValueOrDefault("MinColumnWidth", "200px")"
+                      Gap="@node.Attributes.GetValueOrDefault("Gap", "1rem")"
+                      Modifier="@modifier">
+                    @foreach (var (child, idx) in node.Children.Select((c, i) => (c, i)))
+                    {
+                        @RenderSingleNode(child, $"{stateKey}_{idx}")
+                    }
+                </Grid>
+                break;
+
+            case "ActionButton":
+                var variant = Enum.TryParse<ActionButton.ButtonVariant>(node.Attributes.GetValueOrDefault("Variant"), true, out var bv)
+                    ? bv : ActionButton.ButtonVariant.Solid;
+                var shape = Enum.TryParse<ActionButton.ButtonShape>(node.Attributes.GetValueOrDefault("Shape"), true, out var bs)
+                    ? bs : ActionButton.ButtonShape.Rounded;
+                var size = Enum.TryParse<ActionButton.ButtonSize>(node.Attributes.GetValueOrDefault("Size"), true, out var bsz)
+                    ? bsz : ActionButton.ButtonSize.Dynamic;
+                var holdMs = int.TryParse(node.Attributes.GetValueOrDefault("HoldToConfirmDurationMilliseconds"), out var hms) ? hms : 0;
+                var label = node.Attributes.GetValueOrDefault("Text", "ActionButton");
+
+                <ActionButton Variant="@variant"
+                              Shape="@shape"
+                              Size="@size"
+                              HoldToConfirmDurationMilliseconds="@holdMs"
+                              AutoRepeat="@(string.Equals(node.Attributes.GetValueOrDefault("AutoRepeat"), "true", StringComparison.OrdinalIgnoreCase))"
+                              IsLoading="@(string.Equals(node.Attributes.GetValueOrDefault("IsLoading"), "true", StringComparison.OrdinalIgnoreCase))"
+                              Modifier="@modifier"
+                              Text="@label"
+                              OnClick="@(() => Toast.ShowSuccess($"Triggered <ActionButton Text=\"{label}\" />!"))" />
+                break;
+
+            case "TextInput":
+                if (!_stringState.ContainsKey(stateKey))
+                    _stringState[stateKey] = string.Empty;
+                var touchMode = Enum.TryParse<TouchInputMode>(node.Attributes.GetValueOrDefault("TouchMode"), true, out var tm)
+                    ? tm : TouchInputMode.Auto;
+                <TextInput Label="@node.Attributes.GetValueOrDefault("Label")"
+                           Placeholder="@node.Attributes.GetValueOrDefault("Placeholder", "Type here...")"
+                           IsPassword="@(string.Equals(node.Attributes.GetValueOrDefault("IsPassword"), "true", StringComparison.OrdinalIgnoreCase))"
+                           TouchMode="@touchMode"
+                           Value="@_stringState[stateKey]"
+                           ValueChanged="@(val => _stringState[stateKey] = val)"
+                           Modifier="@modifier" />
+                break;
+
+            case "NumberInput":
+                if (!_numberState.ContainsKey(stateKey))
+                    _numberState[stateKey] = 1;
+                var step = double.TryParse(node.Attributes.GetValueOrDefault("Step"), CultureInfo.InvariantCulture, out var st) ? st : 1;
+                var min = double.TryParse(node.Attributes.GetValueOrDefault("Min"), CultureInfo.InvariantCulture, out var mn) ? mn : 0;
+                var max = double.TryParse(node.Attributes.GetValueOrDefault("Max"), CultureInfo.InvariantCulture, out var mx) ? mx : 100;
+                <NumberInput TValue="double"
+                             Value="@_numberState[stateKey]"
+                             ValueChanged="@(val => _numberState[stateKey] = val)"
+                             Step="@step"
+                             Min="@min"
+                             Max="@max"
+                             Suffix="@node.Attributes.GetValueOrDefault("Suffix")"
+                             Modifier="@modifier" />
+                break;
+
+            case "Checkbox":
+                if (!_boolState.ContainsKey(stateKey))
+                    _boolState[stateKey] = true;
+                <Checkbox Checked="@_boolState[stateKey]"
+                          CheckedChanged="@(val => _boolState[stateKey] = val)"
+                          RenderAsToggleSwitch="@(string.Equals(node.Attributes.GetValueOrDefault("RenderAsToggleSwitch"), "true", StringComparison.OrdinalIgnoreCase))"
+                          Label="@node.Attributes.GetValueOrDefault("Label", "Checkbox")"
+                          Modifier="@modifier" />
+                break;
+
+            case "SegmentedControl":
+                var items = (node.Attributes.GetValueOrDefault("Items", "Option 1,Option 2,Option 3"))
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (!_stringState.ContainsKey(stateKey) || string.IsNullOrEmpty(_stringState[stateKey]))
+                    _stringState[stateKey] = items.FirstOrDefault() ?? "Option 1";
+                <SegmentedControl TItem="string"
+                                  Items="@items"
+                                  Value="@_stringState[stateKey]"
+                                  ValueChanged="@(val => _stringState[stateKey] = val)"
+                                  Modifier="@modifier" />
+                break;
+
+            case "Dropdown":
+                var ddItems = (node.Attributes.GetValueOrDefault("Items", "Item A,Item B,Item C"))
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (!_stringState.ContainsKey(stateKey) || string.IsNullOrEmpty(_stringState[stateKey]))
+                    _stringState[stateKey] = ddItems.FirstOrDefault();
+                <Dropdown TItem="string"
+                          Items="@ddItems"
+                          Value="@_stringState[stateKey]"
+                          ValueChanged="@(val => _stringState[stateKey] = val)"
+                          Modifier="@modifier" />
+                break;
+
+            case "RangeSlider":
+                if (!_numberState.ContainsKey(stateKey))
+                    _numberState[stateKey] = 50;
+                var trackW = double.TryParse(node.Attributes.GetValueOrDefault("TrackWidthPx"), CultureInfo.InvariantCulture, out var tw) ? tw : 240;
+                var rsMin = double.TryParse(node.Attributes.GetValueOrDefault("MinValue"), CultureInfo.InvariantCulture, out var rmn) ? rmn : 0;
+                var rsMax = double.TryParse(node.Attributes.GetValueOrDefault("MaxValue"), CultureInfo.InvariantCulture, out var rmx) ? rmx : 100;
+                var rsStep = double.TryParse(node.Attributes.GetValueOrDefault("Step"), CultureInfo.InvariantCulture, out var rst) ? rst : 10;
+                <RangeSlider TrackWidthPx="@trackW"
+                             MinValue="@rsMin"
+                             MaxValue="@rsMax"
+                             Step="@rsStep"
+                             SelectionUnit="@node.Attributes.GetValueOrDefault("SelectionUnit", "%")"
+                             SelectedValue="@_numberState[stateKey]"
+                             SelectedValueChanged="@(val => _numberState[stateKey] = val)" />
+                break;
+
+            case "RadioSlider":
+                if (!_numberState.ContainsKey(stateKey))
+                    _numberState[stateKey] = 22;
+                var dialSz = double.TryParse(node.Attributes.GetValueOrDefault("DialSizePx"), CultureInfo.InvariantCulture, out var dsz) ? dsz : 180;
+                var maxAng = int.TryParse(node.Attributes.GetValueOrDefault("MaxAngle"), out var mang) ? mang : 240;
+                var rdMin = double.TryParse(node.Attributes.GetValueOrDefault("MinValue"), CultureInfo.InvariantCulture, out var dmn) ? dmn : 0;
+                var rdMax = double.TryParse(node.Attributes.GetValueOrDefault("MaxValue"), CultureInfo.InvariantCulture, out var dmx) ? dmx : 100;
+                var rdStep = double.TryParse(node.Attributes.GetValueOrDefault("Step"), CultureInfo.InvariantCulture, out var dst) ? dst : 5;
+                <RadioSlider DialSizePx="@dialSz"
+                             MaxAngle="@maxAng"
+                             MinValue="@rdMin"
+                             MaxValue="@rdMax"
+                             Step="@rdStep"
+                             SelectionUnit="@node.Attributes.GetValueOrDefault("SelectionUnit", "%")"
+                             SelectedValue="@_numberState[stateKey]"
+                             SelectedValueChanged="@(val => _numberState[stateKey] = val)" />
+                break;
+
+            case "Pill":
+                var pillVar = Enum.TryParse<Pill.PillVariant>(node.Attributes.GetValueOrDefault("Variant"), true, out var pv)
+                    ? pv : Pill.PillVariant.Neutral;
+                <Pill Variant="@pillVar"
+                      Text="@node.Attributes.GetValueOrDefault("Text", "Pill")"
+                      Modifier="@modifier" />
+                break;
+
+            case "Text":
+                var textVar = Enum.TryParse<TypographyVariant>(node.Attributes.GetValueOrDefault("Variant"), true, out var tv)
+                    ? tv : TypographyVariant.Body;
+                FontWeight? weight = Enum.TryParse<FontWeight>(node.Attributes.GetValueOrDefault("Weight"), true, out var fw)
+                    ? fw : null;
+                <ALKsPersonalUI.Layout.Text Variant="@textVar"
+                                            Weight="@weight"
+                                            Muted="@(string.Equals(node.Attributes.GetValueOrDefault("Muted"), "true", StringComparison.OrdinalIgnoreCase))"
+                                            Value="@node.Attributes.GetValueOrDefault("Value", "Text")"
+                                            Modifier="@modifier" />
+                break;
+
+            case "Divider":
+                <Divider Vertical="@(string.Equals(node.Attributes.GetValueOrDefault("Vertical"), "true", StringComparison.OrdinalIgnoreCase))"
+                         Color="@node.Attributes.GetValueOrDefault("Color")"
+                         Thickness="@node.Attributes.GetValueOrDefault("Thickness")" />
+                break;
+
+            case "Spacer":
+                <Spacer Modifier="@modifier" />
+                break;
+
+            case "SimpleSpinner":
+                <SimpleSpinner Modifier="@modifier" />
+                break;
+
+            case "OrbitalLoader":
+                var sysSize = int.TryParse(node.Attributes.GetValueOrDefault("SystemSize"), out var ssz) ? ssz : 100;
+                var satCnt = int.TryParse(node.Attributes.GetValueOrDefault("SatelliteCount"), out var sc) ? sc : 8;
+                <OrbitalLoader SystemSize="@sysSize"
+                               SatelliteCount="@satCnt"
+                               LoadingText="@node.Attributes.GetValueOrDefault("LoadingText", "Loading...")">
+                    <Mars PlanetSize="44" />
+                </OrbitalLoader>
+                break;
+        }
+    };
+}
