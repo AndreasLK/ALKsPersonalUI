@@ -115,7 +115,7 @@
     [Parameter] public string ConfirmText { get; set; } = "Enter \u21B5";
     [Parameter] public EventCallback<TValue> OnConfirm { get; set; }
 
-    private string _rawBuffer = "0";
+    private string _numericInputBuffer = "0";
     private TValue _lastSyncedValue = TValue.Zero;
 
     protected override void OnParametersSet()
@@ -123,7 +123,7 @@
         if (!EqualityComparer<TValue>.Default.Equals(Value, _lastSyncedValue))
         {
             _lastSyncedValue = Value;
-            _rawBuffer = Value.ToString(null, CultureInfo.InvariantCulture);
+            _numericInputBuffer = Value.ToString(null, CultureInfo.InvariantCulture);
         }
     }
 
@@ -144,7 +144,7 @@
         .FontSize("1.2rem")
         .BaseColor(ModifierOrEmpty.BaseColorValue ?? "var(--ui-bg-elevated)")
         .TextColor(ModifierOrEmpty.TextColorValue ?? "var(--ui-text)")
-        .PressScale(0.91);
+        .InwardPressScaleFactor(0.91);
 
     private UIModifier BuildSecondaryKeyModifier() => UIModifier.Empty
         .FillMaxWidth()
@@ -153,7 +153,7 @@
         .FontSize("1.15rem")
         .BaseColor(ModifierOrEmpty.AccentColorValue ?? "var(--ui-accent)")
         .TextColor("var(--ui-text)")
-        .PressScale(0.91);
+        .InwardPressScaleFactor(0.91);
 
     private UIModifier BuildDangerKeyModifier() => UIModifier.Empty
         .FillMaxWidth()
@@ -162,16 +162,17 @@
         .FontSize("1.1rem")
         .BaseColor("var(--ui-danger)")
         .TextColor("var(--ui-text)")
-        .PressScale(0.91);
+        .InwardPressScaleFactor(0.91);
 
     private string FormatDisplayReadout()
     {
         if (IsPinMode)
         {
-            var pinChars = _rawBuffer == "0" ? 0 : _rawBuffer.Length;
-            return pinChars == 0 ? "\u2022\u2022\u2022\u2022" : new string('\u25CF', pinChars);
+            var enteredPinDigitCount = _numericInputBuffer == "0" ? 0 : _numericInputBuffer.Length;
+            return enteredPinDigitCount == 0 ? "\u2022\u2022\u2022\u2022" : new string('\u25CF', enteredPinDigitCount);
         }
-        return string.IsNullOrEmpty(_rawBuffer) ? "0" : _rawBuffer;
+
+        return string.IsNullOrEmpty(_numericInputBuffer) ? "0" : _numericInputBuffer;
     }
 
     private static string FormatQuickStep(TValue delta) =>
@@ -181,70 +182,74 @@
 
     private async Task AppendDigitAsync(string digit)
     {
-        if (IsPinMode && _rawBuffer.Length >= MaxPinLength && _rawBuffer != "0")
+        if (IsPinMode && _numericInputBuffer.Length >= MaxPinLength && _numericInputBuffer != "0")
             return;
 
-        _rawBuffer = _rawBuffer == "0" ? digit : _rawBuffer + digit;
+        _numericInputBuffer = _numericInputBuffer == "0" ? digit : _numericInputBuffer + digit;
         await ParseAndCommitBufferAsync();
     }
 
     private async Task AppendDecimalAsync()
     {
-        if (!AllowDecimal || _rawBuffer.Contains('.'))
+        if (!AllowDecimal || _numericInputBuffer.Contains('.'))
             return;
 
-        _rawBuffer = string.IsNullOrEmpty(_rawBuffer) ? "0." : _rawBuffer + ".";
+        _numericInputBuffer = string.IsNullOrEmpty(_numericInputBuffer) ? "0." : _numericInputBuffer + ".";
         await ParseAndCommitBufferAsync();
     }
 
     private async Task ToggleSignAsync()
     {
-        if (!AllowNegative || _rawBuffer == "0")
+        if (!AllowNegative || _numericInputBuffer == "0")
             return;
 
-        _rawBuffer = _rawBuffer.StartsWith('-') ? _rawBuffer[1..] : "-" + _rawBuffer;
+        _numericInputBuffer = _numericInputBuffer.StartsWith('-')
+            ? _numericInputBuffer[1..]
+            : "-" + _numericInputBuffer;
         await ParseAndCommitBufferAsync();
     }
 
     private async Task BackspaceAsync()
     {
-        if (_rawBuffer.Length <= 1 || (_rawBuffer.Length == 2 && _rawBuffer.StartsWith('-')))
-            _rawBuffer = "0";
+        if (_numericInputBuffer.Length <= 1 || (_numericInputBuffer.Length == 2 && _numericInputBuffer.StartsWith('-')))
+            _numericInputBuffer = "0";
         else
-            _rawBuffer = _rawBuffer[..^1];
+            _numericInputBuffer = _numericInputBuffer[..^1];
 
         await ParseAndCommitBufferAsync();
     }
 
     private async Task ClearAsync()
     {
-        _rawBuffer = "0";
+        _numericInputBuffer = "0";
         await CommitValueAsync(TValue.Zero);
     }
 
     private async Task ApplyQuickStepAsync(TValue delta)
     {
-        var target = Value + delta;
-        await CommitValueAsync(target);
-        _rawBuffer = Value.ToString(null, CultureInfo.InvariantCulture);
+        var steppedValue = Value + delta;
+        await CommitValueAsync(steppedValue);
+        _numericInputBuffer = Value.ToString(null, CultureInfo.InvariantCulture);
     }
 
     private async Task ParseAndCommitBufferAsync()
     {
-        var parseTarget = _rawBuffer.EndsWith('.') ? _rawBuffer[..^1] : _rawBuffer;
-        if (TValue.TryParse(parseTarget, CultureInfo.InvariantCulture, out var parsed))
-            await CommitValueAsync(parsed);
+        var trimmedNumericText = _numericInputBuffer.EndsWith('.')
+            ? _numericInputBuffer[..^1]
+            : _numericInputBuffer;
+        if (TValue.TryParse(trimmedNumericText, CultureInfo.InvariantCulture, out var parsedNumber))
+            await CommitValueAsync(parsedNumber);
     }
 
-    private async Task CommitValueAsync(TValue proposed)
+    private async Task CommitValueAsync(TValue candidateValue)
     {
-        if (Min.HasValue && proposed < Min.Value)
-            proposed = Min.Value;
-        if (Max.HasValue && proposed > Max.Value)
-            proposed = Max.Value;
+        if (Min.HasValue && candidateValue < Min.Value)
+            candidateValue = Min.Value;
+        if (Max.HasValue && candidateValue > Max.Value)
+            candidateValue = Max.Value;
 
-        Value = proposed;
-        _lastSyncedValue = proposed;
+        Value = candidateValue;
+        _lastSyncedValue = candidateValue;
         await ValueChanged.InvokeAsync(Value);
     }
 

@@ -25,11 +25,11 @@ public sealed class KeyboardSetup
     public bool IncludeNumbers { get; private set; }
     public bool IncludeSpecialCharacters { get; private set; }
     public bool IncludeFunctionKeys { get; private set; }
-    public bool IncludeSystemKeys { get; private set; }        // PrtSc, ScrLk, Pause
-    public bool IncludeNavigationCluster { get; private set; } // Ins, Home, PgUp, Del, End, PgDn
-    public bool IncludeArrowKeys { get; private set; }         // Inverted-T Arrows
-    public bool IncludeNumpad { get; private set; }            // Right-hand Numpad
-    public bool IncludePcModifiers { get; private set; }       // Tab, Ctrl, Alt, AltGr (NEVER Windows key)
+    public bool IncludeSystemKeys { get; private set; }            // PrtSc, ScrLk, Pause
+    public bool IncludeNavigationCluster { get; private set; }     // Ins, Home, PgUp, Del, End, PgDn
+    public bool IncludeArrowKeys { get; private set; }             // Inverted-T Arrows
+    public bool IncludeNumpad { get; private set; }                // Right-hand Numpad
+    public bool IncludeDesktopModifierKeys { get; private set; }   // Tab, Ctrl, Alt, AltGr (NEVER Windows key)
 
     public static KeyboardSetup New => new();
 
@@ -43,7 +43,7 @@ public sealed class KeyboardSetup
         .WithNumbers()
         .WithSpecialCharacters()
         .WithFunctionKeys()
-        .WithPcModifiers()
+        .WithDesktopModifierKeys()
         .WithSystemKeys()
         .WithNavigationCluster()
         .WithArrowKeys();
@@ -122,27 +122,29 @@ public sealed class KeyboardSetup
 
     public KeyboardSetup WithoutNumpad() => WithNumpad(false);
 
-    public KeyboardSetup WithPcModifiers(bool enabled = true)
+    public KeyboardSetup WithDesktopModifierKeys(bool enabled = true)
     {
-        IncludePcModifiers = enabled;
+        IncludeDesktopModifierKeys = enabled;
         return this;
     }
 
-    public KeyboardSetup WithoutPcModifiers() => WithPcModifiers(false);
+    public KeyboardSetup WithoutDesktopModifierKeys() => WithDesktopModifierKeys(false);
 
     public string ToCodeSnippet()
     {
-        var sb = new StringBuilder("KeyboardSetup.New");
-        sb.Append($".Layout(KeyboardLayout.{LayoutValue})");
-        if (!IncludeLetters) sb.Append(".WithoutLetters()");
-        if (IncludeNumbers) sb.Append(".WithNumbers()");
-        if (IncludeSpecialCharacters) sb.Append(".WithSpecialCharacters()");
-        if (IncludeFunctionKeys) sb.Append(".WithFunctionKeys()");
-        if (IncludePcModifiers) sb.Append(".WithPcModifiers()");
-        if (IncludeSystemKeys) sb.Append(".WithSystemKeys()");
-        if (IncludeNavigationCluster) sb.Append(".WithNavigationCluster()");
-        if (IncludeArrowKeys) sb.Append(".WithArrowKeys()");
-        if (IncludeNumpad) sb.Append(".WithNumpad()");
-        return sb.ToString();
+        var codeSnippetBuilder = new StringBuilder($"{nameof(KeyboardSetup)}.{nameof(New)}");
+        codeSnippetBuilder.Append($".{nameof(Layout)}({nameof(KeyboardLayout)}.{LayoutValue})");
+
+        if (!IncludeLetters) codeSnippetBuilder.Append($".{nameof(WithoutLetters)}()");
+        if (IncludeNumbers) codeSnippetBuilder.Append($".{nameof(WithNumbers)}()");
+        if (IncludeSpecialCharacters) codeSnippetBuilder.Append($".{nameof(WithSpecialCharacters)}()");
+        if (IncludeFunctionKeys) codeSnippetBuilder.Append($".{nameof(WithFunctionKeys)}()");
+        if (IncludeDesktopModifierKeys) codeSnippetBuilder.Append($".{nameof(WithDesktopModifierKeys)}()");
+        if (IncludeSystemKeys) codeSnippetBuilder.Append($".{nameof(WithSystemKeys)}()");
+        if (IncludeNavigationCluster) codeSnippetBuilder.Append($".{nameof(WithNavigationCluster)}()");
+        if (IncludeArrowKeys) codeSnippetBuilder.Append($".{nameof(WithArrowKeys)}()");
+        if (IncludeNumpad) codeSnippetBuilder.Append($".{nameof(WithNumpad)}()");
+
+        return codeSnippetBuilder.ToString();
     }
 }
