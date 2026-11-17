@@ -23,7 +23,7 @@
     [Parameter] public IEnumerable<TItem>? Items { get; set; }
     [Parameter] public TItem? Value { get; set; }
     [Parameter] public EventCallback<TItem?> ValueChanged { get; set; }
-    [Parameter] public Func<TItem, string>? TextSelector { get; set; }
+    [Parameter] public Func<TItem, string>? ItemDisplayTextSelector { get; set; }
     [Parameter] public bool Disabled { get; set; }
 
     private UIModifier BuildContainerModifier() => UIModifier.Empty
@@ -48,7 +48,7 @@
             ? (ModifierOrEmpty.AccentColorValue ?? "var(--ui-accent)")
             : "var(--ui-text-muted)")
         .TextColor("var(--ui-text)")
-        .PressScale(0.94);
+        .InwardPressScaleFactor(0.94);
 
     private bool IsSelected(TItem candidate) =>
         EqualityComparer<TItem>.Default.Equals(candidate, Value);
@@ -57,9 +57,8 @@
     {
         if (item is null)
             return string.Empty;
-
-        return TextSelector is not null
-            ? TextSelector(item)
+        return ItemDisplayTextSelector is not null
+            ? ItemDisplayTextSelector(item)
             : (item.ToString() ?? string.Empty);
     }
 
@@ -67,7 +66,6 @@
     {
         if (Disabled || IsSelected(selected))
             return;
-
         Value = selected;
         await ValueChanged.InvokeAsync(selected);
     }

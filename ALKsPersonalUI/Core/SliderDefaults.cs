@@ -23,7 +23,7 @@ public static class SliderDefaults
     public static class LinearRange
     {
         public const string DefaultWidth = "260px";
-        public const double DefaultTrackPixelWidth = 260.0;
+        public const double DefaultTrackWidthPx = 260.0;
         public const string SvgViewBox = "0 0 100 12";
         public const double TickTopY = 2.0;
         public const double TickBottomY = 10.0;

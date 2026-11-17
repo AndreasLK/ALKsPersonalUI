@@ -19,15 +19,15 @@ public sealed class UITheme
 {
     public string Name { get; set; } = ThemeDefaults.PresetNames.Default;
 
-    public string AppBg { get; set; } = ThemeDefaults.DarkDefault.AppBackground;
-    public string SurfaceBg { get; set; } = ThemeDefaults.DarkDefault.SurfaceBackground;
-    public string ElevatedBg { get; set; } = ThemeDefaults.DarkDefault.ElevatedBackground;
-    public string HeaderBg { get; set; } = ThemeDefaults.DarkDefault.HeaderBackground;
+    public string ApplicationBackgroundColor { get; set; } = ThemeDefaults.DarkDefault.ApplicationBackgroundColor;
+    public string SurfaceBackgroundColor { get; set; } = ThemeDefaults.DarkDefault.SurfaceBackgroundColor;
+    public string ElevatedBackgroundColor { get; set; } = ThemeDefaults.DarkDefault.ElevatedBackgroundColor;
+    public string HeaderBackgroundColor { get; set; } = ThemeDefaults.DarkDefault.HeaderBackgroundColor;
     public string BorderColor { get; set; } = ThemeDefaults.DarkDefault.BorderColor;
 
     public string TextColor { get; set; } = ThemeDefaults.DarkDefault.TextColor;
-    public string TextMuted { get; set; } = ThemeDefaults.DarkDefault.TextMuted;
-    public string TextInverse { get; set; } = ThemeDefaults.DarkDefault.TextInverse;
+    public string MutedTextColor { get; set; } = ThemeDefaults.DarkDefault.MutedTextColor;
+    public string InverseTextColor { get; set; } = ThemeDefaults.DarkDefault.InverseTextColor;
 
     public string AccentColor { get; set; } = ThemeDefaults.DarkDefault.AccentColor;
     public string ActionColor { get; set; } = ThemeDefaults.DarkDefault.ActionColor;
@@ -35,87 +35,87 @@ public sealed class UITheme
     public string WarningColor { get; set; } = ThemeDefaults.DarkDefault.WarningColor;
     public string DangerColor { get; set; } = ThemeDefaults.DarkDefault.DangerColor;
 
-    public string RadiusSm { get; set; } = ThemeDefaults.DarkDefault.SmallRadius;
-    public string RadiusMd { get; set; } = ThemeDefaults.DarkDefault.MediumRadius;
-    public string RadiusLg { get; set; } = ThemeDefaults.DarkDefault.LargeRadius;
-    public string Depth { get; set; } = ThemeDefaults.DarkDefault.TactileDepth;
-    public string AnimSpeed { get; set; } = ThemeDefaults.DarkDefault.AnimationSpeed;
+    public string SmallBorderRadius { get; set; } = ThemeDefaults.DarkDefault.SmallBorderRadius;
+    public string MediumBorderRadius { get; set; } = ThemeDefaults.DarkDefault.MediumBorderRadius;
+    public string LargeBorderRadius { get; set; } = ThemeDefaults.DarkDefault.LargeBorderRadius;
+    public string ButtonExtrusionDepth { get; set; } = ThemeDefaults.DarkDefault.ButtonExtrusionDepth;
+    public string PressAnimationDuration { get; set; } = ThemeDefaults.DarkDefault.PressAnimationDuration;
 
-    public string PressScale { get; set; } = "0.93";
-    public string TouchTargetMin { get; set; } = "2.75rem";
+    public string InwardPressScaleFactor { get; set; } = ThemeDefaults.DarkDefault.InwardPressScaleFactor;
+    public string MinimumTouchTargetSize { get; set; } = ThemeDefaults.DarkDefault.MinimumTouchTargetSize;
     public ButtonPressEffect DefaultPressEffect { get; set; } = ButtonPressEffect.Auto;
     public TouchInputMode DefaultTouchInputMode { get; set; } = TouchInputMode.None;
 
-    private Dictionary<string, string> _customVariables = new();
+    private Dictionary<string, string> _customCssVariables = new();
 
     public static UITheme FromSeed(
         string name,
         string accentColor,
-        string appBackground = "#121316",
+        string applicationBackgroundColor = "#121316",
         string? actionColor = null,
-        bool isDark = true,
-        ButtonPressEffect pressEffect = ButtonPressEffect.Auto)
+        bool isDarkTheme = true,
+        ButtonPressEffect defaultPressEffect = ButtonPressEffect.Auto)
     {
-        var mixTarget = isDark ? "white" : "black";
+        var contrastMixColor = isDarkTheme ? "white" : "black";
         return new UITheme
         {
             Name = name,
-            AppBg = appBackground,
-            HeaderBg = $"color-mix(in srgb, {appBackground}, {mixTarget} 4%)",
-            ElevatedBg = $"color-mix(in srgb, {appBackground}, {mixTarget} 8%)",
-            SurfaceBg = $"color-mix(in srgb, {appBackground}, {mixTarget} 12%)",
-            BorderColor = $"color-mix(in srgb, {appBackground}, {mixTarget} 20%)",
-            TextColor = isDark ? "#ffffff" : "#0f172a",
-            TextMuted = $"color-mix(in srgb, {(isDark ? "#ffffff" : "#0f172a")}, transparent 38%)",
-            TextInverse = isDark ? "#111111" : "#ffffff",
+            ApplicationBackgroundColor = applicationBackgroundColor,
+            HeaderBackgroundColor = $"color-mix(in srgb, {applicationBackgroundColor}, {contrastMixColor} 4%)",
+            ElevatedBackgroundColor = $"color-mix(in srgb, {applicationBackgroundColor}, {contrastMixColor} 8%)",
+            SurfaceBackgroundColor = $"color-mix(in srgb, {applicationBackgroundColor}, {contrastMixColor} 12%)",
+            BorderColor = $"color-mix(in srgb, {applicationBackgroundColor}, {contrastMixColor} 20%)",
+            TextColor = isDarkTheme ? "#ffffff" : "#0f172a",
+            MutedTextColor = $"color-mix(in srgb, {(isDarkTheme ? "#ffffff" : "#0f172a")}, transparent 38%)",
+            InverseTextColor = isDarkTheme ? "#111111" : "#ffffff",
             AccentColor = accentColor,
             ActionColor = actionColor ?? accentColor,
-            DefaultPressEffect = pressEffect
+            DefaultPressEffect = defaultPressEffect
         };
     }
 
-    public UITheme WithCustomVariable(string cssVariableName, string value)
+    public UITheme WithCustomVariable(string cssVariableName, string variableValue)
     {
-        var formattedName = cssVariableName.StartsWith("--") ? cssVariableName : $"--{cssVariableName}";
-        _customVariables[formattedName] = value;
+        var normalizedCssVariableName = cssVariableName.StartsWith("--") ? cssVariableName : $"--{cssVariableName}";
+        _customCssVariables[normalizedCssVariableName] = variableValue;
         return this;
     }
 
     public string ToCssVariables()
     {
-        var builder = new StyleBuilder()
-            .Add("--ui-bg-app", AppBg)
-            .Add("--ui-bg-surface", SurfaceBg)
-            .Add("--ui-bg-elevated", ElevatedBg)
-            .Add("--ui-bg-header", HeaderBg)
+        var styleBuilder = new StyleBuilder()
+            .Add("--ui-bg-app", ApplicationBackgroundColor)
+            .Add("--ui-bg-surface", SurfaceBackgroundColor)
+            .Add("--ui-bg-elevated", ElevatedBackgroundColor)
+            .Add("--ui-bg-header", HeaderBackgroundColor)
             .Add("--ui-border", BorderColor)
             .Add("--ui-text", TextColor)
-            .Add("--ui-text-muted", TextMuted)
-            .Add("--ui-text-inverse", TextInverse)
+            .Add("--ui-text-muted", MutedTextColor)
+            .Add("--ui-text-inverse", InverseTextColor)
             .Add("--ui-accent", AccentColor)
             .Add("--ui-action", ActionColor)
             .Add("--ui-success", SuccessColor)
             .Add("--ui-warning", WarningColor)
             .Add("--ui-danger", DangerColor)
-            .Add("--ui-radius-sm", RadiusSm)
-            .Add("--ui-radius-md", RadiusMd)
-            .Add("--ui-radius-lg", RadiusLg)
-            .Add("--ui-radius-pill", ThemeDefaults.DarkDefault.PillRadius)
-            .Add("--ui-depth", Depth)
-            .Add("--ui-anim-speed", AnimSpeed)
-            .Add("--ui-press-scale", PressScale)
-            .Add("--ui-touch-target", TouchTargetMin);
+            .Add("--ui-radius-sm", SmallBorderRadius)
+            .Add("--ui-radius-md", MediumBorderRadius)
+            .Add("--ui-radius-lg", LargeBorderRadius)
+            .Add("--ui-radius-pill", ThemeDefaults.DarkDefault.PillBorderRadius)
+            .Add("--ui-depth", ButtonExtrusionDepth)
+            .Add("--ui-anim-speed", PressAnimationDuration)
+            .Add("--ui-press-scale", InwardPressScaleFactor)
+            .Add("--ui-touch-target", MinimumTouchTargetSize);
 
-        foreach (var (key, val) in _customVariables)
-            builder.Add(key, val);
+        foreach (var (variableName, variableValue) in _customCssVariables)
+            styleBuilder.Add(variableName, variableValue);
 
-        return builder.Build();
+        return styleBuilder.Build();
     }
 
     public UITheme Clone()
     {
-        var copy = (UITheme)MemberwiseClone();
-        copy._customVariables = new Dictionary<string, string>(_customVariables);
-        return copy;
+        var clonedTheme = (UITheme)MemberwiseClone();
+        clonedTheme._customCssVariables = new Dictionary<string, string>(_customCssVariables);
+        return clonedTheme;
     }
 }

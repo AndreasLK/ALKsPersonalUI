@@ -17,7 +17,7 @@
         Color ?? ModifierOrEmpty.BorderColorValue ?? LayoutDefaults.Divider.DefaultColor;
 
     private string ResolvedThickness =>
-        Thickness ?? ModifierOrEmpty.ThicknessValue ?? LayoutDefaults.Divider.DefaultThickness;
+        Thickness ?? ModifierOrEmpty.StrokeThicknessValue ?? LayoutDefaults.Divider.DefaultThickness;
 
     private string BuildCssClasses() => new CssBuilder()
         .Add("ui-divider")

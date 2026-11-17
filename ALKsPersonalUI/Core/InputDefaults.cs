@@ -27,7 +27,7 @@ public static class InputDefaults
         public const string ContainerBorderRadius = "12px";
         public const string StepButtonWidth = "2.2rem";
         public const string StepButtonPadding = "0.3rem 0";
-        public const string StepButtonDepth = "2px";
+        public const string StepButtonExtrusionDepth = "2px";
         public const string DefaultButtonColor = "#3b82f6";
         public const string DefaultButtonTextColor = "#ffffff";
         public const string DecrementSymbol = "\u2212";
@@ -38,7 +38,7 @@ public static class InputDefaults
     public static class TextInput
     {
         public const int DefaultMaxLength = 256;
-        public const string ContainerDimensionAuto = "auto";
+        public const string DefaultContainerMinimumDimensions = "auto";
         public const string ContainerPadding = "0.5rem 0.75rem";
         public const string RedactedTextPlaceholder = "[REDACTED]";
         public const string ClearSymbol = "\u2715";

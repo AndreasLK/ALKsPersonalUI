@@ -4,11 +4,11 @@ public sealed class UIThemeService
 {
     public event Action? OnChange;
 
-    private readonly Dictionary<string, Func<UITheme>> _presets = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Func<UITheme>> _registeredPresets = new(StringComparer.OrdinalIgnoreCase);
 
     public UITheme Current { get; private set; } = new();
 
-    public IReadOnlyCollection<string> RegisteredPresets => _presets.Keys;
+    public IReadOnlyCollection<string> RegisteredPresets => _registeredPresets.Keys;
 
     public UIThemeService()
     {
@@ -18,11 +18,11 @@ public sealed class UIThemeService
         RegisterPreset(ThemeDefaults.PresetNames.NordicLight, CreateNordicLightTheme);
     }
 
-    public void RegisterPreset(string presetName, Func<UITheme> factory)
+    public void RegisterPreset(string presetName, Func<UITheme> themeFactory)
     {
-        _presets[presetName] = () =>
+        _registeredPresets[presetName] = () =>
         {
-            var theme = factory();
+            var theme = themeFactory();
             theme.Name = presetName;
             return theme;
         };
@@ -45,9 +45,9 @@ public sealed class UIThemeService
 
     public void ApplyPreset(string presetName)
     {
-        if (_presets.TryGetValue(presetName, out var factory))
+        if (_registeredPresets.TryGetValue(presetName, out var themeFactory))
         {
-            Current = factory();
+            Current = themeFactory();
             NotifyThemeChanged();
             return;
         }
@@ -59,44 +59,44 @@ public sealed class UIThemeService
     private static UITheme CreateCyberpunkTheme() => new()
     {
         Name = ThemeDefaults.PresetNames.Cyberpunk,
-        AppBg = ThemeDefaults.Cyberpunk.AppBackground,
-        SurfaceBg = ThemeDefaults.Cyberpunk.SurfaceBackground,
-        ElevatedBg = ThemeDefaults.Cyberpunk.ElevatedBackground,
-        HeaderBg = ThemeDefaults.Cyberpunk.HeaderBackground,
+        ApplicationBackgroundColor = ThemeDefaults.Cyberpunk.ApplicationBackgroundColor,
+        SurfaceBackgroundColor = ThemeDefaults.Cyberpunk.SurfaceBackgroundColor,
+        ElevatedBackgroundColor = ThemeDefaults.Cyberpunk.ElevatedBackgroundColor,
+        HeaderBackgroundColor = ThemeDefaults.Cyberpunk.HeaderBackgroundColor,
         BorderColor = ThemeDefaults.Cyberpunk.BorderColor,
         AccentColor = ThemeDefaults.Cyberpunk.AccentColor,
         ActionColor = ThemeDefaults.Cyberpunk.ActionColor,
-        RadiusMd = ThemeDefaults.Cyberpunk.MediumRadius,
-        RadiusLg = ThemeDefaults.Cyberpunk.LargeRadius,
-        Depth = ThemeDefaults.Cyberpunk.TactileDepth
+        MediumBorderRadius = ThemeDefaults.Cyberpunk.MediumBorderRadius,
+        LargeBorderRadius = ThemeDefaults.Cyberpunk.LargeBorderRadius,
+        ButtonExtrusionDepth = ThemeDefaults.Cyberpunk.ButtonExtrusionDepth
     };
 
     private static UITheme CreateEmeraldTheme() => new()
     {
         Name = ThemeDefaults.PresetNames.Emerald,
-        AppBg = ThemeDefaults.Emerald.AppBackground,
-        SurfaceBg = ThemeDefaults.Emerald.SurfaceBackground,
-        ElevatedBg = ThemeDefaults.Emerald.ElevatedBackground,
-        HeaderBg = ThemeDefaults.Emerald.HeaderBackground,
+        ApplicationBackgroundColor = ThemeDefaults.Emerald.ApplicationBackgroundColor,
+        SurfaceBackgroundColor = ThemeDefaults.Emerald.SurfaceBackgroundColor,
+        ElevatedBackgroundColor = ThemeDefaults.Emerald.ElevatedBackgroundColor,
+        HeaderBackgroundColor = ThemeDefaults.Emerald.HeaderBackgroundColor,
         BorderColor = ThemeDefaults.Emerald.BorderColor,
         AccentColor = ThemeDefaults.Emerald.AccentColor,
         ActionColor = ThemeDefaults.Emerald.ActionColor,
-        RadiusMd = ThemeDefaults.Emerald.MediumRadius,
-        RadiusLg = ThemeDefaults.Emerald.LargeRadius,
-        Depth = ThemeDefaults.Emerald.TactileDepth
+        MediumBorderRadius = ThemeDefaults.Emerald.MediumBorderRadius,
+        LargeBorderRadius = ThemeDefaults.Emerald.LargeBorderRadius,
+        ButtonExtrusionDepth = ThemeDefaults.Emerald.ButtonExtrusionDepth
     };
 
     private static UITheme CreateNordicLightTheme() => new()
     {
         Name = ThemeDefaults.PresetNames.NordicLight,
-        AppBg = ThemeDefaults.NordicLight.AppBackground,
-        SurfaceBg = ThemeDefaults.NordicLight.SurfaceBackground,
-        ElevatedBg = ThemeDefaults.NordicLight.ElevatedBackground,
-        HeaderBg = ThemeDefaults.NordicLight.HeaderBackground,
+        ApplicationBackgroundColor = ThemeDefaults.NordicLight.ApplicationBackgroundColor,
+        SurfaceBackgroundColor = ThemeDefaults.NordicLight.SurfaceBackgroundColor,
+        ElevatedBackgroundColor = ThemeDefaults.NordicLight.ElevatedBackgroundColor,
+        HeaderBackgroundColor = ThemeDefaults.NordicLight.HeaderBackgroundColor,
         BorderColor = ThemeDefaults.NordicLight.BorderColor,
         TextColor = ThemeDefaults.NordicLight.TextColor,
-        TextMuted = ThemeDefaults.NordicLight.TextMuted,
-        TextInverse = ThemeDefaults.NordicLight.TextInverse,
+        MutedTextColor = ThemeDefaults.NordicLight.MutedTextColor,
+        InverseTextColor = ThemeDefaults.NordicLight.InverseTextColor,
         AccentColor = ThemeDefaults.NordicLight.AccentColor,
         ActionColor = ThemeDefaults.NordicLight.ActionColor
     };

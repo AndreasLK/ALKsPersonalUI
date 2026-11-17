@@ -6,8 +6,9 @@
         <Dropdown TItem="string"
                   Items="GetFilterableColumnTitles()"
                   @bind-Value="_selectedFilterColumnTitle"
-                  TextSelector="FormatColumnDropdownLabel"
+                  ItemDisplayTextSelector="FormatColumnDropdownLabel"
                   AriaLabel="@DataTableDefaults.ColumnFilterAriaLabel" />
+
         <TextInput @bind-Value="_searchFilterText"
                    Placeholder="@DataTableDefaults.SearchPlaceholder" />
     </div>
@@ -21,6 +22,7 @@
                       OnClick="ClearSearchFilter">
                     @DataTableDefaults.AllColumnsKey
                 </Pill>
+
                 @foreach (var distinctCategoryValue in GetQuickFilterValuesForColumn(quickFilterColumn))
                 {
                     <Pill Active="@IsQuickFilterSelected(quickFilterColumn, distinctCategoryValue)"
@@ -144,7 +146,6 @@
     {
         if (_activeSortColumn != column)
             return DataTableDefaults.SortNeutralIcon;
-
         return _isSortedAscending
             ? DataTableDefaults.SortAscendingIcon
             : DataTableDefaults.SortDescendingIcon;
@@ -154,7 +155,6 @@
     {
         if (_activeSortColumn != column)
             return DataTableDefaults.AriaSortNone;
-
         return _isSortedAscending
             ? DataTableDefaults.AriaSortAscending
             : DataTableDefaults.AriaSortDescending;
@@ -191,7 +191,6 @@
     {
         if (Items is null)
             return Enumerable.Empty<TItem>();
-
         if (IsSearchFilterEmpty || Columns is null)
             return Items;
 

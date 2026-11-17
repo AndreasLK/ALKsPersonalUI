@@ -8,8 +8,8 @@ public static class ButtonDefaults
     public const string DefaultFontSize = "0.95rem";
     public const string DefaultBaseColor = "var(--ui-action)";
     public const string DefaultTextColor = "var(--ui-text-inverse)";
-    public const string DefaultDepth = "var(--ui-depth)";
-    public const string DefaultAnimationSpeed = "var(--ui-anim-speed)";
+    public const string DefaultButtonExtrusionDepth = "var(--ui-depth)";
+    public const string DefaultPressAnimationDuration = "var(--ui-anim-speed)";
 
     public static readonly (string VerticalPadding, string HorizontalPadding, string FontSize) SmallMetrics =
         ("0.5rem", "1.05rem", "0.85rem");

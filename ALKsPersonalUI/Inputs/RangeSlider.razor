@@ -3,7 +3,6 @@
 <div class="@BuildRootCssClasses()"
      style="@BuildSliderInlineStyles()"
      @attributes="AdditionalAttributes">
-
     @if (ShouldRenderTickScale)
     {
         <div class="range-scale">
@@ -47,25 +46,22 @@
             @onpointermove="HandlePointerMove"
             @onpointerup="HandlePointerUp"
             @onpointercancel="HandlePointerUp">
-
         <span class="range-track">
             <span class="range-fill"></span>
         </span>
-
         <span class="@BuildThumbCssClasses()">
             @if (ShowSelectedValue)
             {
                 <span class="thumb-readout">@SelectedValue@SelectionUnit</span>
             }
         </span>
-
         <span class="range-hit-area" onpointerdown="this.setPointerCapture(event.pointerId)"></span>
     </button>
 </div>
 
 @code {
     [Parameter] public bool ShowTicks { get; set; } = true;
-    [Parameter] public double TrackPixelWidth { get; set; } = SliderDefaults.LinearRange.DefaultTrackPixelWidth;
+    [Parameter] public double TrackWidthPx { get; set; } = SliderDefaults.LinearRange.DefaultTrackWidthPx;
 
     private bool ShouldRenderTickScale => ShowTicks && TotalTicks > 0;
 
@@ -75,7 +71,7 @@
         .Build();
 
     private string BuildSliderInlineStyles() => new StyleBuilder()
-        .Add("--_rng-width", ModifierOrEmpty.WidthValue ?? $"{GeometryMath.FormatInvariant(TrackPixelWidth)}px")
+        .Add("--_rng-width", ModifierOrEmpty.WidthValue ?? $"{GeometryMath.FormatInvariant(TrackWidthPx)}px")
         .Add("--_rng-progress", $"{GeometryMath.FormatInvariant(ValuePercentage * GeometryMath.FullPercentage)}%")
         .AddRaw(ModifierOrEmpty.BuildFrameExtras())
         .Build();
@@ -92,11 +88,11 @@
 
     protected override async Task UpdateValueFromPointer(PointerEventArgs pointerEvent)
     {
-        if (!HasValidRange || TrackPixelWidth <= 0)
+        if (!HasValidRange || TrackWidthPx <= 0)
             return;
 
         var normalizedProgress = Math.Clamp(
-            pointerEvent.OffsetX / TrackPixelWidth,
+            pointerEvent.OffsetX / TrackWidthPx,
             GeometryMath.NormalizedMin,
             GeometryMath.NormalizedMax);
 

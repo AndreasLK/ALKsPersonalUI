@@ -83,7 +83,7 @@
     [Parameter] public string? Label { get; set; }
     [Parameter] public string? Placeholder { get; set; }
     [Parameter] public int MaxLength { get; set; } = InputDefaults.TextInput.DefaultMaxLength;
-    [Parameter] public List<ValidationRule>? Rules { get; set; }
+    [Parameter] public List<ValidationRule>? ValidationRules { get; set; }
     [Parameter] public bool IsPassword { get; set; }
     [Parameter] public bool ShowClearButton { get; set; } = true;
     [Parameter] public TouchInputMode? TouchMode { get; set; }
@@ -115,8 +115,8 @@
 
     private UIModifier BuildInnerWindowModifier() => UIModifier.Empty
         .FillMaxWidth()
-        .MinWidth(InputDefaults.TextInput.ContainerDimensionAuto)
-        .MinHeight(InputDefaults.TextInput.ContainerDimensionAuto)
+        .MinWidth(InputDefaults.TextInput.DefaultContainerMinimumDimensions)
+        .MinHeight(InputDefaults.TextInput.DefaultContainerMinimumDimensions)
         .Row()
         .AlignItems("center")
         .Gap("0.5rem")
@@ -157,9 +157,10 @@
             _currentInputText = string.Empty;
     }
 
-    private void HandleInputPointerDown(PointerEventArgs e)
+    private void HandleInputPointerDown(PointerEventArgs pointerEvent)
     {
-        _isLastPointerTouch = e.PointerType is "touch" or "pen";
+        _isLastPointerTouch = pointerEvent.PointerType is "touch" or "pen";
+
         if (ResolvedTouchMode == TouchInputMode.Always ||
             (ResolvedTouchMode == TouchInputMode.Auto && _isLastPointerTouch))
         {
@@ -200,10 +201,10 @@
 
     private IEnumerable<string> GetFailedValidationMessages()
     {
-        if (Rules is null || string.IsNullOrEmpty(_currentInputText))
+        if (ValidationRules is null || string.IsNullOrEmpty(_currentInputText))
             return Enumerable.Empty<string>();
 
-        return Rules
+        return ValidationRules
             .Where(validationRule => !DoesCurrentTextPassRule(validationRule))
             .Select(validationRule => validationRule.ErrorMessage);
     }

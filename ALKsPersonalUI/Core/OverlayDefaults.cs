@@ -29,7 +29,7 @@ public static class OverlayDefaults
 
     public static class Tooltip
     {
-        public const string IdPrefix = "tt-";
+        public const string TooltipElementIdPrefix = "tt-";
         public const string Width = "fit-content";
         public const string Height = "fit-content";
         public const string MinDimension = "0";

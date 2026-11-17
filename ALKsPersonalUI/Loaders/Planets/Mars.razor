@@ -7,7 +7,9 @@
              style="@BuildSurfaceFeatureStyles(surfaceFeature, surfaceFeature.DiameterPercentage)">
         </div>
     }
+
     <div class="planet-lighting"></div>
+
     @foreach (var colonyBuilding in GetColonyBuildings())
     {
         <div class="building-light"
@@ -22,7 +24,7 @@
     [CascadingParameter(Name = "GlobalScale")] public double Scale { get; set; } = LoaderDefaults.Mars.DefaultScale;
     [CascadingParameter(Name = "FillParent")] public bool FillParent { get; set; }
 
-    [Parameter] public double PlanetSize { get; set; } = LoaderDefaults.Mars.DefaultPlanetSizePixels;
+    [Parameter] public double PlanetSize { get; set; } = LoaderDefaults.Mars.DefaultPlanetSizePx;
     [Parameter] public double DayDuration { get; set; } = LoaderDefaults.Mars.DefaultDayDurationSeconds;
     [Parameter] public int MinFeatures { get; set; } = LoaderDefaults.Mars.DefaultMinFeatures;
     [Parameter] public int MaxFeatures { get; set; } = LoaderDefaults.Mars.DefaultMaxFeatures;
@@ -31,6 +33,7 @@
     [Parameter] public double MinCraterSize { get; set; } = LoaderDefaults.Mars.DefaultMinCraterSizePercent;
     [Parameter] public double MaxCraterSize { get; set; } = LoaderDefaults.Mars.DefaultMaxCraterSizePercent;
     [Parameter] public double WindowLightSize { get; set; } = LoaderDefaults.Mars.DefaultWindowLightSizePercent;
+
     [Parameter] public string PlanetColor { get; set; } = LoaderDefaults.Mars.DefaultPlanetColor;
     [Parameter] public string NightShadowColor { get; set; } = LoaderDefaults.Mars.DefaultNightShadowColor;
     [Parameter] public string CraterColor { get; set; } = LoaderDefaults.Mars.DefaultCraterColor;
@@ -44,6 +47,7 @@
     {
         var randomGenerator = new Random();
         var targetFeatureCount = randomGenerator.Next(MinFeatures, MaxFeatures + 1);
+
         var candidateFeatures = Enumerable
             .Range(0, LoaderDefaults.Mars.CandidateGenerationPoolSize)
             .Select(_ => GenerateRandomCandidateFeature(randomGenerator));
@@ -84,6 +88,7 @@
             * LoaderDefaults.Mars.PlanetVirtualRadiusPercent;
 
         var distanceBetweenCenters = GeometryMath.CalculateEuclideanDistance(horizontalDistance, verticalDistance);
+
         var combinedRadiiWithPadding =
             (firstFeature.DiameterPercentage / GeometryMath.HalfDivisor) +
             (secondFeature.DiameterPercentage / GeometryMath.HalfDivisor) +

@@ -48,8 +48,9 @@
     [Parameter] public ButtonSize Size { get; set; } = ButtonSize.Dynamic;
     [Parameter] public ButtonType Type { get; set; } = ButtonType.Button;
     [Parameter] public ButtonPressEffect? PressEffect { get; set; }
-    [Parameter] public int HoldDurationMs { get; set; }
-    [Parameter] public int LongPressDurationMs { get; set; } = 600;
+
+    [Parameter] public int HoldToConfirmDurationMilliseconds { get; set; }
+    [Parameter] public int LongPressTriggerDurationMilliseconds { get; set; } = 600;
 
     /// <summary>
     /// When true, holding the button down continuously invokes OnClick with accelerating speed.
@@ -57,13 +58,13 @@
     /// </summary>
     [Parameter] public bool AutoRepeat { get; set; }
 
-    private CancellationTokenSource? _pressCts;
-    private bool _isHolding;
+    private CancellationTokenSource? _pressGestureCancellationTokenSource;
+    private bool _isHoldToConfirmActive;
     private bool _suppressNextClick;
     private string? _detectedPointerType;
 
     private bool IsInteractionBlocked => IsDisabled || IsLoading;
-    private bool IsHoldToConfirmEnabled => HoldDurationMs > 0;
+    private bool IsHoldToConfirmEnabled => HoldToConfirmDurationMilliseconds > 0;
     private bool HasSpecialPressBehavior => IsHoldToConfirmEnabled || OnLongPress.HasDelegate || AutoRepeat;
     private string HtmlButtonType => Type.ToString().ToLowerInvariant();
 
@@ -96,10 +97,10 @@
 
     private (string VerticalPadding, string HorizontalPadding, string FontSize) ResolveCustomMetrics()
     {
-        var vertical = ModifierOrEmpty.PaddingVerticalValue ?? "0.75rem";
-        var horizontal = ModifierOrEmpty.PaddingHorizontalValue ?? "1.5rem";
+        var verticalPadding = ModifierOrEmpty.PaddingVerticalValue ?? "0.75rem";
+        var horizontalPadding = ModifierOrEmpty.PaddingHorizontalValue ?? "1.5rem";
         var fontSize = ModifierOrEmpty.FontSizeValue ?? ButtonDefaults.DefaultFontSize;
-        return (vertical, horizontal, fontSize);
+        return (verticalPadding, horizontalPadding, fontSize);
     }
 
     private string BuildButtonCssClasses() => new CssBuilder()
@@ -108,22 +109,24 @@
         .Add($"shape-{Shape.ToString().ToLowerInvariant()}")
         .Add(ResolvedPressEffectClass)
         .Add("is-loading", when: IsLoading)
-        .Add("is-holding", when: _isHolding)
+        .Add("is-holding", when: _isHoldToConfirmActive)
         .AddRaw(ModifierClass)
         .Build();
 
     private string BuildButtonInlineStyles() => new StyleBuilder()
         .Add("--_btn-base", ModifierOrEmpty.BaseColorValue ?? ButtonDefaults.DefaultBaseColor)
         .Add("--_btn-text", ModifierOrEmpty.TextColorValue ?? ButtonDefaults.DefaultTextColor)
-        .Add("--_btn-depth", ModifierOrEmpty.DepthValue ?? ButtonDefaults.DefaultDepth)
-        .Add("--_btn-scale", ModifierOrEmpty.PressScaleValue ?? "var(--ui-press-scale, 0.93)")
-        .Add("--_btn-speed", ModifierOrEmpty.AnimationSpeedValue ?? ButtonDefaults.DefaultAnimationSpeed)
-        .Add("--_btn-hold-ms", $"{HoldDurationMs}ms")
+        .Add("--_btn-depth", ModifierOrEmpty.ButtonExtrusionDepthValue ?? ButtonDefaults.DefaultButtonExtrusionDepth)
+        .Add("--_btn-scale", ModifierOrEmpty.InwardPressScaleFactorValue ?? "var(--ui-press-scale, 0.93)")
+        .Add("--_btn-speed", ModifierOrEmpty.PressAnimationDurationValue ?? ButtonDefaults.DefaultPressAnimationDuration)
+        .Add("--_btn-hold-ms", $"{HoldToConfirmDurationMilliseconds}ms")
         .Add("--_btn-pad-y", ResolvedSizeMetrics.VerticalPadding)
         .Add("--_btn-pad-x", ResolvedSizeMetrics.HorizontalPadding)
         .Add("--_btn-font", ResolvedSizeMetrics.FontSize)
         .Add("--_btn-width", ModifierOrEmpty.WidthValue ?? ButtonDefaults.DefaultWidth)
         .Add("--_btn-height", ModifierOrEmpty.HeightValue ?? ButtonDefaults.DefaultHeight)
+        .Add("--_btn-min-width", ModifierOrEmpty.MinWidthValue)
+        .Add("--_btn-min-height", ModifierOrEmpty.MinHeightValue)
         .AddRaw(ModifierOrEmpty.BuildFrameExtras())
         .Build();
 
@@ -157,24 +160,27 @@
             return;
 
         CancelPressTimers();
-        _pressCts = new CancellationTokenSource();
-        var token = _pressCts.Token;
+        _pressGestureCancellationTokenSource = new CancellationTokenSource();
+        var cancellationToken = _pressGestureCancellationTokenSource.Token;
 
         if (AutoRepeat && !IsHoldToConfirmEnabled)
         {
-            await RunAutoRepeatLoopAsync(token);
+            await RunAutoRepeatLoopAsync(cancellationToken);
             return;
         }
 
-        _isHolding = IsHoldToConfirmEnabled;
-        var waitMs = IsHoldToConfirmEnabled ? HoldDurationMs : LongPressDurationMs;
+        _isHoldToConfirmActive = IsHoldToConfirmEnabled;
+        var holdThresholdMilliseconds = IsHoldToConfirmEnabled
+            ? HoldToConfirmDurationMilliseconds
+            : LongPressTriggerDurationMilliseconds;
 
         try
         {
-            await Task.Delay(waitMs, token);
-            if (!token.IsCancellationRequested)
+            await Task.Delay(holdThresholdMilliseconds, cancellationToken);
+            if (!cancellationToken.IsCancellationRequested)
             {
-                _isHolding = false;
+                _isHoldToConfirmActive = false;
+
                 if (IsHoldToConfirmEnabled)
                 {
                     await OnClick.InvokeAsync(new MouseEventArgs());
@@ -184,6 +190,7 @@
                     _suppressNextClick = true;
                     await OnLongPress.InvokeAsync();
                 }
+
                 StateHasChanged();
             }
         }
@@ -193,21 +200,22 @@
         }
     }
 
-    private async Task RunAutoRepeatLoopAsync(CancellationToken token)
+    private async Task RunAutoRepeatLoopAsync(CancellationToken cancellationToken)
     {
         try
         {
-            await Task.Delay(400, token);
-            var intervalMs = 130;
-            while (!token.IsCancellationRequested && !IsInteractionBlocked)
+            await Task.Delay(400, cancellationToken);
+            var autoRepeatIntervalMilliseconds = 130;
+
+            while (!cancellationToken.IsCancellationRequested && !IsInteractionBlocked)
             {
                 _suppressNextClick = true;
                 await OnClick.InvokeAsync(new MouseEventArgs());
                 StateHasChanged();
 
-                await Task.Delay(intervalMs, token);
-                if (intervalMs > 45)
-                    intervalMs -= 15;
+                await Task.Delay(autoRepeatIntervalMilliseconds, cancellationToken);
+                if (autoRepeatIntervalMilliseconds > 45)
+                    autoRepeatIntervalMilliseconds -= 15;
             }
         }
         catch (TaskCanceledException)
@@ -218,13 +226,13 @@
 
     private void CancelPressTimers()
     {
-        if (_pressCts is not null)
+        if (_pressGestureCancellationTokenSource is not null)
         {
-            _pressCts.Cancel();
-            _pressCts.Dispose();
-            _pressCts = null;
+            _pressGestureCancellationTokenSource.Cancel();
+            _pressGestureCancellationTokenSource.Dispose();
+            _pressGestureCancellationTokenSource = null;
         }
-        _isHolding = false;
+        _isHoldToConfirmActive = false;
     }
 
     public void Dispose() => CancelPressTimers();
