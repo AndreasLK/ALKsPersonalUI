@@ -6,22 +6,20 @@
 <PageTitle>ALK's Personal UI - Live Theme Debugger & Color Picker Studio</PageTitle>
 
 <Column Modifier="@(UIModifier.New.FillMaxWidth())" Gap="2rem">
-
-    <TitledWindow Title="Live Theme Debugger, Hex Color Pickers & Code Generator"
+    <TitledWindow Title="Live Theme Debugger, Hex Color Pickers & v3 Code Generator"
                   Modifier="@ShowcaseStyles.SectionWindow">
         <Text Variant="TypographyVariant.Body"
               Muted="true"
-              Value="Pick any Main (Accent), Secondary (Action), or Third (App Background) hex color using the native color pickers below. Every change updates the entire application live so you can debug contrast and export your exact C# or CSS theme." />
+              Value="Pick any AccentColor, ActionColor, or ApplicationBackgroundColor hex value using the color pickers below. Every change updates the entire application live so you can test contrast and export your complete v3 UITheme." />
 
         <Grid MinColumnWidth="440px" Gap="1.5rem">
-
             @* LEFT COLUMN: LIVE COLOR PICKERS & TOKEN CONTROLS *@
             <Window Modifier="@ShowcaseStyles.CardWindow">
                 <Row HorizontalArrangement="Arrangement.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Modifier="@(UIModifier.New.FillMaxWidth())">
                     <Text Variant="TypographyVariant.Subtitle" Weight="FontWeight.Bold" Value="1. Live Hex Color Pickers" />
                     <Checkbox @bind-Checked="_autoDeriveSurfaces"
-                              IsSwitch="true"
-                              Label="Auto-Derive Surfaces from AppBg" />
+                              RenderAsToggleSwitch="true"
+                              Label="Auto-Derive Surfaces" />
                 </Row>
 
                 <TextInput Label="Custom Theme Preset Name"
@@ -31,42 +29,39 @@
                 <Divider />
 
                 @* PRIMARY 3 SEED COLORS *@
-                <Text Variant="TypographyVariant.Caption" Weight="FontWeight.Bold" Color="var(--ui-accent)" Value="CORE PALETTE (MAIN / SECONDARY / BACKGROUND)" />
-
+                <Text Variant="TypographyVariant.Caption" Weight="FontWeight.Bold" Color="var(--ui-accent)" Value="CORE PALETTE (ACCENT / ACTION / APPLICATION BACKGROUND)" />
                 <Grid MinColumnWidth="190px" Gap="0.85rem">
-                    @RenderColorPickerRow("1. Main (AccentColor)", _accentHex, val => { _accentHex = val; PushLiveTheme(); })
-                    @RenderColorPickerRow("2. Secondary (ActionColor)", _actionHex, val => { _actionHex = val; PushLiveTheme(); })
-                    @RenderColorPickerRow("3. Third (AppBg)", _appBgHex, val => { _appBgHex = val; RecalculateIfAuto(); PushLiveTheme(); })
-                    @RenderColorPickerRow("4. Text Color", _textHex, val => { _textHex = val; PushLiveTheme(); })
+                    @RenderColorPickerRow("1. AccentColor", _accentHex, val => { _accentHex = val; PushLiveTheme(); })
+                    @RenderColorPickerRow("2. ActionColor", _actionHex, val => { _actionHex = val; PushLiveTheme(); })
+                    @RenderColorPickerRow("3. ApplicationBackgroundColor", _appBgHex, val => { _appBgHex = val; RecalculateIfAuto(); PushLiveTheme(); })
+                    @RenderColorPickerRow("4. TextColor", _textHex, val => { _textHex = val; PushLiveTheme(); })
                 </Grid>
 
                 <Divider />
 
                 @* SURFACE & BORDER COLORS *@
                 <Text Variant="TypographyVariant.Caption" Weight="FontWeight.Bold" Color="var(--ui-accent)" Value="SURFACES & BORDERS (AUTO-COMPUTED OR MANUAL HEX)" />
-
                 <Grid MinColumnWidth="190px" Gap="0.85rem">
-                    @RenderColorPickerRow("SurfaceBg (Cards)", _surfaceBgHex, val => { _autoDeriveSurfaces = false; _surfaceBgHex = val; PushLiveTheme(); })
-                    @RenderColorPickerRow("ElevatedBg (Inner)", _elevatedBgHex, val => { _autoDeriveSurfaces = false; _elevatedBgHex = val; PushLiveTheme(); })
-                    @RenderColorPickerRow("HeaderBg (TitleBar)", _headerBgHex, val => { _autoDeriveSurfaces = false; _headerBgHex = val; PushLiveTheme(); })
+                    @RenderColorPickerRow("SurfaceBackgroundColor", _surfaceBgHex, val => { _autoDeriveSurfaces = false; _surfaceBgHex = val; PushLiveTheme(); })
+                    @RenderColorPickerRow("ElevatedBackgroundColor", _elevatedBgHex, val => { _autoDeriveSurfaces = false; _elevatedBgHex = val; PushLiveTheme(); })
+                    @RenderColorPickerRow("HeaderBackgroundColor", _headerBgHex, val => { _autoDeriveSurfaces = false; _headerBgHex = val; PushLiveTheme(); })
                     @RenderColorPickerRow("BorderColor", _borderHex, val => { _autoDeriveSurfaces = false; _borderHex = val; PushLiveTheme(); })
                 </Grid>
 
                 <Divider />
 
                 @* SEMANTIC STATUS COLORS *@
-                <Text Variant="TypographyVariant.Caption" Weight="FontWeight.Bold" Color="var(--ui-accent)" Value="SEMANTIC STATUS COLORS & GEOMETRY" />
-
+                <Text Variant="TypographyVariant.Caption" Weight="FontWeight.Bold" Color="var(--ui-accent)" Value="SEMANTIC STATUS COLORS" />
                 <Grid MinColumnWidth="150px" Gap="0.85rem">
-                    @RenderColorPickerRow("Success", _successHex, val => { _successHex = val; PushLiveTheme(); })
-                    @RenderColorPickerRow("Warning", _warningHex, val => { _warningHex = val; PushLiveTheme(); })
-                    @RenderColorPickerRow("Danger", _dangerHex, val => { _dangerHex = val; PushLiveTheme(); })
+                    @RenderColorPickerRow("SuccessColor", _successHex, val => { _successHex = val; PushLiveTheme(); })
+                    @RenderColorPickerRow("WarningColor", _warningHex, val => { _warningHex = val; PushLiveTheme(); })
+                    @RenderColorPickerRow("DangerColor", _dangerHex, val => { _dangerHex = val; PushLiveTheme(); })
                 </Grid>
 
                 <Row HorizontalArrangement="Arrangement.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Wrap="true" Gap="1rem">
                     <Checkbox Checked="_isDarkTheme"
                               CheckedChanged="@(dark => { _isDarkTheme = dark; _textHex = dark ? "#ffffff" : "#0f172a"; RecalculateIfAuto(); PushLiveTheme(); })"
-                              IsSwitch="true"
+                              RenderAsToggleSwitch="true"
                               Label="Dark Mode Base" />
 
                     <ActionButton Size="ActionButton.ButtonSize.Small"
@@ -116,6 +111,7 @@
                                       Text="Copy Theme Code"
                                       OnClick="@(() => ShowcaseStyles.CopyAsync(JS, Toast, GetExportCode(), "Theme code"))" />
                     </Row>
+
                     <Window Modifier="@ShowcaseStyles.ExpandingCodeWindow">
                         <Text Variant="TypographyVariant.Mono"
                               Color="#93c5fd"
@@ -124,10 +120,8 @@
                     </Window>
                 </Column>
             </Window>
-
         </Grid>
     </TitledWindow>
-
 </Column>
 
 @code {
@@ -177,7 +171,6 @@
         if (!_autoDeriveSurfaces)
             return;
 
-        // Compute hex approximations so the native <input type="color"> pickers also reflect the derived shades
         _headerBgHex = BlendHex(_appBgHex, _isDarkTheme ? "#ffffff" : "#000000", 0.04);
         _elevatedBgHex = BlendHex(_appBgHex, _isDarkTheme ? "#ffffff" : "#000000", 0.08);
         _surfaceBgHex = BlendHex(_appBgHex, _isDarkTheme ? "#ffffff" : "#000000", 0.13);
@@ -199,6 +192,7 @@
             int r = (int)Math.Round(rA * (1 - ratioB) + rB * ratioB);
             int g = (int)Math.Round(gA * (1 - ratioB) + gB * ratioB);
             int b = (int)Math.Round(bA * (1 - ratioB) + bB * ratioB);
+
             return $"#{r:x2}{g:x2}{b:x2}";
         }
         catch
@@ -210,18 +204,19 @@
     private UITheme BuildCurrentThemeObject()
     {
         var name = string.IsNullOrWhiteSpace(_themeName) ? "CustomTheme" : _themeName;
+
         return new UITheme
         {
             Name = name,
             AccentColor = _accentHex,
             ActionColor = _actionHex,
-            AppBg = _appBgHex,
-            SurfaceBg = _surfaceBgHex,
-            ElevatedBg = _elevatedBgHex,
-            HeaderBg = _headerBgHex,
+            ApplicationBackgroundColor = _appBgHex,
+            SurfaceBackgroundColor = _surfaceBgHex,
+            ElevatedBackgroundColor = _elevatedBgHex,
+            HeaderBackgroundColor = _headerBgHex,
             BorderColor = _borderHex,
             TextColor = _textHex,
-            TextInverse = _isDarkTheme ? "#111111" : "#ffffff",
+            InverseTextColor = _isDarkTheme ? "#111111" : "#ffffff",
             SuccessColor = _successHex,
             WarningColor = _warningHex,
             DangerColor = _dangerHex,
@@ -244,6 +239,7 @@
     private string GetExportCode()
     {
         var name = string.IsNullOrWhiteSpace(_themeName) ? "CustomTheme" : _themeName;
+
         if (_exportFormat == "FromSeed() C#")
         {
             return $@"// Program.cs (Quick 3-color seed registration):
@@ -251,12 +247,14 @@ builder.Services.AddPersonalUILibrary(options =>
 {{
     options.DefaultPressEffect = ButtonPressEffect.{ThemeService.Current.DefaultPressEffect};
     options.DefaultTouchInputMode = TouchInputMode.{ThemeService.Current.DefaultTouchInputMode};
+
     options.AddSeedTheme(
         name: ""{name}"",
         accentColor: ""{_accentHex}"",
-        appBackground: ""{_appBgHex}"",
+        applicationBackgroundColor: ""{_appBgHex}"",
         actionColor: ""{_actionHex}"",
-        isDark: {(_isDarkTheme ? "true" : "false")});
+        isDarkTheme: {(_isDarkTheme ? "true" : "false")});
+
     options.InitialPresetName = ""{name}"";
 }});";
         }
@@ -286,18 +284,27 @@ builder.Services.AddPersonalUILibrary(options =>
         Name = ""{name}"",
         AccentColor = ""{_accentHex}"",
         ActionColor = ""{_actionHex}"",
-        AppBg = ""{_appBgHex}"",
-        SurfaceBg = ""{_surfaceBgHex}"",
-        ElevatedBg = ""{_elevatedBgHex}"",
-        HeaderBg = ""{_headerBgHex}"",
+        ApplicationBackgroundColor = ""{_appBgHex}"",
+        SurfaceBackgroundColor = ""{_surfaceBgHex}"",
+        ElevatedBackgroundColor = ""{_elevatedBgHex}"",
+        HeaderBackgroundColor = ""{_headerBgHex}"",
         BorderColor = ""{_borderHex}"",
         TextColor = ""{_textHex}"",
+        InverseTextColor = ""{(_isDarkTheme ? "#111111" : "#ffffff")}"",
         SuccessColor = ""{_successHex}"",
         WarningColor = ""{_warningHex}"",
         DangerColor = ""{_dangerHex}"",
+        SmallBorderRadius = ""4px"",
+        MediumBorderRadius = ""10px"",
+        LargeBorderRadius = ""12px"",
+        ButtonExtrusionDepth = ""2px"",
+        PressAnimationDuration = ""0.05s"",
+        InwardPressScaleFactor = ""0.93"",
+        MinimumTouchTargetSize = ""2.75rem"",
         DefaultPressEffect = ButtonPressEffect.{ThemeService.Current.DefaultPressEffect},
         DefaultTouchInputMode = TouchInputMode.{ThemeService.Current.DefaultTouchInputMode}
     }});
+
     options.InitialPresetName = ""{name}"";
 }});";
     }

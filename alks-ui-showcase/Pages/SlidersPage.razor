@@ -5,7 +5,6 @@
 <PageTitle>ALK's Personal UI - Rotary & Linear Sliders</PageTitle>
 
 <Column Modifier="@(UIModifier.New.FillMaxWidth())" Gap="2rem">
-
     <TitledWindow Title="RadioSlider & RangeSlider (Pointer-Captured Dragging, Wheel & Arrow Keys)"
                   Modifier="@ShowcaseStyles.SectionWindow">
         <Text Variant="TypographyVariant.Body"
@@ -15,7 +14,8 @@
         <Grid MinColumnWidth="420px" Gap="1.5rem">
             <Window Modifier="@(ShowcaseStyles.CardWindow.Clone().AlignItems(HorizontalAlignment.Center))">
                 <Text Variant="TypographyVariant.Subtitle" Weight="FontWeight.Bold" Value="@($"Rotary <RadioSlider> ({_dialMaxAngle} deg)")" />
-                <RadioSlider DialPixelSize="220"
+
+                <RadioSlider DialSizePx="220"
                              MinValue="0"
                              MaxValue="100"
                              Step="@_sliderStep"
@@ -30,14 +30,15 @@
                     <SegmentedControl TItem="int"
                                       Items="@(new[] { 180, 240, 270, 300 })"
                                       @bind-Value="_dialMaxAngle"
-                                      TextSelector="@(deg => $"{deg}°")" />
+                                      ItemDisplayTextSelector="@(deg => $"{deg}°")" />
                 </Row>
             </Window>
 
             <Window Modifier="@ShowcaseStyles.FullHeightCardWindow">
                 <Column Gap="1rem" Modifier="@(UIModifier.New.FillMaxWidth())">
                     <Text Variant="TypographyVariant.Subtitle" Weight="FontWeight.Bold" Value="Linear <RangeSlider> & Shared Settings" />
-                    <RangeSlider TrackPixelWidth="320"
+
+                    <RangeSlider TrackWidthPx="320"
                                  MinValue="0"
                                  MaxValue="100"
                                  Step="@_sliderStep"
@@ -50,8 +51,9 @@
 
                     <Row HorizontalArrangement="Arrangement.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Wrap="true">
                         <Checkbox @bind-Checked="_snapSliders"
-                                  IsSwitch="true"
+                                  RenderAsToggleSwitch="true"
                                   Label="@($"SnapToTicks (Step = {_sliderStep})")" />
+
                         <NumberInput TValue="double"
                                      @bind-Value="_sliderStep"
                                      Step="5"
@@ -77,7 +79,6 @@
             </Window>
         </Grid>
     </TitledWindow>
-
 </Column>
 
 @code {
@@ -87,14 +88,14 @@
     private bool _snapSliders = true;
 
     private string BuildSliderSnippet() =>
-        $@"<RadioSlider DialPixelSize=""220""
+        $@"<RadioSlider DialSizePx=""220""
              MinValue=""0"" MaxValue=""100"" Step=""{_sliderStep}""
              MaxAngle=""{_dialMaxAngle}""
              SnapToTicks=""{(_snapSliders ? "true" : "false")}""
              SelectionUnit=""%""
              @bind-SelectedValue=""_volume"" />
 
-<RangeSlider TrackPixelWidth=""320""
+<RangeSlider TrackWidthPx=""320""
              MinValue=""0"" MaxValue=""100"" Step=""{_sliderStep}""
              SnapToTicks=""{(_snapSliders ? "true" : "false")}""
              SelectionUnit=""%""

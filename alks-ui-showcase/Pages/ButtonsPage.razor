@@ -5,7 +5,6 @@
 <PageTitle>ALK's Personal UI - Buttons, Pills & Segmented Controls</PageTitle>
 
 <Column Modifier="@(UIModifier.New.FillMaxWidth())" Gap="2rem">
-
     <TitledWindow Title="Interactive ActionButton Workbench & Live Code Generator"
                   Modifier="@ShowcaseStyles.SectionWindow">
         <Text Variant="TypographyVariant.Body"
@@ -68,7 +67,7 @@
                     </Column>
 
                     <Column Gap="0.35rem" Modifier="@(UIModifier.New.FillMaxWidth())">
-                        <Text Variant="TypographyVariant.Caption" Muted="true" Value="3D Depth (px):" />
+                        <Text Variant="TypographyVariant.Caption" Muted="true" Value="ButtonExtrusionDepth (px):" />
                         <NumberInput TValue="int"
                                      @bind-Value="_wbBtnDepth"
                                      Step="1"
@@ -80,9 +79,9 @@
                 </Grid>
 
                 <Row Gap="1.25rem" Wrap="true">
-                    <Checkbox @bind-Checked="_wbBtnAutoRepeat" IsSwitch="true" Label="AutoRepeat (Hold)" />
-                    <Checkbox @bind-Checked="_wbBtnLoading" IsSwitch="true" Label="IsLoading" />
-                    <Checkbox @bind-Checked="_wbBtnDisabled" IsSwitch="true" Label="IsDisabled" />
+                    <Checkbox @bind-Checked="_wbBtnAutoRepeat" RenderAsToggleSwitch="true" Label="AutoRepeat (Hold)" />
+                    <Checkbox @bind-Checked="_wbBtnLoading" RenderAsToggleSwitch="true" Label="IsLoading" />
+                    <Checkbox @bind-Checked="_wbBtnDisabled" RenderAsToggleSwitch="true" Label="IsDisabled" />
                 </Row>
             </Window>
 
@@ -99,11 +98,11 @@
                         <ActionButton Variant="_wbBtnVariant"
                                       Shape="_wbBtnShape"
                                       PressEffect="_wbBtnPress"
-                                      HoldDurationMs="_wbBtnHoldMs"
+                                      HoldToConfirmDurationMilliseconds="_wbBtnHoldMs"
                                       AutoRepeat="_wbBtnAutoRepeat"
                                       IsLoading="_wbBtnLoading"
                                       IsDisabled="_wbBtnDisabled"
-                                      Modifier="@(UIModifier.New.Padding(14, 28).BaseColor(_wbBtnColor).TextColor(_wbBtnTextColor).Depth(_wbBtnDepth))"
+                                      Modifier="@(UIModifier.New.Padding(14, 28).BaseColor(_wbBtnColor).TextColor(_wbBtnTextColor).ButtonExtrusionDepth(_wbBtnDepth))"
                                       Text="@GetWorkbenchButtonLabel()"
                                       OnClick="HandleWorkbenchButtonClick" />
                     </Box>
@@ -118,6 +117,7 @@
                                       Text="Copy Code"
                                       OnClick="@(() => ShowcaseStyles.CopyAsync(JS, Toast, BuildWorkbenchButtonCode(), "ActionButton code"))" />
                     </Row>
+
                     <Window Modifier="@ShowcaseStyles.ExpandingCodeWindow">
                         <Text Variant="TypographyVariant.Mono"
                               Color="#93c5fd"
@@ -132,7 +132,6 @@
     <TitledWindow Title="Pill Badges & SegmentedControl<TItem> (With Live Code)"
                   Modifier="@ShowcaseStyles.SectionWindow">
         <Grid MinColumnWidth="420px" Gap="1.5rem">
-
             @* PILL CARD WITH FULL CODE *@
             <Window Modifier="@ShowcaseStyles.FullHeightCardWindow">
                 <Column Gap="0.85rem" Modifier="@(UIModifier.New.FillMaxWidth())">
@@ -203,10 +202,8 @@
                     </Window>
                 </Column>
             </Window>
-
         </Grid>
     </TitledWindow>
-
 </Column>
 
 @code {
@@ -254,7 +251,7 @@
 
     private string BuildWorkbenchButtonCode()
     {
-        var holdAttr = _wbBtnHoldMs > 0 ? $"\n              HoldDurationMs=\"{_wbBtnHoldMs}\"" : string.Empty;
+        var holdAttr = _wbBtnHoldMs > 0 ? $"\n              HoldToConfirmDurationMilliseconds=\"{_wbBtnHoldMs}\"" : string.Empty;
         var repeatAttr = _wbBtnAutoRepeat ? "\n              AutoRepeat=\"true\"" : string.Empty;
         var loadAttr = _wbBtnLoading ? "\n              IsLoading=\"true\"" : string.Empty;
         var disAttr = _wbBtnDisabled ? "\n              IsDisabled=\"true\"" : string.Empty;
@@ -266,14 +263,14 @@
                   .Padding(14, 28)
                   .BaseColor(""{_wbBtnColor}"")
                   .TextColor(""{_wbBtnTextColor}"")
-                  .Depth({_wbBtnDepth}))""
+                  .ButtonExtrusionDepth({_wbBtnDepth}))""
               Text=""{GetWorkbenchButtonLabel()}""
               OnClick=""HandleSaveAsync"" />
 
 @code {{
     private async Task HandleSaveAsync()
     {{
-        // Triggered on click (or after {_wbBtnHoldMs}ms hold if HoldDurationMs > 0)
+        // Triggered on click (or after {_wbBtnHoldMs}ms hold if HoldToConfirmDurationMilliseconds > 0)
     }}
 }}";
     }

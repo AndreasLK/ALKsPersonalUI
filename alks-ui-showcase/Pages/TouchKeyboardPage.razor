@@ -5,12 +5,11 @@
 <PageTitle>ALK's Personal UI - Virtual Keyboard & Numpad Studio</PageTitle>
 
 <Column Modifier="@(UIModifier.New.FillMaxWidth())" Gap="2rem">
-
     <TitledWindow Title="Interactive <ScreenKeyboard> & Fluent KeyboardSetup Builder"
                   Modifier="@ShowcaseStyles.SectionWindow">
         <Text Variant="TypographyVariant.Body"
               Muted="true"
-              Value="Use the fluent KeyboardSetup builder to enable or disable any zone on the keyboard individually. Designed for touch kiosks and macro tools—never includes a Windows/Meta key." />
+              Value="Use the fluent KeyboardSetup builder to enable or disable any zone on the keyboard individually. Designed for touch kiosks and macro tools — never includes a Windows/Meta key." />
 
         <Window Modifier="@ShowcaseStyles.CardWindow">
             <Row HorizontalArrangement="Arrangement.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Wrap="true" Gap="1rem" Modifier="@(UIModifier.New.FillMaxWidth())">
@@ -39,7 +38,7 @@
                 <Pill Active="@_kbSetup.IncludeNumbers" Text=".WithNumbers()" OnClick="@(() => _kbSetup.WithNumbers(!_kbSetup.IncludeNumbers))" />
                 <Pill Active="@_kbSetup.IncludeSpecialCharacters" Text=".WithSpecialCharacters()" OnClick="@(() => _kbSetup.WithSpecialCharacters(!_kbSetup.IncludeSpecialCharacters))" />
                 <Pill Active="@_kbSetup.IncludeFunctionKeys" Text=".WithFunctionKeys() (F1-F12)" OnClick="@(() => _kbSetup.WithFunctionKeys(!_kbSetup.IncludeFunctionKeys))" />
-                <Pill Active="@_kbSetup.IncludePcModifiers" Text=".WithPcModifiers() (No Win Key)" OnClick="@(() => _kbSetup.WithPcModifiers(!_kbSetup.IncludePcModifiers))" />
+                <Pill Active="@_kbSetup.IncludeDesktopModifierKeys" Text=".WithDesktopModifierKeys() (No Win Key)" OnClick="@(() => _kbSetup.WithDesktopModifierKeys(!_kbSetup.IncludeDesktopModifierKeys))" />
                 <Pill Active="@_kbSetup.IncludeSystemKeys" Text=".WithSystemKeys() (PrtSc/ScrLk)" OnClick="@(() => _kbSetup.WithSystemKeys(!_kbSetup.IncludeSystemKeys))" />
                 <Pill Active="@_kbSetup.IncludeNavigationCluster" Text=".WithNavigationCluster() (Ins/Home/PgUp)" OnClick="@(() => _kbSetup.WithNavigationCluster(!_kbSetup.IncludeNavigationCluster))" />
                 <Pill Active="@_kbSetup.IncludeArrowKeys" Text=".WithArrowKeys()" OnClick="@(() => _kbSetup.WithArrowKeys(!_kbSetup.IncludeArrowKeys))" />
@@ -92,6 +91,7 @@
                                  QuickSteps="@(new List<decimal> { 10m, 50m, 100m })"
                                  OnConfirm="@(val => Toast.ShowSuccess($"Confirmed {val:0.00} kr.!"))" />
                 </Column>
+
                 <Column Gap="0.45rem" Modifier="@(UIModifier.New.FillMaxWidth())">
                     <Row HorizontalArrangement="Arrangement.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Modifier="@(UIModifier.New.FillMaxWidth())">
                         <Text Variant="TypographyVariant.Caption" Muted="true" Value="Decimal Numpad Markup:" />
@@ -118,6 +118,7 @@
                                  ConfirmText="Unlock"
                                  OnConfirm="@(pin => Toast.ShowInfo($"PIN Entered: {pin}"))" />
                 </Column>
+
                 <Column Gap="0.45rem" Modifier="@(UIModifier.New.FillMaxWidth())">
                     <Row HorizontalArrangement="Arrangement.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Modifier="@(UIModifier.New.FillMaxWidth())">
                         <Text Variant="TypographyVariant.Caption" Muted="true" Value="PIN Numpad Markup:" />
@@ -134,7 +135,6 @@
             </Window>
         </Grid>
     </TitledWindow>
-
 </Column>
 
 @code {
