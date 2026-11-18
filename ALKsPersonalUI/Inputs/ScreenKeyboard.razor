@@ -533,7 +533,7 @@
     [Parameter] public EventCallback<VirtualKeyEventArgs> OnKeyPress { get; set; }
     [Parameter] public bool ShowPreviewBar { get; set; } = true;
     [Parameter] public bool IsPassword { get; set; }
-    [Parameter] public int MaxLength { get; set; } = 256;
+    [Parameter] public int MaxLength { get; set; } = InputDefaults.ScreenKeyboard.DefaultMaxLength;
     [Parameter] public string Placeholder { get; set; } = "Tap keys to type...";
     [Parameter] public string SubmitText { get; set; } = "Done \u2713";
     [Parameter] public EventCallback<string?> OnSubmit { get; set; }

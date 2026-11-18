@@ -7,7 +7,7 @@
 </div>
 
 @code {
-    [Parameter] public int AspectWidth { get; set; } = 16;
+    [Parameter] public int AspectWidth { get; set; } = TemplateDefaults.AspectRatioFrame.DefaultAspectWidth;
     [Parameter] public int AspectHeight { get; set; } = 9;
     [Parameter] public string? MaxWidth { get; set; }
     [Parameter] public string? MaxHeight { get; set; }

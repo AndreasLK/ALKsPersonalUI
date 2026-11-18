@@ -65,7 +65,7 @@
     [Parameter] public ButtonPressEffect? PressEffect { get; set; }
 
     [Parameter] public int HoldToConfirmDurationMilliseconds { get; set; }
-    [Parameter] public int LongPressTriggerDurationMilliseconds { get; set; } = 600;
+    [Parameter] public int LongPressTriggerDurationMilliseconds { get; set; } = ButtonDefaults.DefaultLongPressTriggerDurationMilliseconds;
 
     /// <summary>
     /// When true, holding the button down continuously invokes OnClick with accelerating speed.
@@ -254,8 +254,8 @@
     {
         try
         {
-            await Task.Delay(400, cancellationToken);
-            var autoRepeatIntervalMilliseconds = 130;
+            await Task.Delay(ButtonDefaults.AutoRepeatInitialDelayMilliseconds, cancellationToken);
+            var autoRepeatIntervalMilliseconds = ButtonDefaults.AutoRepeatStartIntervalMilliseconds;
 
             while (!cancellationToken.IsCancellationRequested && !IsInteractionBlocked)
             {
@@ -264,8 +264,8 @@
                 StateHasChanged();
 
                 await Task.Delay(autoRepeatIntervalMilliseconds, cancellationToken);
-                if (autoRepeatIntervalMilliseconds > 45)
-                    autoRepeatIntervalMilliseconds -= 15;
+                if (autoRepeatIntervalMilliseconds > ButtonDefaults.AutoRepeatMinIntervalMilliseconds)
+                    autoRepeatIntervalMilliseconds -= ButtonDefaults.AutoRepeatStepDecrementMilliseconds;
             }
         }
         catch (TaskCanceledException)

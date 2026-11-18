@@ -10,6 +10,11 @@ public static class ButtonDefaults
     public const string DefaultTextColor = "var(--ui-text-inverse)";
     public const string DefaultButtonExtrusionDepth = "var(--ui-depth)";
     public const string DefaultPressAnimationDuration = "var(--ui-anim-speed)";
+    public const int DefaultLongPressTriggerDurationMilliseconds = 600;
+    public const int AutoRepeatInitialDelayMilliseconds = 400;
+    public const int AutoRepeatStartIntervalMilliseconds = 130;
+    public const int AutoRepeatMinIntervalMilliseconds = 45;
+    public const int AutoRepeatStepDecrementMilliseconds = 15;
 
     public static readonly (string VerticalPadding, string HorizontalPadding, string FontSize) SmallMetrics =
         ("0.5rem", "1.05rem", "0.85rem");

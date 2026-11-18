@@ -8,7 +8,7 @@
 
 ## Solution & Project Map
 
-- `ALKsPersonalUI.slnx` — Root solution file referencing `ALKsPersonalUI` and `ALKsPersonalUI.Showcase`.
+- `ALKsPersonalUI.slnx` — Root solution file referencing `ALKsPersonalUI`, `ALKsPersonalUI.Showcase`, and `ALKsPersonalUI.Tests`.
 - `ALKsPersonalUI/` (`ALKsPersonalUI.csproj`) — Razor Class Library for tactile dark-mode & touch-ready Blazor UI components:
   - `Buttons/` — Button components
   - `Core/` — Core library types and utilities
@@ -19,9 +19,10 @@
   - `Loaders/` — `OrbitalLoader`, `SimpleSpinner`, and `Planets/` (`Mars`)
   - `Navigation/` — `BurgerMenu`, `Navbar`, `TabPanel`, `Tabs`
   - `Overlays/` — `BottomSheet`, `Modal`, `ToastContainer`, `ToastService`, `Tooltip`
+  - `Templates/` — Kiosk & page templates
   - `Windows/` — `Window`, `TitledWindow`
 - `alks-ui-showcase/` (`ALKsPersonalUI.Showcase.csproj`) — Blazor WebAssembly (`net10.0`) showcase & documentation app (`Program.cs`, `App.razor`, `Layout/MainLayout.razor`, `Pages/`).
-- `ALKsPersonalUI.Tests/` — Test directory.
+- `ALKsPersonalUI.Tests/` (`ALKsPersonalUI.Tests.csproj`) — bUnit & xUnit test project (`Components/`, `Core/`, `TestInfrastructure/`).
 
 ## Ignore Rules
 
