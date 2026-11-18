@@ -1,0 +1,109 @@
+@inherits UIComponentBase
+@inject UIThemeService ThemeService
+
+<div class="@BuildWrapperCssClasses()"
+     style="@ModifierStyle"
+     @attributes="AdditionalAttributes">
+    @if (!string.IsNullOrWhiteSpace(Label))
+    {
+        <label class="textarea-label">@Label</label>
+    }
+
+    <textarea class="textarea-field"
+              rows="@Rows"
+              maxlength="@MaxLength"
+              placeholder="@Placeholder"
+              readonly="@(IsReadOnly || IsUsingTouchOverlay)"
+              disabled="@IsDisabled"
+              value="@Value"
+              @oninput="HandleInputAsync"
+              @onclick="HandleTouchFocus" />
+
+    @if (ValidationRules is not null)
+    {
+        @foreach (var errorMessage in GetFailedValidationMessages())
+        {
+            <span class="textarea-error" role="alert" aria-live="polite">@errorMessage</span>
+        }
+    }
+
+    @if (IsUsingTouchOverlay)
+    {
+        <BottomSheet @bind-IsOpen="_isKeyboardOpen">
+            <ScreenKeyboard Value="@(Value ?? string.Empty)"
+                            ValueChanged="UpdateTextAndNotifyAsync"
+                            Setup="@KeyboardSetup"
+                            MaxLength="@MaxLength"
+                            Placeholder="@Placeholder"
+                            OnSubmit="@(_ => _isKeyboardOpen = false)" />
+        </BottomSheet>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public int Rows { get; set; } = InputDefaults.TextArea.DefaultRows;
+    [Parameter] public int MaxLength { get; set; } = InputDefaults.TextArea.DefaultMaxLength;
+    [Parameter] public string Placeholder { get; set; } = InputDefaults.TextArea.DefaultPlaceholder;
+    [Parameter] public List<ValidationRule>? ValidationRules { get; set; }
+    [Parameter] public bool IsReadOnly { get; set; }
+    [Parameter] public bool IsDisabled { get; set; }
+    [Parameter] public TouchInputMode? TouchMode { get; set; }
+    [Parameter] public KeyboardSetup? KeyboardSetup { get; set; }
+
+    private bool _isKeyboardOpen;
+
+    private TouchInputMode ResolvedTouchMode => TouchMode ?? ThemeService.Current.DefaultTouchInputMode;
+
+    private bool IsUsingTouchOverlay => !IsReadOnly && !IsDisabled && ResolvedTouchMode == TouchInputMode.Always;
+
+    private void HandleTouchFocus()
+    {
+        if (IsUsingTouchOverlay)
+        {
+            _isKeyboardOpen = true;
+        }
+    }
+
+    private async Task HandleInputAsync(ChangeEventArgs args)
+    {
+        await UpdateTextAndNotifyAsync(args.Value?.ToString() ?? string.Empty);
+    }
+
+    private async Task UpdateTextAndNotifyAsync(string nextValue)
+    {
+        Value = nextValue;
+        if (ValueChanged.HasDelegate)
+        {
+            await ValueChanged.InvokeAsync(nextValue);
+        }
+    }
+
+    private IEnumerable<string> GetFailedValidationMessages()
+    {
+        if (ValidationRules is null)
+        {
+            yield break;
+        }
+
+        foreach (var rule in ValidationRules)
+        {
+            if (!rule.IsValid(Value ?? string.Empty))
+            {
+                yield return rule.ErrorMessage;
+            }
+        }
+    }
+
+    private string BuildWrapperCssClasses()
+    {
+        return new CssBuilder()
+            .Add("textarea-wrapper")
+            .Add("textarea-disabled", IsDisabled)
+            .AddRaw(ModifierClass)
+            .Build();
+    }
+}
+

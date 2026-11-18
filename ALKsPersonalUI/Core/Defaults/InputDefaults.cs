@@ -69,4 +69,25 @@ public static class InputDefaults
         public const string ArrowDown = "\u2193";
         public const string ArrowRight = "\u2192";
     }
+
+    public static class FileUpload
+    {
+        public const long DefaultMaxFileSizeBytes = 10 * 1024 * 1024;
+        public const int DefaultMaxAllowedFiles = 20;
+        public const string DefaultAcceptedExtensions = ".png,.jpg,.jpeg,.webp,.gif,.svg";
+        public const string DefaultPromptText = "Tap to choose files";
+    }
+
+    public static class SearchInput
+    {
+        public const string DefaultPlaceholder = "Search...";
+        public const string DefaultAriaLabel = "Search";
+    }
+
+    public static class TextArea
+    {
+        public const int DefaultRows = 4;
+        public const int DefaultMaxLength = 2000;
+        public const string DefaultPlaceholder = "Enter text...";
+    }
 }

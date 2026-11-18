@@ -1,0 +1,64 @@
+@inherits UIComponentBase
+
+<div class="@BuildWrapperCssClasses()"
+     style="@ModifierStyle"
+     @attributes="AdditionalAttributes">
+    <div class="search-input-row">
+        <input type="search"
+               class="search-input-field"
+               value="@Value"
+               placeholder="@Placeholder"
+               aria-label="@AriaLabel"
+               disabled="@IsDisabled"
+               @oninput="HandleInputAsync" />
+        @if (!string.IsNullOrEmpty(Value) && !IsDisabled)
+        {
+            <CloseButton OnClick="ClearAsync" AriaLabel="Clear search" />
+        }
+    </div>
+
+    @if (FilterContent is not null)
+    {
+        <div class="search-input-filters">
+            @FilterContent
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = InputDefaults.SearchInput.DefaultPlaceholder;
+    [Parameter] public string AriaLabel { get; set; } = InputDefaults.SearchInput.DefaultAriaLabel;
+    [Parameter] public bool IsDisabled { get; set; }
+    [Parameter] public RenderFragment? FilterContent { get; set; }
+
+    private async Task HandleInputAsync(ChangeEventArgs args)
+    {
+        var nextValue = args.Value?.ToString();
+        Value = nextValue;
+        if (ValueChanged.HasDelegate)
+        {
+            await ValueChanged.InvokeAsync(nextValue);
+        }
+    }
+
+    private async Task ClearAsync()
+    {
+        Value = string.Empty;
+        if (ValueChanged.HasDelegate)
+        {
+            await ValueChanged.InvokeAsync(string.Empty);
+        }
+    }
+
+    private string BuildWrapperCssClasses()
+    {
+        return new CssBuilder()
+            .Add("search-input")
+            .Add("search-input-disabled", IsDisabled)
+            .AddRaw(ModifierClass)
+            .Build();
+    }
+}
+
