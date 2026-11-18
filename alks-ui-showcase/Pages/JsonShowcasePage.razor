@@ -1,0 +1,309 @@
+@page "/json-showcase"
+@using System.Globalization
+@using ALKsPersonalUI.Showcase.Shared
+@implements IAsyncDisposable
+
+<Column Gap="1.5rem" Modifier="@(UIModifier.New.FillMaxWidth().MaxWidth(1100))">
+    <TitledWindow Title="JSON-Driven Full Showcase (/json-showcase)" Modifier="@ShowcaseStyles.SectionWindow">
+        <Column Gap="1rem">
+            <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Body">
+                Every component below is serialized to JSON, parsed back into a <code>JsonUiNode</code> tree, and rendered dynamically.
+            </ALKsPersonalUI.Layout.Text>
+
+            <Row Gap="0.75rem" Wrap="true">
+                <ActionButton Text="Re-parse &amp; Render JSON" OnClick="ParseJson" />
+                <ActionButton Text="@(_showJsonEditor ? "Hide JSON" : "Show / Edit JSON")"
+                              Variant="ActionButton.ButtonVariant.Ghost"
+                              OnClick="@(() => _showJsonEditor = !_showJsonEditor)" />
+                @if (!string.IsNullOrWhiteSpace(_lastActionMessage))
+                {
+                    <Pill Text="@_lastActionMessage" Active="true" />
+                }
+            </Row>
+
+            @if (!string.IsNullOrWhiteSpace(_parseError))
+            {
+                <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Caption" Color="var(--ui-danger)">@_parseError</ALKsPersonalUI.Layout.Text>
+            }
+
+            @if (_showJsonEditor)
+            {
+                <TextArea Label="Showcase JSON Tree"
+                          Rows="10"
+                          MaxLength="50000"
+                          @bind-Value="_jsonPayload" />
+            }
+        </Column>
+    </TitledWindow>
+
+    @if (_parsedRoot is not null)
+    {
+        <JsonUiRenderer Node="@_parsedRoot" OnAction="HandleNodeAction" />
+    }
+</Column>
+
+@code {
+    private const int ProgressTickMilliseconds = 500;
+    private const int ProgressStep = 4;
+    private const int MaxProgress = 100;
+
+    private string? _jsonPayload;
+    private string? _parseError;
+    private string? _lastActionMessage;
+    private JsonUiNode? _parsedRoot;
+    private bool _showJsonEditor;
+    private PeriodicTimer? _progressTimer;
+    private CancellationTokenSource? _timerCts;
+    private Task? _progressLoopTask;
+
+    protected override void OnInitialized()
+    {
+        _jsonPayload = BuildFullShowcaseTree().ToJson(indented: true);
+        ParseJson();
+        StartProgressTimer();
+    }
+
+    private void HandleNodeAction(string actionName)
+    {
+        _lastActionMessage = $"Triggered: {actionName}";
+    }
+
+    private void StartProgressTimer()
+    {
+        _timerCts = new CancellationTokenSource();
+        _progressTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(ProgressTickMilliseconds));
+        _progressLoopTask = RunProgressLoopAsync(_progressTimer, _timerCts.Token);
+    }
+
+    private async Task RunProgressLoopAsync(PeriodicTimer timer, CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                AdvanceProgressBar();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
+
+    private void AdvanceProgressBar()
+    {
+        var progressNode = FindNodeByType(_parsedRoot, "ProgressBar");
+        if (progressNode is null)
+        {
+            return;
+        }
+
+        progressNode.Props ??= new();
+        var currentValue = progressNode.GetInt("Value", 0);
+        var nextValue = currentValue + ProgressStep;
+        if (nextValue > MaxProgress)
+        {
+            nextValue = 0;
+        }
+
+        progressNode.Props["Value"] = nextValue.ToString(CultureInfo.InvariantCulture);
+    }
+
+    private static JsonUiNode? FindNodeByType(JsonUiNode? node, string type)
+    {
+        if (node is null)
+        {
+            return null;
+        }
+
+        if (string.Equals(node.Type, type, StringComparison.Ordinal))
+        {
+            return node;
+        }
+
+        if (node.Children is null)
+        {
+            return null;
+        }
+
+        foreach (var child in node.Children)
+        {
+            var match = FindNodeByType(child, type);
+            if (match is not null)
+            {
+                return match;
+            }
+        }
+
+        return null;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_timerCts is not null)
+        {
+            _timerCts.Cancel();
+            _timerCts.Dispose();
+            _timerCts = null;
+        }
+
+        if (_progressTimer is not null)
+        {
+            _progressTimer.Dispose();
+            _progressTimer = null;
+        }
+
+        if (_progressLoopTask is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _progressLoopTask;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
+
+    private void ParseJson()
+    {
+        _parseError = null;
+        if (string.IsNullOrWhiteSpace(_jsonPayload))
+        {
+            _parseError = "JSON payload is empty.";
+            return;
+        }
+
+        try
+        {
+            _parsedRoot = JsonUiNode.FromJson(_jsonPayload);
+        }
+        catch (Exception ex)
+        {
+            _parseError = $"Parse error: {ex.Message}";
+        }
+    }
+
+    private static JsonUiNode BuildFullShowcaseTree() => new()
+    {
+        Type = "Column",
+        Props = new() { ["Gap"] = "1.5rem" },
+        Children =
+        [
+            new JsonUiNode
+            {
+                Type = "TitledWindow",
+                Props = new() { ["Title"] = "Buttons & Indicators (from JSON)" },
+                Children =
+                [
+                    new JsonUiNode
+                    {
+                        Type = "Column",
+                        Children =
+                        [
+                            new JsonUiNode { Type = "LockBanner", Props = new() { ["IsLocked"] = "true", ["LockedByUser"] = "andre" } },
+                            new JsonUiNode
+                            {
+                                Type = "Row",
+                                Children =
+                                [
+                                    new JsonUiNode { Type = "ActionButton", Props = new() { ["Text"] = "Primary Action" } },
+                                    new JsonUiNode { Type = "CloseButton" },
+                                    new JsonUiNode { Type = "Pill", Props = new() { ["Text"] = "Active Pill", ["Active"] = "true" } },
+                                    new JsonUiNode { Type = "SimpleSpinner" },
+                                    new JsonUiNode
+                                    {
+                                        Type = "OrbitalLoader",
+                                        Children = [ new JsonUiNode { Type = "Mars" } ]
+                                    }
+                                ]
+                            },
+                            new JsonUiNode { Type = "ProgressBar", Props = new() { ["Value"] = "72", ["Max"] = "100", ["Label"] = "JSON Upload" } },
+                            new JsonUiNode { Type = "CountdownTimer", Props = new() { ["TotalSeconds"] = "45" } }
+                        ]
+                    }
+                ]
+            },
+            new JsonUiNode
+            {
+                Type = "TitledWindow",
+                Props = new() { ["Title"] = "Inputs (from JSON)" },
+                Children =
+                [
+                    new JsonUiNode
+                    {
+                        Type = "Column",
+                        Children =
+                        [
+                            new JsonUiNode { Type = "SearchInput", Props = new() { ["Placeholder"] = "Search assets..." } },
+                            new JsonUiNode { Type = "TextInput", Props = new() { ["Label"] = "Title", ["Placeholder"] = "Enter title..." } },
+                            new JsonUiNode { Type = "TextArea", Props = new() { ["Label"] = "Notes", ["Rows"] = "3" } },
+                            new JsonUiNode { Type = "NumberInput", Props = new() { ["Label"] = "Quantity" } },
+                            new JsonUiNode { Type = "Checkbox", Props = new() { ["Label"] = "Publish immediately" } },
+                            new JsonUiNode { Type = "FileUpload", Props = new() { ["PromptText"] = "Drop images here" } }
+                        ]
+                    }
+                ]
+            },
+            new JsonUiNode
+            {
+                Type = "TitledWindow",
+                Props = new() { ["Title"] = "Templates, Navigation & Media (from JSON)" },
+                Children =
+                [
+                    new JsonUiNode
+                    {
+                        Type = "Column",
+                        Children =
+                        [
+                            new JsonUiNode { Type = "Breadcrumbs" },
+                            new JsonUiNode
+                            {
+                                Type = "FrameBox",
+                                Children =
+                                [
+                                    new JsonUiNode
+                                    {
+                                        Type = "TemplateSlot",
+                                        Props = new() { ["SlotName"] = "Media", ["IsEditorMode"] = "true", ["IsFilled"] = "true" },
+                                        Children =
+                                        [
+                                            new JsonUiNode
+                                            {
+                                                Type = "Row",
+                                                Children =
+                                                [
+                                                    new JsonUiNode { Type = "MediaTile", Props = new() { ["Title"] = "Mars Rover", ["Subtitle"] = "14 photos", ["IsSelected"] = "true" } },
+                                                    new JsonUiNode { Type = "MediaTile", Props = new() { ["Title"] = "Olympus Mons", ["Subtitle"] = "8 photos", ["IsSelected"] = "false" } }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            new JsonUiNode
+                            {
+                                Type = "PageCarousel",
+                                Props = new() { ["ActivePageIndex"] = "0", ["PageCount"] = "2" },
+                                Children =
+                                [
+                                    new JsonUiNode { Type = "Text", Text = "Page 1: Carousel content rendered from JSON!" },
+                                    new JsonUiNode { Type = "Text", Text = "Page 2: Second page from JSON!" }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    };
+}
+
