@@ -1,0 +1,64 @@
+.template-slot {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-height: var(--_ts-min-height, 5rem);
+    padding: var(--_ts-padding, 0.75rem);
+    border: var(--_ts-border-width, 2px) var(--_ts-border-style, dashed) var(--ui-border, rgba(255, 255, 255, 0.18));
+    border-radius: var(--radius-md, 0.75rem);
+    background: color-mix(in srgb, var(--ui-surface, #161622) 70%, transparent);
+    transition: border-color var(--press-duration, 120ms) ease, background-color var(--press-duration, 120ms) ease;
+    outline: none;
+}
+
+.template-slot-interactive {
+    cursor: pointer;
+}
+
+.template-slot-interactive:hover,
+.template-slot-interactive:focus-visible {
+    border-color: var(--ui-accent, #7c3aed);
+    background: color-mix(in srgb, var(--ui-accent, #7c3aed) 10%, var(--ui-surface, #161622));
+}
+
+.template-slot-filled {
+    border-color: color-mix(in srgb, var(--ui-success, #22c55e) 55%, var(--ui-border, rgba(255, 255, 255, 0.18)));
+}
+
+.template-slot-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ui-text-muted, #9ca3af);
+}
+
+.template-slot-name {
+    color: var(--ui-text, #f9fafb);
+}
+
+.template-slot-badge {
+    padding: 0.125rem 0.45rem;
+    border-radius: 999px;
+    background: var(--ui-elevated, #1e1e2e);
+    border: 1px solid var(--ui-border, rgba(255, 255, 255, 0.12));
+    font-size: 0.6875rem;
+}
+
+.template-slot-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    justify-content: center;
+}
+
+.template-slot-placeholder {
+    font-size: 0.875rem;
+    color: var(--ui-text-muted, #9ca3af);
+    text-align: center;
+}
+

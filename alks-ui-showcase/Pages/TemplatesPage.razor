@@ -56,106 +56,48 @@
         </Column>
     </TitledWindow>
 
-    <TitledWindow Title="QuizTemplate" Modifier="@ShowcaseStyles.SectionWindow">
+    <TitledWindow Title="TemplateSlot &amp; FrameBox" Modifier="@ShowcaseStyles.SectionWindow">
         <Column Gap="1rem">
             <Text Variant="TypographyVariant.Body">
-                Structured quiz layout with progress header, question prompt, and answer slots.
+                Generic data-driven template primitives for the Content Service editor and screen renderer.
             </Text>
-            <QuizTemplate CurrentQuestionNumber="@_quizQuestion"
-                          TotalQuestions="5"
-                          QuestionText="Which Blazor feature powers ALKsPersonalUI without JavaScript?"
-                          Score="@_quizScore">
+            <Row Gap="0.75rem" AlignItems="VerticalAlignment.Center">
+                <ActionButton Text="@(_slotEditorMode ? "Switch to Screen Mode" : "Switch to Editor Mode")"
+                              Variant="ActionButton.ButtonVariant.Outline"
+                              OnClick="@(() => _slotEditorMode = !_slotEditorMode)" />
+                <Text Variant="TypographyVariant.Caption" Color="var(--ui-text-muted)">
+                    Last selected slot: @(_selectedSlotName ?? "None")
+                </Text>
+            </Row>
+            <FrameBox BorderColor="var(--ui-accent)" Padding="1.25rem">
                 <Column Gap="0.75rem">
-                    <ActionButton Text="Pure C# &amp; CSS" Variant="ActionButton.ButtonVariant.Outline" OnClick="@(() => AnswerQuiz(true))" />
-                    <ActionButton Text="HTML &amp; CSS Only (No Blazor)" Variant="ActionButton.ButtonVariant.Outline" OnClick="@(() => AnswerQuiz(false))" />
+                    <TemplateSlot SlotName="Header"
+                                  IsEditorMode="@_slotEditorMode"
+                                  IsFilled="true"
+                                  OnSelectSlot="@(name => _selectedSlotName = name)">
+                        <Text Variant="TypographyVariant.Title">Exhibition Title</Text>
+                    </TemplateSlot>
+                    <TemplateSlot SlotName="Media"
+                                  PlaceholderText="Select an image or album"
+                                  IsEditorMode="@_slotEditorMode"
+                                  IsFilled="false"
+                                  OnSelectSlot="@(name => _selectedSlotName = name)" />
                 </Column>
-            </QuizTemplate>
-        </Column>
-    </TitledWindow>
-
-    <TitledWindow Title="GameTemplate" Modifier="@ShowcaseStyles.SectionWindow">
-        <Column Gap="1rem">
-            <Text Variant="TypographyVariant.Body">
-                Arcade/game HUD shell with score, lives, and central stage.
-            </Text>
-            <GameTemplate Title="Sector Target" Score="@_gameScore" Lives="@_gameLives">
-                <Column Padding="1.5rem" Gap="1rem" AlignItems="HorizontalAlignment.Center">
-                    @if (_gameLives > 0)
-                    {
-                        <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Body" Color="var(--ui-text-muted)">
-                            Hit the active sector (@(_activeTarget + 1)) to score! Missing costs 1 life.
-                        </ALKsPersonalUI.Layout.Text>
-                        <Row Gap="0.75rem" JustifyContent="Arrangement.Center">
-                            @for (int i = 0; i < TargetCount; i++)
-                            {
-                                int sectorIndex = i;
-                                bool isTarget = sectorIndex == _activeTarget;
-                                <ActionButton Text="@($"Sector {sectorIndex + 1}")"
-                                              Variant="@(isTarget ? ActionButton.ButtonVariant.Solid : ActionButton.ButtonVariant.Outline)"
-                                              OnClick="@(() => HitSector(sectorIndex))" />
-                            }
-                        </Row>
-                    }
-                    else
-                    {
-                        <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Title">Game Over</ALKsPersonalUI.Layout.Text>
-                        <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Body" Color="var(--ui-text-muted)">Final Score: @_gameScore</ALKsPersonalUI.Layout.Text>
-                        <ActionButton Text="Play Again" Variant="ActionButton.ButtonVariant.Solid" OnClick="ResetGame" />
-                    }
-                </Column>
-            </GameTemplate>
+            </FrameBox>
         </Column>
     </TitledWindow>
 </Column>
 
 @code {
-    private const int TargetCount = 3;
-    private const int PointsPerHit = 100;
-    private const int InitialLives = 3;
+    private bool _slotEditorMode = true;
+    private string? _selectedSlotName;
 
     private bool _kioskStarted;
     private string? _kioskSelection;
-    private int _quizQuestion = 1;
-    private int _quizScore;
-    private int _gameScore;
-    private int _gameLives = InitialLives;
-    private int _activeTarget;
 
     private void ResetKiosk()
     {
         _kioskStarted = false;
         _kioskSelection = null;
-    }
-
-    private void HitSector(int sectorIndex)
-    {
-        if (_gameLives <= 0)
-            return;
-
-        if (sectorIndex == _activeTarget)
-        {
-            _gameScore += PointsPerHit;
-        }
-        else
-        {
-            _gameLives--;
-        }
-
-        _activeTarget = (_activeTarget + 1) % TargetCount;
-    }
-
-    private void ResetGame()
-    {
-        _gameScore = 0;
-        _gameLives = InitialLives;
-        _activeTarget = 0;
-    }
-
-    private void AnswerQuiz(bool isCorrect)
-    {
-        if (isCorrect)
-            _quizScore += 10;
-
-        _quizQuestion = _quizQuestion < 5 ? _quizQuestion + 1 : 1;
     }
 }

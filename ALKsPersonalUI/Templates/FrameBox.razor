@@ -1,0 +1,56 @@
+@inherits UIComponentBase
+
+<div class="@BuildFrameCssClasses()"
+     style="@BuildFrameStyles()"
+     @attributes="AdditionalAttributes">
+    <div class="frame-box-inner">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? BorderColor { get; set; }
+    [Parameter] public string? BorderWidth { get; set; }
+    [Parameter] public string? BorderStyle { get; set; }
+    [Parameter] public string? BorderRadius { get; set; }
+    [Parameter] public string? BorderImageSource { get; set; }
+    [Parameter] public string? BorderImageSlice { get; set; }
+    [Parameter] public string? Padding { get; set; }
+    [Parameter] public string? Background { get; set; }
+
+    private string BuildFrameCssClasses()
+    {
+        return new CssBuilder()
+            .Add("frame-box")
+            .Add("frame-box-image", !string.IsNullOrWhiteSpace(BorderImageSource))
+            .AddRaw(ModifierClass)
+            .Build();
+    }
+
+    private string BuildFrameStyles()
+    {
+        var builder = new StyleBuilder()
+            .Add("--_fb-border-width", BorderWidth ?? TemplateDefaults.FrameBox.DefaultBorderWidth)
+            .Add("--_fb-border-style", BorderStyle ?? TemplateDefaults.FrameBox.DefaultBorderStyle)
+            .Add("--_fb-border-radius", BorderRadius ?? TemplateDefaults.FrameBox.DefaultBorderRadius)
+            .Add("--_fb-padding", Padding ?? TemplateDefaults.FrameBox.DefaultPadding);
+
+        if (!string.IsNullOrWhiteSpace(BorderColor))
+        {
+            builder.Add("--_fb-border-color", BorderColor);
+        }
+
+        if (!string.IsNullOrWhiteSpace(Background))
+        {
+            builder.Add("--_fb-background", Background);
+        }
+
+        if (!string.IsNullOrWhiteSpace(BorderImageSource))
+        {
+            builder.Add("--_fb-border-image-source", $"url('{BorderImageSource}')");
+            builder.Add("--_fb-border-image-slice", BorderImageSlice ?? TemplateDefaults.FrameBox.DefaultBorderImageSlice);
+        }
+
+        return builder.AddRaw(ModifierStyle).Build();
+    }
+}

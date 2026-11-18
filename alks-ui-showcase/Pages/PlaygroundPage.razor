@@ -228,12 +228,14 @@
             <CountdownTimer TotalSeconds=""15"" AutoStart=""true"" />
         </Row>
         <ProgressBar Value=""60"" Max=""100"" Label=""Session Progress"" ShowPercentage=""true"" />
-        <QuizTemplate CurrentQuestionNumber=""1"" TotalQuestions=""3"" QuestionText=""Which Blazor feature powers ALKsPersonalUI?"" Score=""10"">
-            <Column Gap=""0.5rem"">
-                <ActionButton Variant=""Solid"" Text=""Pure C# & CSS"" />
-                <ActionButton Variant=""Outline"" Text=""Pure C# / Blazor"" />
-            </Column>
-        </QuizTemplate>
+        <FrameBox>
+            <TemplateSlot SlotName=""Question"" IsEditorMode=""true"" IsFilled=""true"">
+                <Column Gap=""0.5rem"">
+                    <ActionButton Variant=""Solid"" Text=""Pure C# & CSS"" />
+                    <ActionButton Variant=""Outline"" Text=""Pure C# / Blazor"" />
+                </Column>
+            </TemplateSlot>
+        </FrameBox>
     </Column>
 </KioskShell>")
     ];
@@ -950,28 +952,24 @@
                 </KioskShell>
                 break;
 
-            case "QuizTemplate":
-                var curQ = int.TryParse(node.Attributes.GetValueOrDefault("CurrentQuestionNumber"), out var cq) ? cq : 1;
-                var totQ = int.TryParse(node.Attributes.GetValueOrDefault("TotalQuestions"), out var tq) ? tq : 5;
-                var qScore = int.TryParse(node.Attributes.GetValueOrDefault("Score"), out var qs) ? qs : 0;
-                <QuizTemplate CurrentQuestionNumber="@curQ"
-                              TotalQuestions="@totQ"
-                              QuestionText="@node.Attributes.GetValueOrDefault("QuestionText", "Question?")"
-                              Score="@qScore"
+            case "TemplateSlot":
+                var isEditor = !bool.TryParse(node.Attributes.GetValueOrDefault("IsEditorMode"), out var ed) || ed;
+                var isFilled = bool.TryParse(node.Attributes.GetValueOrDefault("IsFilled"), out var fl) && fl;
+                <TemplateSlot SlotName="@node.Attributes.GetValueOrDefault("SlotName", "Slot")"
+                              PlaceholderText="@node.Attributes.GetValueOrDefault("PlaceholderText", "Drop or select content")"
+                              IsEditorMode="@isEditor"
+                              IsFilled="@isFilled"
                               Modifier="@modifier">
                     @RenderParsedTree(node.Children)
-                </QuizTemplate>
+                </TemplateSlot>
                 break;
 
-            case "GameTemplate":
-                var gScore = int.TryParse(node.Attributes.GetValueOrDefault("Score"), out var gs) ? gs : 0;
-                var gLives = int.TryParse(node.Attributes.GetValueOrDefault("Lives"), out var gl) ? gl : 3;
-                <GameTemplate Title="@node.Attributes.GetValueOrDefault("Title", "Game")"
-                              Score="@gScore"
-                              Lives="@gLives"
-                              Modifier="@modifier">
+            case "FrameBox":
+                <FrameBox BorderColor="@node.Attributes.GetValueOrDefault("BorderColor")"
+                          Padding="@node.Attributes.GetValueOrDefault("Padding")"
+                          Modifier="@modifier">
                     @RenderParsedTree(node.Children)
-                </GameTemplate>
+                </FrameBox>
                 break;
         }
     };
