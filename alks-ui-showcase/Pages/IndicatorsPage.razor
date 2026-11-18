@@ -1,0 +1,71 @@
+@page "/indicators"
+
+<PageTitle>Indicators — ALKsPersonalUI</PageTitle>
+
+<Column Modifier="@(UIModifier.New.FillMaxWidth())" Gap="2rem">
+    <TitledWindow Title="Pill Badges" Modifier="@ShowcaseStyles.SectionWindow">
+        <Column Gap="1rem">
+            <Text Variant="TypographyVariant.Body">
+                Compact status badges with semantic variants for tags, scores, and live states.
+            </Text>
+            <Row Gap="0.75rem" Wrap="true" AlignItems="VerticalAlignment.Center">
+                <Pill Text="Neutral" Variant="Pill.PillVariant.Neutral" />
+                <Pill Text="Accent" Variant="Pill.PillVariant.Accent" />
+                <Pill Text="Success" Variant="Pill.PillVariant.Success" />
+                <Pill Text="Warning" Variant="Pill.PillVariant.Warning" />
+                <Pill Text="Danger" Variant="Pill.PillVariant.Danger" />
+            </Row>
+        </Column>
+    </TitledWindow>
+
+    <TitledWindow Title="ProgressBar" Modifier="@ShowcaseStyles.SectionWindow">
+        <Column Gap="1rem">
+            <Text Variant="TypographyVariant.Body">
+                Smooth, theme-aware progress bar with optional label and percentage display.
+            </Text>
+            <ProgressBar Value="@_progressValue" Max="100" Label="Loading Assets" ShowPercentage="true" />
+            <Row Gap="0.75rem">
+                <ActionButton Text="-10%" Variant="ActionButton.ButtonVariant.Outline" OnClick="@(() => AdjustProgress(-10))" />
+                <ActionButton Text="+10%" Variant="ActionButton.ButtonVariant.Solid" OnClick="@(() => AdjustProgress(10))" />
+            </Row>
+        </Column>
+    </TitledWindow>
+
+    <TitledWindow Title="CountdownTimer" Modifier="@ShowcaseStyles.SectionWindow">
+        <Column Gap="1rem">
+            <Text Variant="TypographyVariant.Body">
+                Pure C# PeriodicTimer countdown pill that shifts to warning state below the threshold.
+            </Text>
+            <Row Gap="1rem" AlignItems="VerticalAlignment.Center" Wrap="true">
+                <CountdownTimer @key="_timerResetKey" TotalSeconds="15" AutoStart="true" OnExpired="HandleTimerExpired" />
+                <ActionButton Text="Restart (15s)" Variant="ActionButton.ButtonVariant.Outline" OnClick="RestartTimer" />
+                @if (_timerExpired)
+                {
+                    <Pill Text="Expired!" Variant="Pill.PillVariant.Danger" />
+                }
+            </Row>
+        </Column>
+    </TitledWindow>
+</Column>
+
+@code {
+    private double _progressValue = 60;
+    private int _timerResetKey;
+    private bool _timerExpired;
+
+    private void AdjustProgress(double delta)
+    {
+        _progressValue = Math.Clamp(_progressValue + delta, 0, 100);
+    }
+
+    private void RestartTimer()
+    {
+        _timerExpired = false;
+        _timerResetKey++;
+    }
+
+    private void HandleTimerExpired()
+    {
+        _timerExpired = true;
+    }
+}

@@ -199,16 +199,6 @@
                                                   aria-label="Right Shift"
                                                   OnClick="CycleShiftState" />
                                 }
-                                else
-                                {
-                                    <ActionButton PressEffect="ButtonPressEffect.InwardScale"
-                                                  Variant="ActionButton.ButtonVariant.Outline"
-                                                  AutoRepeat="true"
-                                                  Modifier="@BuildFunctionKeyModifier(1.55)"
-                                                  Text="@InputDefaults.Symbols.Backspace"
-                                                  aria-label="Backspace"
-                                                  OnClick="BackspaceAsync" />
-                                }
                             }
                         </div>
                     }
@@ -533,7 +523,7 @@
     [Parameter] public EventCallback<VirtualKeyEventArgs> OnKeyPress { get; set; }
     [Parameter] public bool ShowPreviewBar { get; set; } = true;
     [Parameter] public bool IsPassword { get; set; }
-    [Parameter] public int MaxLength { get; set; } = 256;
+    [Parameter] public int MaxLength { get; set; } = InputDefaults.ScreenKeyboard.DefaultMaxLength;
     [Parameter] public string Placeholder { get; set; } = "Tap keys to type...";
     [Parameter] public string SubmitText { get; set; } = "Done \u2713";
     [Parameter] public EventCallback<string?> OnSubmit { get; set; }

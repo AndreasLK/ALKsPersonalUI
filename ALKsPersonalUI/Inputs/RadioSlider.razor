@@ -55,7 +55,7 @@
 </div>
 
 @code {
-    [Parameter] public double DialSizePx { get; set; } = 250.0;
+    [Parameter] public double DialSizePx { get; set; } = InputDefaults.RadioSlider.DefaultDialSizePx;
     [Parameter] public int MaxAngle { get; set; } = SliderDefaults.RotaryDial.DefaultMaxAngleDegrees;
     [Parameter] public double? CustomStartAngle { get; set; }
 

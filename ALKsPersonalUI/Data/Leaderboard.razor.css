@@ -1,0 +1,61 @@
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.9rem;
+    background: var(--ui-bg-surface);
+    border-radius: var(--ui-radius-md);
+    overflow: hidden;
+    border: 1px solid var(--ui-border);
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--ui-border-subtle);
+    color: var(--ui-text-primary);
+}
+
+.leaderboard-table th {
+    font-weight: 600;
+    color: var(--ui-text-secondary);
+    background: var(--ui-bg-elevated);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+}
+
+.leaderboard-rank-col {
+    width: 1%;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--ui-text-secondary);
+}
+
+.leaderboard-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.leaderboard-row-highlighted {
+    background: color-mix(in srgb, var(--ui-accent) 14%, var(--ui-bg-surface));
+}
+
+.leaderboard-row-highlighted td {
+    font-weight: 600;
+}
+
+.leaderboard-separator-row td {
+    text-align: center;
+    color: var(--ui-text-muted);
+    letter-spacing: 0.2em;
+    padding: 0.4rem 1rem;
+    background: var(--ui-bg-elevated);
+}
+
+.leaderboard-empty {
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--ui-text-muted);
+}
+

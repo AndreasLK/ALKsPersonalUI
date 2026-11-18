@@ -1,0 +1,71 @@
+@using System.Globalization
+@inherits UIComponentBase
+
+<div class="@BuildCssClasses()"
+     style="@BuildStyles()"
+     role="progressbar"
+     aria-valuenow="@FormattedValue"
+     aria-valuemin="0"
+     aria-valuemax="@FormattedMax"
+     aria-label="@AriaLabel"
+     @attributes="AdditionalAttributes">
+    @if (HasHeaderRow)
+    {
+        <div class="ui-progress-header">
+            @if (!string.IsNullOrWhiteSpace(Label))
+            {
+                <span class="ui-progress-label">@Label</span>
+            }
+            @if (ShowPercentage)
+            {
+                <span class="ui-progress-percentage">@($"{Math.Round(Percentage):0}%")</span>
+            }
+        </div>
+    }
+
+    <div class="ui-progress-track">
+        <div class="ui-progress-fill" style="@($"width: {FormattedPercentage}%;")"></div>
+        @if (ComparisonPercentage.HasValue)
+        {
+            <div class="ui-progress-comparison"
+                 style="@($"left: {FormattedComparisonPercentage}%;")"
+                 aria-hidden="true"></div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public double Value { get; set; }
+    [Parameter] public double Max { get; set; } = 100;
+    [Parameter] public double? ComparisonValue { get; set; }
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public bool ShowPercentage { get; set; } = true;
+    [Parameter] public Pill.PillVariant Variant { get; set; } = Pill.PillVariant.Accent;
+
+    private double SafeMax => Max > 0 ? Max : 100;
+    private double ClampedValue => Math.Clamp(Value, 0, SafeMax);
+    private double Percentage => ClampedValue / SafeMax * 100d;
+    private double? ComparisonPercentage => ComparisonValue.HasValue
+        ? Math.Clamp(ComparisonValue.Value, 0, SafeMax) / SafeMax * 100d
+        : null;
+
+    private bool HasHeaderRow => !string.IsNullOrWhiteSpace(Label) || ShowPercentage;
+    private string? AriaLabel => string.IsNullOrWhiteSpace(Label) ? null : Label;
+
+    private string FormattedValue => ClampedValue.ToString("0.##", CultureInfo.InvariantCulture);
+    private string FormattedMax => SafeMax.ToString("0.##", CultureInfo.InvariantCulture);
+    private string FormattedPercentage => Percentage.ToString("0.##", CultureInfo.InvariantCulture);
+    private string FormattedComparisonPercentage => (ComparisonPercentage ?? 0).ToString("0.##", CultureInfo.InvariantCulture);
+
+    private string BuildCssClasses() => new CssBuilder()
+        .Add("ui-progress")
+        .Add(Variant.ToString().ToLowerInvariant())
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private string BuildStyles() => new StyleBuilder()
+        .Add("--_progress-accent", ModifierOrEmpty.AccentColorValue)
+        .Add("--_progress-text", ModifierOrEmpty.TextColorValue)
+        .AddRaw(ModifierOrEmpty.BuildFrameExtras())
+        .Build();
+}

@@ -45,6 +45,16 @@ public static class InputDefaults
         public const string KeyboardSymbol = "\u2328";
     }
 
+    public static class ScreenKeyboard
+    {
+        public const int DefaultMaxLength = TextInput.DefaultMaxLength;
+    }
+
+    public static class RadioSlider
+    {
+        public const double DefaultDialSizePx = 250.0;
+    }
+
     public static class Symbols
     {
         public const string Backspace = "\u232B";

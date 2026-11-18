@@ -1,0 +1,153 @@
+@inherits UIComponentBase
+@implements IAsyncDisposable
+
+<div class="@BuildCssClasses()"
+     style="@ModifierStyle"
+     @onpointerdown="RecordActivityAsync"
+     @onkeydown="RecordActivityAsync"
+     @attributes="AdditionalAttributes">
+    @if (IsOffline && ConnectionBanner is not null)
+    {
+        <div class="ui-kiosk-connection-banner" role="status">
+            @ConnectionBanner
+        </div>
+    }
+
+    <Scaffold TopBar="@TopBar"
+              BottomBar="@BottomBar"
+              FloatingAction="@FloatingAction"
+              EnableToasts="@EnableToasts">
+        @ChildContent
+    </Scaffold>
+
+    @if (_isIdle && AttractOverlay is not null)
+    {
+        <div class="ui-kiosk-attract-overlay" role="dialog" aria-modal="true">
+            @AttractOverlay
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public RenderFragment? TopBar { get; set; }
+    [Parameter] public RenderFragment? BottomBar { get; set; }
+    [Parameter] public RenderFragment? FloatingAction { get; set; }
+    [Parameter] public RenderFragment? ConnectionBanner { get; set; }
+    [Parameter] public RenderFragment? AttractOverlay { get; set; }
+    [Parameter] public bool EnableToasts { get; set; } = true;
+    [Parameter] public bool IsOffline { get; set; }
+    [Parameter] public bool IsPreview { get; set; }
+    [Parameter] public int IdleTimeoutSeconds { get; set; }
+    [Parameter] public EventCallback OnIdleTimeout { get; set; }
+    [Parameter] public EventCallback OnActivityResumed { get; set; }
+
+    private DateTimeOffset _lastActivityUtc = DateTimeOffset.UtcNow;
+    private bool _isIdle;
+    private bool _hasRendered;
+    private CancellationTokenSource? _idleCts;
+    private Task? _idleLoopTask;
+
+    private bool ShouldMonitorIdle => !IsPreview && IdleTimeoutSeconds > 0;
+
+    protected override void OnParametersSet()
+    {
+        if (!ShouldMonitorIdle)
+        {
+            StopIdleMonitor();
+            _isIdle = false;
+            return;
+        }
+
+        if (_hasRendered && _idleCts is null)
+            StartIdleMonitor();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        _hasRendered = true;
+        if (ShouldMonitorIdle)
+            StartIdleMonitor();
+    }
+
+    private void StartIdleMonitor()
+    {
+        StopIdleMonitor();
+        _lastActivityUtc = DateTimeOffset.UtcNow;
+        _idleCts = new CancellationTokenSource();
+        _idleLoopTask = RunIdleMonitorLoopAsync(_idleCts.Token);
+    }
+
+    private void StopIdleMonitor()
+    {
+        if (_idleCts is null)
+            return;
+
+        _idleCts.Cancel();
+        _idleCts.Dispose();
+        _idleCts = null;
+    }
+
+    private async Task RunIdleMonitorLoopAsync(CancellationToken cancellationToken)
+    {
+        using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        try
+        {
+            while (await periodicTimer.WaitForNextTickAsync(cancellationToken))
+            {
+                if (_isIdle || IdleTimeoutSeconds <= 0)
+                    continue;
+
+                var elapsedSeconds = (DateTimeOffset.UtcNow - _lastActivityUtc).TotalSeconds;
+                if (elapsedSeconds < IdleTimeoutSeconds)
+                    continue;
+
+                _isIdle = true;
+                await InvokeAsync(NotifyIdleTimeoutAsync);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task NotifyIdleTimeoutAsync()
+    {
+        StateHasChanged();
+        await OnIdleTimeout.InvokeAsync();
+    }
+
+    private async Task RecordActivityAsync()
+    {
+        _lastActivityUtc = DateTimeOffset.UtcNow;
+        if (!_isIdle)
+            return;
+
+        _isIdle = false;
+        await OnActivityResumed.InvokeAsync();
+    }
+
+    private string BuildCssClasses() => new CssBuilder()
+        .Add("ui-kiosk-shell")
+        .Add("preview", when: IsPreview)
+        .Add("idle", when: _isIdle)
+        .AddRaw(ModifierClass)
+        .Build();
+
+    public async ValueTask DisposeAsync()
+    {
+        StopIdleMonitor();
+        if (_idleLoopTask is null)
+            return;
+
+        try
+        {
+            await _idleLoopTask;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+}

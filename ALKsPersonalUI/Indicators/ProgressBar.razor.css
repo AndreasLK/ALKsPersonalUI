@@ -1,0 +1,77 @@
+.ui-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    width: 100%;
+    color: var(--_progress-text, var(--ui-text));
+    box-sizing: border-box;
+}
+
+.ui-progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    line-height: 1.2;
+}
+
+.ui-progress-label {
+    font-weight: 600;
+    color: var(--_progress-text, var(--ui-text));
+}
+
+.ui-progress-percentage {
+    color: var(--ui-text-muted);
+    font-variant-numeric: tabular-nums;
+    margin-left: auto;
+}
+
+.ui-progress-track {
+    position: relative;
+    width: 100%;
+    height: 0.65rem;
+    border-radius: var(--ui-radius-pill);
+    background-color: var(--ui-bg-surface);
+    border: 1px solid var(--ui-border);
+    overflow: visible;
+    box-sizing: border-box;
+}
+
+.ui-progress-fill {
+    height: 100%;
+    border-radius: var(--ui-radius-pill);
+    background-color: var(--_progress-color, var(--_progress-accent, var(--ui-accent)));
+    transition: width 0.25s ease, background-color 0.2s ease;
+}
+
+.ui-progress-comparison {
+    position: absolute;
+    top: -0.2rem;
+    bottom: -0.2rem;
+    width: 2px;
+    transform: translateX(-50%);
+    background-color: var(--ui-text);
+    border-radius: 1px;
+    pointer-events: none;
+}
+
+.ui-progress.neutral {
+    --_progress-color: var(--ui-text-muted);
+}
+
+.ui-progress.accent {
+    --_progress-color: var(--_progress-accent, var(--ui-accent));
+}
+
+.ui-progress.success {
+    --_progress-color: var(--ui-success);
+}
+
+.ui-progress.warning {
+    --_progress-color: var(--ui-warning);
+}
+
+.ui-progress.danger {
+    --_progress-color: var(--ui-danger);
+}

@@ -1,0 +1,121 @@
+@typeparam TItem
+@inherits UIComponentBase
+
+<Window Modifier="@BuildWindowModifier()">
+    @if (Columns is not null && Items is not null)
+    {
+        var allItems = Items.ToList();
+        if (allItems.Count == 0)
+        {
+            <div class="leaderboard-empty">@EmptyText</div>
+        }
+        else
+        {
+            var topItems = allItems.Take(Math.Max(0, TopCount)).ToList();
+            var highlightedEntry = FindHighlightedOutsideTop(allItems, TopCount);
+
+            <table class="leaderboard-table" @attributes="AdditionalAttributes">
+                <thead>
+                    <tr>
+                        <th class="leaderboard-rank-col">@RankHeader</th>
+                        @foreach (var col in Columns)
+                        {
+                            <th>@col.Title</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < topItems.Count; i++)
+                    {
+                        var item = topItems[i];
+                        var rank = i + 1;
+                        bool isHighlighted = IsItemHighlighted(item);
+                        <tr class="@(isHighlighted ? "leaderboard-row-highlighted" : string.Empty)">
+                            <td class="leaderboard-rank-col">@($"{rank}.")</td>
+                            @foreach (var col in Columns)
+                            {
+                                <td>
+                                    @if (col.Template is not null)
+                                    {
+                                        @col.Template(item)
+                                    }
+                                    else if (col.GetValue is not null)
+                                    {
+                                        @col.GetValue(item)
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+
+                    @if (highlightedEntry is not null)
+                    {
+                        <tr class="leaderboard-separator-row">
+                            <td colspan="@(Columns.Count + 1)">@SeparatorText</td>
+                        </tr>
+                        <tr class="leaderboard-row-highlighted">
+                            <td class="leaderboard-rank-col">@($"{highlightedEntry.Value.Rank}.")</td>
+                            @foreach (var col in Columns)
+                            {
+                                <td>
+                                    @if (col.Template is not null)
+                                    {
+                                        @col.Template(highlightedEntry.Value.Item)
+                                    }
+                                    else if (col.GetValue is not null)
+                                    {
+                                        @col.GetValue(highlightedEntry.Value.Item)
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    }
+</Window>
+
+@code {
+    public record Column(
+        string Title,
+        Func<TItem, object?>? GetValue = null,
+        RenderFragment<TItem>? Template = null);
+
+    [Parameter] public IEnumerable<TItem>? Items { get; set; }
+    [Parameter] public List<Column>? Columns { get; set; }
+    [Parameter] public int TopCount { get; set; } = 10;
+    [Parameter] public TItem? HighlightedItem { get; set; }
+    [Parameter] public Func<TItem, bool>? IsHighlighted { get; set; }
+    [Parameter] public string RankHeader { get; set; } = "#";
+    [Parameter] public string EmptyText { get; set; } = "No entries yet.";
+    [Parameter] public string SeparatorText { get; set; } = "...";
+
+    private UIModifier BuildWindowModifier()
+    {
+        return Modifier ?? UIModifier.New.Background("var(--ui-bg-surface)").Padding(0);
+    }
+
+    private bool IsItemHighlighted(TItem item)
+    {
+        if (IsHighlighted is not null)
+            return IsHighlighted(item);
+
+        if (HighlightedItem is not null)
+            return EqualityComparer<TItem>.Default.Equals(item, HighlightedItem);
+
+        return false;
+    }
+
+    private (TItem Item, int Rank)? FindHighlightedOutsideTop(List<TItem> allItems, int topCount)
+    {
+        int startIndex = Math.Max(0, topCount);
+        for (int i = startIndex; i < allItems.Count; i++)
+        {
+            if (IsItemHighlighted(allItems[i]))
+                return (allItems[i], i + 1);
+        }
+
+        return null;
+    }
+}

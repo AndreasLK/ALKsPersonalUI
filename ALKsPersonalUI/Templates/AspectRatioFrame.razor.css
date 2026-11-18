@@ -1,0 +1,12 @@
+.ui-aspect-frame {
+    position: relative;
+    width: 100%;
+    container-type: inline-size;
+    background-color: var(--ui-bg-surface);
+    border: 1px solid var(--ui-border);
+    border-radius: var(--ui-radius-lg);
+    overflow: hidden;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
