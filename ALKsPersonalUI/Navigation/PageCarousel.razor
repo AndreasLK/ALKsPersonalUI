@@ -1,0 +1,76 @@
+@inherits UIComponentBase
+
+<section class="@BuildCarouselCssClasses()"
+         style="@ModifierStyle"
+         aria-label="@AriaLabel"
+         @attributes="AdditionalAttributes">
+    <div class="page-carousel-body">
+        @ChildContent
+    </div>
+
+    @if (ShowNavigationControls && PageCount > 1)
+    {
+        <div class="page-carousel-controls">
+            <ActionButton Variant="ActionButton.ButtonVariant.Ghost"
+                          IsDisabled="@(ActivePageIndex <= 0)"
+                          OnClick="PreviousPageAsync">
+                @NavigationDefaults.PageCarousel.PreviousLabel
+            </ActionButton>
+
+            <span class="page-carousel-indicator">
+                @(ActivePageIndex + 1) / @PageCount
+            </span>
+
+            <ActionButton Variant="ActionButton.ButtonVariant.Ghost"
+                          IsDisabled="@(ActivePageIndex >= PageCount - 1)"
+                          OnClick="NextPageAsync">
+                @NavigationDefaults.PageCarousel.NextLabel
+            </ActionButton>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public int ActivePageIndex { get; set; }
+    [Parameter] public int PageCount { get; set; } = 1;
+    [Parameter] public bool ShowNavigationControls { get; set; } = true;
+    [Parameter] public string AriaLabel { get; set; } = NavigationDefaults.PageCarousel.DefaultAriaLabel;
+    [Parameter] public EventCallback<int> OnPageChanged { get; set; }
+
+    private async Task PreviousPageAsync()
+    {
+        if (ActivePageIndex <= 0)
+        {
+            return;
+        }
+
+        await SetPageAsync(ActivePageIndex - 1);
+    }
+
+    private async Task NextPageAsync()
+    {
+        if (ActivePageIndex >= PageCount - 1)
+        {
+            return;
+        }
+
+        await SetPageAsync(ActivePageIndex + 1);
+    }
+
+    private async Task SetPageAsync(int nextIndex)
+    {
+        ActivePageIndex = nextIndex;
+        if (OnPageChanged.HasDelegate)
+        {
+            await OnPageChanged.InvokeAsync(nextIndex);
+        }
+    }
+
+    private string BuildCarouselCssClasses()
+    {
+        return new CssBuilder()
+            .Add("page-carousel")
+            .AddRaw(ModifierClass)
+            .Build();
+    }
+}

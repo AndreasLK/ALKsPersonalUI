@@ -1,0 +1,22 @@
+.frame-box {
+    position: relative;
+    padding: var(--_fb-padding, 1rem);
+    border-width: var(--_fb-border-width, 2px);
+    border-style: var(--_fb-border-style, solid);
+    border-color: var(--_fb-border-color, var(--ui-border, rgba(255, 255, 255, 0.16)));
+    border-radius: var(--_fb-border-radius, var(--radius-md, 0.75rem));
+    background: var(--_fb-background, var(--ui-surface, #161622));
+    box-sizing: border-box;
+}
+
+.frame-box-image {
+    border-image-source: var(--_fb-border-image-source);
+    border-image-slice: var(--_fb-border-image-slice, 1);
+    border-image-repeat: stretch;
+}
+
+.frame-box-inner {
+    width: 100%;
+    height: 100%;
+}
+

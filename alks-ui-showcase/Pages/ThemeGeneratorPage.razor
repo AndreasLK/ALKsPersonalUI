@@ -77,7 +77,7 @@
                     <Row HorizontalArrangement="Arrangement.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Wrap="true" Modifier="@(UIModifier.New.FillMaxWidth())">
                         <Text Variant="TypographyVariant.Subtitle" Weight="FontWeight.Bold" Value="2. Live Component & Token Preview" />
                         <SegmentedControl TItem="string"
-                                          Items="@(new[] { "FromSeed() C#", "Full UITheme C#", "CSS Variables" })"
+                                          Items="@(new[] { "FromSeed() C#", "Full UITheme C#", "CSS Variables", "JSON" })"
                                           @bind-Value="_exportFormat" />
                     </Row>
 
@@ -149,7 +149,8 @@
             <Row Gap="0.5rem" VerticalAlignment="VerticalAlignment.Center" Modifier="@(UIModifier.New.FillMaxWidth())">
                 <input type="color"
                        value="@NormalizeHexForColorInput(currentHex)"
-                       @oninput="@(e => onChanged(e.Value?.ToString() ?? currentHex))"
+                       @oninput="@(e => HandleThrottledColorInput(e.Value?.ToString() ?? currentHex, onChanged))"
+                       @onchange="@(e => HandleImmediateColorCommit(e.Value?.ToString() ?? currentHex, onChanged))"
                        style="width: 36px; height: 32px; border: 1px solid var(--ui-border); border-radius: 6px; background: transparent; cursor: pointer; padding: 0; flex-shrink: 0;" />
                 <input type="text"
                        value="@currentHex"
@@ -225,6 +226,26 @@
         };
     }
 
+    private long _lastLivePushTick;
+
+    private void HandleThrottledColorInput(string hex, Action<string> onChanged)
+    {
+        var now = Environment.TickCount64;
+        if (now - _lastLivePushTick < ThemeDefaults.LiveUpdateThrottleMs)
+        {
+            return;
+        }
+
+        _lastLivePushTick = now;
+        onChanged(hex);
+    }
+
+    private void HandleImmediateColorCommit(string hex, Action<string> onChanged)
+    {
+        _lastLivePushTick = Environment.TickCount64;
+        onChanged(hex);
+    }
+
     private void PushLiveTheme() =>
         ThemeService.SetTheme(BuildCurrentThemeObject());
 
@@ -239,6 +260,11 @@
     private string GetExportCode()
     {
         var name = string.IsNullOrWhiteSpace(_themeName) ? "CustomTheme" : _themeName;
+
+        if (_exportFormat == "JSON")
+        {
+            return BuildCurrentThemeObject().ToJson(indented: true);
+        }
 
         if (_exportFormat == "FromSeed() C#")
         {

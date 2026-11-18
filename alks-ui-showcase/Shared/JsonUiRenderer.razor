@@ -1,0 +1,214 @@
+@using ALKsPersonalUI.Showcase.Shared
+
+@if (Node is not null)
+{
+    @RenderNode(Node)
+}
+
+@code {
+    [Parameter] public JsonUiNode? Node { get; set; }
+    [Parameter] public EventCallback<string> OnAction { get; set; }
+
+    private RenderFragment RenderNode(JsonUiNode node) => __builder =>
+    {
+        switch (node.Type)
+        {
+            case "Column":
+                <Column Gap="@node.GetProp("Gap", "1rem")">
+                    @RenderChildren(node)
+                </Column>
+                break;
+
+            case "Row":
+                <Row Gap="@node.GetProp("Gap", "0.75rem")" Wrap="@node.GetBool("Wrap", true)">
+                    @RenderChildren(node)
+                </Row>
+                break;
+
+            case "Box":
+                <Box>
+                    @RenderChildren(node)
+                </Box>
+                break;
+
+            case "Window":
+                <Window>
+                    @RenderChildren(node)
+                </Window>
+                break;
+
+            case "TitledWindow":
+                <TitledWindow Title="@node.GetProp("Title", "Window")" Modifier="@ShowcaseStyles.SectionWindow">
+                    @RenderChildren(node)
+                </TitledWindow>
+                break;
+
+            case "Divider":
+                <Divider />
+                break;
+
+            case "Spacer":
+                <Spacer />
+                break;
+
+            case "Text":
+                <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Body">
+                    @(node.Text ?? node.GetProp("Value"))
+                </ALKsPersonalUI.Layout.Text>
+                break;
+
+            case "Image":
+                <Image Source="@node.GetProp("Source")"
+                       Alt="@node.GetProp("Alt", "Image")"
+                       FallbackText="@node.GetProp("FallbackText", "Image")" />
+                break;
+
+            case "FrameBox":
+                <FrameBox BorderColor="@node.GetProp("BorderColor", "var(--ui-accent)")"
+                          Padding="@node.GetProp("Padding", "1rem")">
+                    @RenderChildren(node)
+                </FrameBox>
+                break;
+
+            case "TemplateSlot":
+                <TemplateSlot SlotName="@node.GetProp("SlotName", "Slot")"
+                              PlaceholderText="@node.GetProp("PlaceholderText", "Drop or select content")"
+                              IsEditorMode="@node.GetBool("IsEditorMode", true)"
+                              IsFilled="@node.GetBool("IsFilled", false)">
+                    @RenderChildren(node)
+                </TemplateSlot>
+                break;
+
+            case "AspectRatioFrame":
+                <AspectRatioFrame AspectWidth="@node.GetInt("AspectWidth", 16)"
+                                  AspectHeight="@node.GetInt("AspectHeight", 9)">
+                    @RenderChildren(node)
+                </AspectRatioFrame>
+                break;
+
+            case "ActionButton":
+                <ActionButton Text="@node.GetProp("Text", "Button")"
+                              OnClick="@(() => TriggerActionAsync(node.GetProp("Text", "Button")))" />
+                break;
+
+            case "CloseButton":
+                <CloseButton OnClick="@(() => TriggerActionAsync(node.GetProp("AriaLabel", "Close")))" />
+                break;
+
+            case "Pill":
+                <Pill Text="@node.GetProp("Text", "Pill")" Active="@node.GetBool("Active")" />
+                break;
+
+            case "ProgressBar":
+                <ProgressBar Value="@node.GetDouble("Value", 60)"
+                             Max="@node.GetDouble("Max", 100)"
+                             Label="@node.GetProp("Label", "Progress")"
+                             ShowPercentage="@node.GetBool("ShowPercentage", true)" />
+                break;
+
+            case "CountdownTimer":
+                <CountdownTimer TotalSeconds="@node.GetInt("TotalSeconds", 30)"
+                                AutoStart="@node.GetBool("AutoStart", true)" />
+                break;
+
+            case "LockBanner":
+                <LockBanner IsLocked="@node.GetBool("IsLocked", true)"
+                            LockedByUser="@node.GetProp("LockedByUser", "editor")" />
+                break;
+
+            case "TextInput":
+                <TextInput Label="@node.GetProp("Label", "Text Input")"
+                           Placeholder="@node.GetProp("Placeholder", "Type here...")" />
+                break;
+
+            case "TextArea":
+                <TextArea Label="@node.GetProp("Label", "Text Area")"
+                          Placeholder="@node.GetProp("Placeholder", "Enter notes...")"
+                          Rows="@node.GetInt("Rows", 3)" />
+                break;
+
+            case "SearchInput":
+                <SearchInput Placeholder="@node.GetProp("Placeholder", "Search...")" />
+                break;
+
+            case "NumberInput":
+                <NumberInput TValue="int" Label="@node.GetProp("Label", "Number")" />
+                break;
+
+            case "Checkbox":
+                <Checkbox Label="@node.GetProp("Label", "Check me")" />
+                break;
+
+            case "FileUpload":
+                <FileUpload PromptText="@node.GetProp("PromptText", "Tap to choose files")"
+                            AllowMultiple="@node.GetBool("AllowMultiple", true)" />
+                break;
+
+            case "Breadcrumbs":
+                <Breadcrumbs Items="@(new[] { new Breadcrumbs.BreadcrumbItem("1", "Home"), new Breadcrumbs.BreadcrumbItem("2", "JSON Showcase") })" />
+                break;
+
+            case "PageCarousel":
+                var activePageIndex = node.GetInt("ActivePageIndex", 0);
+                <PageCarousel ActivePageIndex="@activePageIndex"
+                              PageCount="@node.GetInt("PageCount", 2)"
+                              OnPageChanged="@(index => UpdateProp(node, "ActivePageIndex", index.ToString()))">
+                    @if (node.Children is { Count: > 0 })
+                    {
+                        var safeIndex = Math.Clamp(activePageIndex, 0, node.Children.Count - 1);
+                        @RenderNode(node.Children[safeIndex])
+                    }
+                </PageCarousel>
+                break;
+
+            case "MediaTile":
+                <MediaTile Title="@node.GetProp("Title", "Media")"
+                           Subtitle="@node.GetProp("Subtitle")"
+                           IsSelectionMode="@node.GetBool("IsSelectionMode", true)"
+                           IsSelected="@node.GetBool("IsSelected", false)"
+                           OnToggleSelect="@(isSelected => UpdateProp(node, "IsSelected", isSelected.ToString()))" />
+                break;
+
+            case "SimpleSpinner":
+                <SimpleSpinner />
+                break;
+
+            case "OrbitalLoader":
+                <OrbitalLoader>
+                    @RenderChildren(node)
+                </OrbitalLoader>
+                break;
+
+            case "Mars":
+                <Mars />
+                break;
+        }
+    };
+
+    private async Task TriggerActionAsync(string actionName)
+    {
+        if (OnAction.HasDelegate)
+        {
+            await OnAction.InvokeAsync(actionName);
+        }
+    }
+
+    private static void UpdateProp(JsonUiNode node, string key, string value)
+    {
+        node.Props ??= new();
+        node.Props[key] = value;
+    }
+
+    private RenderFragment RenderChildren(JsonUiNode node) => __builder =>
+    {
+        if (node.Children is null)
+        {
+            return;
+        }
+
+        foreach (var child in node.Children)
+        {
+            @RenderNode(child)
+        }
+    };
+}

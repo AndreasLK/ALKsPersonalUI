@@ -1,0 +1,94 @@
+@using Microsoft.AspNetCore.Components.Forms
+@inherits UIComponentBase
+
+<div class="@BuildWrapperCssClasses()"
+     style="@ModifierStyle"
+     @attributes="AdditionalAttributes">
+    <label class="file-upload-zone">
+        <InputFile class="file-upload-input"
+                   multiple="@AllowMultiple"
+                   accept="@AcceptedExtensions"
+                   disabled="@IsDisabled"
+                   OnChange="HandleFilesSelectedAsync" />
+        <span class="file-upload-prompt">@PromptText</span>
+        @if (!string.IsNullOrWhiteSpace(AcceptedExtensions))
+        {
+            <span class="file-upload-hint">@AcceptedExtensions</span>
+        }
+    </label>
+
+    @if (!string.IsNullOrWhiteSpace(_validationError))
+    {
+        <span class="file-upload-error" role="alert" aria-live="polite">@_validationError</span>
+    }
+</div>
+
+@code {
+    [Parameter] public bool AllowMultiple { get; set; }
+    [Parameter] public string AcceptedExtensions { get; set; } = InputDefaults.FileUpload.DefaultAcceptedExtensions;
+    [Parameter] public long MaxFileSizeBytes { get; set; } = InputDefaults.FileUpload.DefaultMaxFileSizeBytes;
+    [Parameter] public int MaxAllowedFiles { get; set; } = InputDefaults.FileUpload.DefaultMaxAllowedFiles;
+    [Parameter] public string PromptText { get; set; } = InputDefaults.FileUpload.DefaultPromptText;
+    [Parameter] public bool IsDisabled { get; set; }
+    [Parameter] public EventCallback<IReadOnlyList<IBrowserFile>> OnFilesSelected { get; set; }
+
+    private string? _validationError;
+
+    private async Task HandleFilesSelectedAsync(InputFileChangeEventArgs args)
+    {
+        _validationError = null;
+        var selectedFiles = AllowMultiple
+            ? args.GetMultipleFiles(MaxAllowedFiles)
+            : [args.File];
+
+        var validFiles = new List<IBrowserFile>(selectedFiles.Count);
+        foreach (var file in selectedFiles)
+        {
+            if (file.Size > MaxFileSizeBytes)
+            {
+                _validationError = $"'{file.Name}' exceeds the maximum size of {MaxFileSizeBytes / (1024 * 1024)} MB.";
+                return;
+            }
+
+            if (!IsExtensionAllowed(file.Name))
+            {
+                _validationError = $"'{file.Name}' has an unsupported file extension.";
+                return;
+            }
+
+            validFiles.Add(file);
+        }
+
+        if (OnFilesSelected.HasDelegate)
+        {
+            await OnFilesSelected.InvokeAsync(validFiles);
+        }
+    }
+
+    private bool IsExtensionAllowed(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(AcceptedExtensions))
+        {
+            return true;
+        }
+
+        var extension = Path.GetExtension(fileName);
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            return false;
+        }
+
+        var allowed = AcceptedExtensions.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return allowed.Any(ext => string.Equals(ext, extension, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string BuildWrapperCssClasses()
+    {
+        return new CssBuilder()
+            .Add("file-upload")
+            .Add("file-upload-disabled", IsDisabled)
+            .AddRaw(ModifierClass)
+            .Build();
+    }
+}
+

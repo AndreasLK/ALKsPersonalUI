@@ -1,0 +1,56 @@
+@inherits UIComponentBase
+
+@if (!IsLocked)
+{
+    return;
+}
+
+<div class="@BuildBannerCssClasses()"
+     style="@ModifierStyle"
+     role="status"
+     aria-live="polite"
+     @attributes="AdditionalAttributes">
+    <div class="lock-banner-info">
+        <span class="lock-banner-title">
+            Locked by @(string.IsNullOrWhiteSpace(LockedByUser) ? "another editor" : LockedByUser)
+        </span>
+        @if (LockedAt.HasValue)
+        {
+            <span class="lock-banner-time">
+                since @LockedAt.Value.ToLocalTime().ToString("g")
+            </span>
+        }
+    </div>
+
+    <div class="lock-banner-actions">
+        @if (OnRequestUnlock.HasDelegate)
+        {
+            <ActionButton Variant="ActionButton.ButtonVariant.Ghost"
+                          OnClick="OnRequestUnlock">
+                Request Unlock
+            </ActionButton>
+        }
+        @if (OnReleaseLock.HasDelegate)
+        {
+            <ActionButton OnClick="OnReleaseLock">
+                Release Lock
+            </ActionButton>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool IsLocked { get; set; }
+    [Parameter] public string? LockedByUser { get; set; }
+    [Parameter] public DateTimeOffset? LockedAt { get; set; }
+    [Parameter] public EventCallback OnRequestUnlock { get; set; }
+    [Parameter] public EventCallback OnReleaseLock { get; set; }
+
+    private string BuildBannerCssClasses()
+    {
+        return new CssBuilder()
+            .Add("lock-banner")
+            .AddRaw(ModifierClass)
+            .Build();
+    }
+}

@@ -1,0 +1,80 @@
+@inherits UIComponentBase
+
+@if (!IsEditorMode)
+{
+    @ChildContent
+    return;
+}
+
+<div class="@BuildSlotCssClasses()"
+     style="@BuildSlotStyles()"
+     role="button"
+     tabindex="0"
+     aria-label="@($"Template slot {SlotName}")"
+     @onclick="HandleSelectSlotAsync"
+     @onkeydown="HandleKeyDownAsync"
+     @attributes="AdditionalAttributes">
+    <div class="template-slot-header">
+        <span class="template-slot-name">@SlotName</span>
+        <span class="template-slot-badge">@(IsFilled ? "Filled" : "Empty")</span>
+    </div>
+    <div class="template-slot-body">
+        @if (IsFilled && ChildContent is not null)
+        {
+            @ChildContent
+        }
+        else
+        {
+            <span class="template-slot-placeholder">@PlaceholderText</span>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string SlotName { get; set; } = TemplateDefaults.TemplateSlot.DefaultSlotName;
+    [Parameter] public string PlaceholderText { get; set; } = TemplateDefaults.TemplateSlot.DefaultPlaceholderText;
+    [Parameter] public bool IsEditorMode { get; set; }
+    [Parameter] public bool IsFilled { get; set; }
+    [Parameter] public EventCallback<string> OnSelectSlot { get; set; }
+
+    private async Task HandleSelectSlotAsync()
+    {
+        if (!OnSelectSlot.HasDelegate)
+        {
+            return;
+        }
+
+        await OnSelectSlot.InvokeAsync(SlotName);
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key is not ("Enter" or " "))
+        {
+            return;
+        }
+
+        await HandleSelectSlotAsync();
+    }
+
+    private string BuildSlotCssClasses()
+    {
+        return new CssBuilder()
+            .Add("template-slot")
+            .Add("template-slot-filled", IsFilled)
+            .Add("template-slot-interactive", OnSelectSlot.HasDelegate)
+            .AddRaw(ModifierClass)
+            .Build();
+    }
+
+    private string BuildSlotStyles()
+    {
+        return new StyleBuilder()
+            .Add("--_ts-min-height", TemplateDefaults.TemplateSlot.DefaultMinHeight)
+            .Add("--_ts-border-width", TemplateDefaults.TemplateSlot.DefaultBorderWidth)
+            .Add("--_ts-border-style", TemplateDefaults.TemplateSlot.DefaultBorderStyle)
+            .Add("--_ts-padding", TemplateDefaults.TemplateSlot.DefaultPadding)
+            .AddRaw(ModifierStyle)
+            .Build();
+    }
+}

@@ -1,4 +1,7 @@
-﻿namespace ALKsPersonalUI.Core;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace ALKsPersonalUI.Core;
 
 public enum ButtonPressEffect
 {
@@ -117,5 +120,40 @@ public sealed class UITheme
         var clonedTheme = (UITheme)MemberwiseClone();
         clonedTheme._customCssVariables = new Dictionary<string, string>(_customCssVariables);
         return clonedTheme;
+    }
+
+    public string ToJson(bool indented = true)
+    {
+        var options = CreateJsonOptions(indented);
+        return JsonSerializer.Serialize(this, options);
+    }
+
+    public static UITheme FromJson(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new UITheme();
+        }
+
+        try
+        {
+            var options = CreateJsonOptions(indented: false);
+            var parsed = JsonSerializer.Deserialize<UITheme>(json, options);
+            return parsed ?? new UITheme();
+        }
+        catch (JsonException)
+        {
+            return new UITheme();
+        }
+    }
+
+    private static JsonSerializerOptions CreateJsonOptions(bool indented)
+    {
+        return new JsonSerializerOptions
+        {
+            WriteIndented = indented,
+            PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() }
+        };
     }
 }

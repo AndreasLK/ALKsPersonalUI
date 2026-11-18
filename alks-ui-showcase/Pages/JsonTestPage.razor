@@ -1,0 +1,162 @@
+@page "/test"
+@using System.Text.Json
+@inject UIThemeService ThemeService
+@inject ToastService Toast
+
+<Column Gap="1.5rem" Modifier="@(UIModifier.New.FillMaxWidth().MaxWidth(1100))">
+    <TitledWindow Title="JSON UI &amp; Theme Parser Test (/test)" Modifier="@ShowcaseStyles.SectionWindow">
+        <Column Gap="1rem">
+            <Text Variant="TypographyVariant.Body">
+                Serializes a multi-page UI definition and a <code>UITheme</code> to JSON, parses them back, and renders the live interactive UI from JSON.
+            </Text>
+
+            <Row Gap="0.75rem" Wrap="true">
+                <ActionButton Text="Serialize Pages to JSON" OnClick="SerializeSamplePages" />
+                <ActionButton Text="Parse JSON &amp; Render UI" OnClick="ParseAndRenderJson" />
+                <ActionButton Text="Round-Trip Current Theme JSON" Variant="ActionButton.ButtonVariant.Ghost" OnClick="RoundTripThemeJson" />
+            </Row>
+
+            @if (!string.IsNullOrWhiteSpace(_parseError))
+            {
+                <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Caption" Color="var(--ui-danger)">@_parseError</ALKsPersonalUI.Layout.Text>
+            }
+
+            <TextArea Label="Page Definition JSON"
+                      Rows="8"
+                      MaxLength="10000"
+                      @bind-Value="_jsonPayload" />
+        </Column>
+    </TitledWindow>
+
+    @if (_parsedDocument is not null)
+    {
+        <TitledWindow Title="@($"Rendered from JSON: {_parsedDocument.Title}")" Modifier="@ShowcaseStyles.SectionWindow">
+            <Column Gap="1rem">
+                <LockBanner IsLocked="@_isLocked"
+                            LockedByUser="@_parsedDocument.LockedBy"
+                            OnRequestUnlock="@(() => Toast.ShowInfo("Unlock requested!"))"
+                            OnReleaseLock="@(() => _isLocked = false)" />
+
+                <Breadcrumbs Items="@_breadcrumbs"
+                             OnItemClicked="@(item => Toast.ShowInfo($"Navigated to {item.Label}"))" />
+
+                <PageCarousel ActivePageIndex="@_activePageIndex"
+                              PageCount="@_parsedDocument.Pages.Count"
+                              OnPageChanged="@(idx => _activePageIndex = idx)">
+                    @if (_activePageIndex >= 0 && _activePageIndex < _parsedDocument.Pages.Count)
+                    {
+                        var pageDef = _parsedDocument.Pages[_activePageIndex];
+                        <FrameBox BorderColor="var(--ui-accent)" Padding="1.25rem">
+                            <Column Gap="1rem">
+                                <Text Variant="TypographyVariant.Title">@pageDef.Heading</Text>
+                                <TemplateSlot SlotName="@pageDef.SlotName" IsEditorMode="false" IsFilled="true">
+                                    <Text Variant="TypographyVariant.Body">@pageDef.Body</Text>
+                                </TemplateSlot>
+
+                                @if (pageDef.Items.Count > 0)
+                                {
+                                    <Row Gap="0.75rem" Wrap="true">
+                                        @foreach (var item in pageDef.Items)
+                                        {
+                                            <MediaTile Title="@item.Title"
+                                                       Subtitle="@item.Subtitle"
+                                                       IsSelectionMode="true"
+                                                       IsSelected="@(_selectedTile == item.Title)"
+                                                       OnToggleSelect="@(sel => _selectedTile = sel ? item.Title : null)" />
+                                        }
+                                    </Row>
+                                }
+                            </Column>
+                        </FrameBox>
+                    }
+                </PageCarousel>
+            </Column>
+        </TitledWindow>
+    }
+</Column>
+
+@code {
+    private sealed record JsonTileItem(string Title, string Subtitle);
+    private sealed record JsonPageDef(string Heading, string SlotName, string Body, List<JsonTileItem> Items);
+    private sealed record JsonPageDocument(string Title, string LockedBy, List<JsonPageDef> Pages);
+
+    private string? _jsonPayload;
+    private string? _parseError;
+    private JsonPageDocument? _parsedDocument;
+    private int _activePageIndex;
+    private bool _isLocked = true;
+    private string? _selectedTile;
+
+    private readonly IReadOnlyList<Breadcrumbs.BreadcrumbItem> _breadcrumbs =
+    [
+        new("root", "Albums"),
+        new("exhibition", "Exhibition"),
+        new("preview", "JSON Preview")
+    ];
+
+    protected override void OnInitialized()
+    {
+        SerializeSamplePages();
+        ParseAndRenderJson();
+    }
+
+    private void SerializeSamplePages()
+    {
+        var sample = new JsonPageDocument(
+            Title: "Exhibition Kiosk Draft",
+            LockedBy: "andre",
+            Pages:
+            [
+                new JsonPageDef(
+                    Heading: "Page 1: Mars Overview",
+                    SlotName: "HeroContent",
+                    Body: "Rendered directly from parsed JSON using FrameBox, TemplateSlot, and PageCarousel.",
+                    Items:
+                    [
+                        new JsonTileItem("Olympus Mons", "12 items"),
+                        new JsonTileItem("Valles Marineris", "8 items")
+                    ]),
+                new JsonPageDef(
+                    Heading: "Page 2: Visitor Notes",
+                    SlotName: "DetailsContent",
+                    Body: "Second page parsed from JSON. Step back and forth using PageCarousel controls.",
+                    Items: [])
+            ]);
+
+        _jsonPayload = JsonSerializer.Serialize(sample, new JsonSerializerOptions { WriteIndented = true });
+        _parseError = null;
+    }
+
+    private void ParseAndRenderJson()
+    {
+        _parseError = null;
+        if (string.IsNullOrWhiteSpace(_jsonPayload))
+        {
+            _parseError = "JSON payload is empty.";
+            return;
+        }
+
+        try
+        {
+            _parsedDocument = JsonSerializer.Deserialize<JsonPageDocument>(_jsonPayload, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            _activePageIndex = 0;
+        }
+        catch (JsonException ex)
+        {
+            _parseError = $"JSON parse error: {ex.Message}";
+        }
+    }
+
+    private void RoundTripThemeJson()
+    {
+        var json = ThemeService.ExportCurrentThemeJson(indented: true);
+        if (ThemeService.TryApplyFromJson(json))
+        {
+            Toast.ShowSuccess("UITheme round-tripped through JSON successfully!");
+        }
+    }
+}
+

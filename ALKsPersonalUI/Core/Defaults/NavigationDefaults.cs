@@ -48,4 +48,17 @@ public static class NavigationDefaults
         public const string TabButtonFontSize = "0.85rem";
         public const string TrailSeparatorSymbol = "/";
     }
+
+    public static class Breadcrumbs
+    {
+        public const string DefaultSeparator = ">";
+        public const string DefaultAriaLabel = "Breadcrumb navigation";
+    }
+
+    public static class PageCarousel
+    {
+        public const string PreviousLabel = "Previous";
+        public const string NextLabel = "Next";
+        public const string DefaultAriaLabel = "Page carousel";
+    }
 }
