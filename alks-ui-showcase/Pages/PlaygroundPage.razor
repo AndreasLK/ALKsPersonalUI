@@ -220,7 +220,22 @@
             <Mars PlanetSize=""46"" ColonyProbability=""0.35"" />
         </OrbitalLoader>
     </Row>
-</TitledWindow>")
+</TitledWindow>"),
+        new("Quiz & Kiosk", @"<KioskShell IsPreview=""true"" IdleTimeoutSeconds=""30"">
+    <Column Gap=""1rem"" Modifier=""@(UIModifier.New.FillMaxWidth().Padding(16))"">
+        <Row HorizontalArrangement=""SpaceBetween"" VerticalAlignment=""Center"" Modifier=""@(UIModifier.New.FillMaxWidth())"">
+            <Pill Variant=""Accent"" Text=""Kiosk Mode"" />
+            <CountdownTimer TotalSeconds=""15"" AutoStart=""true"" />
+        </Row>
+        <ProgressBar Value=""60"" Max=""100"" Label=""Session Progress"" ShowPercentage=""true"" />
+        <QuizTemplate CurrentQuestionNumber=""1"" TotalQuestions=""3"" QuestionText=""Which Blazor feature powers ALKsPersonalUI?"" Score=""10"">
+            <Column Gap=""0.5rem"">
+                <ActionButton Variant=""Solid"" Text=""Pure C# & CSS"" />
+                <ActionButton Variant=""Outline"" Text=""JavaScript Interop"" />
+            </Column>
+        </QuizTemplate>
+    </Column>
+</KioskShell>")
     ];
 
     private static readonly AutocompleteItem[] _componentSuggestions =
@@ -243,7 +258,13 @@
         new("<Divider />", "<Divider Color=\"var(--ui-border)\" Thickness=\"1px\" />", "Horizontal or vertical separator line"),
         new("<Spacer />", "<Spacer />", "Expanding flex spacer that pushes sibling items apart"),
         new("<SimpleSpinner />", "<SimpleSpinner Modifier=\"@(UIModifier.New.Width(36).StrokeThickness(4).BaseColor(\"var(--ui-accent)\"))\" />", "Conic velocity ring loader"),
-        new("<OrbitalLoader>", "<OrbitalLoader SystemSize=\"110\" SatelliteCount=\"8\" LoadingText=\"Loading...\">\n    <Mars PlanetSize=\"48\" />\n</OrbitalLoader>", "3D Doppler-shifted orbital system loader")
+        new("<OrbitalLoader>", "<OrbitalLoader SystemSize=\"110\" SatelliteCount=\"8\" LoadingText=\"Loading...\">\n    <Mars PlanetSize=\"48\" />\n</OrbitalLoader>", "3D Doppler-shifted orbital system loader"),
+        new("<ProgressBar />", "<ProgressBar Value=\"60\" Max=\"100\" Label=\"Progress\" ShowPercentage=\"true\" />", "Theme-aware progress bar with optional label"),
+        new("<CountdownTimer />", "<CountdownTimer TotalSeconds=\"30\" AutoStart=\"true\" />", "Pure C# PeriodicTimer countdown pill"),
+        new("<AspectRatioFrame>", "<AspectRatioFrame AspectWidth=\"16\" AspectHeight=\"9\">\n    \n</AspectRatioFrame>", "Fixed aspect ratio container (default 16:9)", -20),
+        new("<KioskShell>", "<KioskShell IsPreview=\"true\" IdleTimeoutSeconds=\"30\">\n    \n</KioskShell>", "Full-bleed kiosk container with idle timeout", -14),
+        new("<QuizTemplate>", "<QuizTemplate CurrentQuestionNumber=\"1\" TotalQuestions=\"5\" QuestionText=\"Question?\" Score=\"0\">\n    \n</QuizTemplate>", "Structured quiz layout with progress and score", -16),
+        new("<GameTemplate>", "<GameTemplate Title=\"Arcade\" Score=\"0\" Lives=\"3\">\n    \n</GameTemplate>", "Arcade/game HUD shell with score and lives", -16)
     ];
 
     private static readonly AutocompleteItem[] _modifierSuggestions =
@@ -541,7 +562,8 @@
             bool isSelfClosing = match.Groups[4].Value == "/" ||
                                  tagName is "Divider" or "Spacer" or "ActionButton" or "TextInput" or "NumberInput"
                                      or "Checkbox" or "SegmentedControl" or "Dropdown" or "RangeSlider" or "RadioSlider"
-                                     or "Pill" or "Text" or "SimpleSpinner" or "Mars" or "TouchNumpad" or "ScreenKeyboard";
+                                     or "Pill" or "Text" or "SimpleSpinner" or "Mars" or "TouchNumpad" or "ScreenKeyboard"
+                                     or "ProgressBar" or "CountdownTimer";
 
             if (isClosing)
             {
@@ -890,6 +912,66 @@
                                LoadingText="@node.Attributes.GetValueOrDefault("LoadingText", "Loading...")">
                     <Mars PlanetSize="44" />
                 </OrbitalLoader>
+                break;
+
+            case "ProgressBar":
+                var pbVal = double.TryParse(node.Attributes.GetValueOrDefault("Value"), CultureInfo.InvariantCulture, out var pvNum) ? pvNum : 50;
+                var pbMax = double.TryParse(node.Attributes.GetValueOrDefault("Max"), CultureInfo.InvariantCulture, out var pmNum) ? pmNum : 100;
+                <ProgressBar Value="@pbVal"
+                             Max="@pbMax"
+                             Label="@node.Attributes.GetValueOrDefault("Label")"
+                             ShowPercentage="@(!string.Equals(node.Attributes.GetValueOrDefault("ShowPercentage"), "false", StringComparison.OrdinalIgnoreCase))"
+                             Modifier="@modifier" />
+                break;
+
+            case "CountdownTimer":
+                var totalSec = int.TryParse(node.Attributes.GetValueOrDefault("TotalSeconds"), out var ts) ? ts : 30;
+                <CountdownTimer TotalSeconds="@totalSec"
+                                AutoStart="@(!string.Equals(node.Attributes.GetValueOrDefault("AutoStart"), "false", StringComparison.OrdinalIgnoreCase))"
+                                Modifier="@modifier" />
+                break;
+
+            case "AspectRatioFrame":
+                var aspectW = int.TryParse(node.Attributes.GetValueOrDefault("AspectWidth"), out var aw) ? aw : 16;
+                var aspectH = int.TryParse(node.Attributes.GetValueOrDefault("AspectHeight"), out var ah) ? ah : 9;
+                <AspectRatioFrame AspectWidth="@aspectW"
+                                  AspectHeight="@aspectH"
+                                  Modifier="@modifier">
+                    @RenderParsedTree(node.Children)
+                </AspectRatioFrame>
+                break;
+
+            case "KioskShell":
+                var idleSec = int.TryParse(node.Attributes.GetValueOrDefault("IdleTimeoutSeconds"), out var ids) ? ids : 30;
+                <KioskShell IsPreview="@(!string.Equals(node.Attributes.GetValueOrDefault("IsPreview"), "false", StringComparison.OrdinalIgnoreCase))"
+                            IdleTimeoutSeconds="@idleSec"
+                            Modifier="@modifier">
+                    @RenderParsedTree(node.Children)
+                </KioskShell>
+                break;
+
+            case "QuizTemplate":
+                var curQ = int.TryParse(node.Attributes.GetValueOrDefault("CurrentQuestionNumber"), out var cq) ? cq : 1;
+                var totQ = int.TryParse(node.Attributes.GetValueOrDefault("TotalQuestions"), out var tq) ? tq : 5;
+                var qScore = int.TryParse(node.Attributes.GetValueOrDefault("Score"), out var qs) ? qs : 0;
+                <QuizTemplate CurrentQuestionNumber="@curQ"
+                              TotalQuestions="@totQ"
+                              QuestionText="@node.Attributes.GetValueOrDefault("QuestionText", "Question?")"
+                              Score="@qScore"
+                              Modifier="@modifier">
+                    @RenderParsedTree(node.Children)
+                </QuizTemplate>
+                break;
+
+            case "GameTemplate":
+                var gScore = int.TryParse(node.Attributes.GetValueOrDefault("Score"), out var gs) ? gs : 0;
+                var gLives = int.TryParse(node.Attributes.GetValueOrDefault("Lives"), out var gl) ? gl : 3;
+                <GameTemplate Title="@node.Attributes.GetValueOrDefault("Title", "Game")"
+                              Score="@gScore"
+                              Lives="@gLives"
+                              Modifier="@modifier">
+                    @RenderParsedTree(node.Children)
+                </GameTemplate>
                 break;
         }
     };
