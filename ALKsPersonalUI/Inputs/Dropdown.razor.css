@@ -112,3 +112,20 @@
 .option-check {
     font-size: 0.85em;
 }
+
+.select-item-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.select-item-image {
+    width: var(--_dd-img-size, 1.25rem);
+    height: var(--_dd-img-size, 1.25rem);
+    object-fit: var(--_dd-img-fit, cover);
+    border-radius: 4px;
+    flex-shrink: 0;
+    user-select: none;
+    -webkit-user-drag: none;
+}

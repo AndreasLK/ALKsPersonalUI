@@ -1,0 +1,61 @@
+.ui-image-frame {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    box-sizing: border-box;
+    border-radius: var(--_img-radius, var(--ui-radius-md));
+    background-color: var(--_img-bg, var(--ui-bg-header));
+    border: 1px solid var(--_img-border, var(--ui-border));
+}
+
+.ui-image-element {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    flex: 1 1 auto;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.ui-image-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-height: 3rem;
+    padding: 0.75rem 1rem;
+    box-sizing: border-box;
+    color: var(--ui-text-muted, #a1a1aa);
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.ui-image-caption {
+    padding: 0.5rem 0.75rem;
+    background-color: var(--ui-bg-elevated, #242424);
+    color: var(--ui-text, #ffffff);
+    font-size: 0.82rem;
+    border-top: 1px solid var(--_img-border, var(--ui-border));
+    flex-shrink: 0;
+}
+
+.ui-image-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    padding: 0.75rem;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+    .ui-image-overlay > * {
+        pointer-events: auto;
+    }
+

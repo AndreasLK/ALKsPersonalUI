@@ -3,14 +3,24 @@
 <header class="@BuildWrapperCssClasses()" @attributes="AdditionalAttributes">
     <Window Modifier="@BuildNavbarWindowModifier()">
         <div class="navbar-inner">
-            <a href="@BrandHref" class="navbar-brand">
+            <a href="@BrandHref" class="navbar-brand" style="@BuildBrandStyles()">
                 @if (HasCustomBrandContent)
                 {
                     @BrandContent
                 }
                 else
                 {
-                    <span class="brand-text">@Title</span>
+                    @if (ShouldRenderInlineBrandImage)
+                    {
+                        <img class="brand-image"
+                             src="@BrandImageSource"
+                             alt="@ResolvedBrandImageAlt"
+                             draggable="false" />
+                    }
+                    @if (ShouldRenderBrandTitle)
+                    {
+                        <span class="brand-text">@Title</span>
+                    }
                 }
             </a>
 
@@ -40,13 +50,32 @@
 @code {
     [Parameter] public string Title { get; set; } = NavigationDefaults.Navbar.DefaultTitle;
     [Parameter] public string BrandHref { get; set; } = NavigationDefaults.Navbar.DefaultBrandHref;
+    [Parameter] public string? BrandImageSource { get; set; }
+    [Parameter] public string? BrandImageAlt { get; set; }
+    [Parameter] public string? BrandImageSize { get; set; }
+    [Parameter] public ImageFit BrandImageFit { get; set; } = ImageFit.Cover;
+    [Parameter] public ImagePlacement BrandImagePlacement { get; set; } = ImagePlacement.Start;
     [Parameter] public RenderFragment? BrandContent { get; set; }
     [Parameter] public RenderFragment? NavItems { get; set; }
     [Parameter] public RenderFragment? RightActions { get; set; }
 
     private bool HasCustomBrandContent => BrandContent is not null;
+    private bool HasBrandImage => !string.IsNullOrWhiteSpace(BrandImageSource);
+    private bool ShouldRenderInlineBrandImage => HasBrandImage && BrandImagePlacement != ImagePlacement.Background;
+    private bool ShouldRenderBrandTitle => !string.IsNullOrWhiteSpace(Title) && (!HasBrandImage || BrandImagePlacement != ImagePlacement.ReplaceText);
+    private string ResolvedBrandImageAlt => BrandImageAlt ?? Title;
     private bool HasRightActions => RightActions is not null;
     private bool HasNavigationItems => NavItems is not null;
+
+    private string BuildBrandStyles() => new StyleBuilder()
+        .Add("--_nav-brand-dir", LayoutDefaults.ToFlexDirectionCss(BrandImagePlacement))
+        .Add("--_nav-brand-img-size", BrandImageSize)
+        .Add("--_nav-brand-img-fit", LayoutDefaults.ToCss(BrandImageFit))
+        .AddIf(HasBrandImage && BrandImagePlacement == ImagePlacement.Background, "background-image", LayoutDefaults.FormatCssUrl(BrandImageSource))
+        .AddIf(HasBrandImage && BrandImagePlacement == ImagePlacement.Background, "background-size", LayoutDefaults.ToCss(BrandImageFit))
+        .AddIf(HasBrandImage && BrandImagePlacement == ImagePlacement.Background, "background-position", LayoutDefaults.Image.DefaultObjectPosition)
+        .AddIf(HasBrandImage && BrandImagePlacement == ImagePlacement.Background, "background-repeat", LayoutDefaults.Image.DefaultBackgroundRepeat)
+        .Build();
 
     private string ResolvedAccentColor =>
         ModifierOrEmpty.AccentColorValue ?? NavigationDefaults.Navbar.DefaultAccentColor;

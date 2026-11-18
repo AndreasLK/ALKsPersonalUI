@@ -5,6 +5,23 @@
     box-sizing: border-box;
 }
 
+.ui-text.with-inline-image {
+    display: inline-flex;
+    flex-direction: var(--_txt-dir, row);
+    align-items: center;
+    gap: 0.45em;
+}
+
+.ui-text-image {
+    width: var(--_txt-img-size, 1.25em);
+    height: var(--_txt-img-size, 1.25em);
+    object-fit: var(--_txt-img-fit, cover);
+    border-radius: 4px;
+    flex-shrink: 0;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
 .variant-display {
     font-size: 2.25rem;
     font-weight: 800;

@@ -7,12 +7,27 @@
     }
     else
     {
-        @Value
+        @if (ShouldRenderInlineImage)
+        {
+            <img class="ui-text-image"
+                 src="@ImageSource"
+                 alt="@ResolvedImageAlt"
+                 draggable="false" />
+        }
+        @if (ShouldRenderTextValue)
+        {
+            <span>@Value</span>
+        }
     }
 </span>
 
 @code {
     [Parameter] public string? Value { get; set; }
+    [Parameter] public string? ImageSource { get; set; }
+    [Parameter] public string? ImageAlt { get; set; }
+    [Parameter] public string? ImageSize { get; set; }
+    [Parameter] public ImageFit ImageFit { get; set; } = ImageFit.Cover;
+    [Parameter] public ImagePlacement ImagePlacement { get; set; } = ImagePlacement.Start;
     [Parameter] public TypographyVariant Variant { get; set; } = TypographyVariant.Body;
     [Parameter] public FontWeight? Weight { get; set; }
     [Parameter] public TextAlignment Align { get; set; } = TextAlignment.Start;
@@ -22,13 +37,26 @@
     [Parameter] public int? MaxLines { get; set; }
 
     private bool HasLineClamp => MaxLines is > 0;
+    private bool HasImageSource => !string.IsNullOrWhiteSpace(ImageSource);
+    private bool ShouldRenderInlineImage => HasImageSource && ImagePlacement != ImagePlacement.Background;
+    private bool ShouldRenderTextValue => !string.IsNullOrWhiteSpace(Value) && (!HasImageSource || ImagePlacement != ImagePlacement.ReplaceText);
+    private string ResolvedImageAlt => ImageAlt ?? Value ?? string.Empty;
 
     private string ResolvedColor =>
         Color ?? ModifierOrEmpty.TextColorValue ?? (Muted ? LayoutDefaults.Text.MutedColor : LayoutDefaults.Text.DefaultColor);
 
+    private string? ResolveBackgroundImageCss()
+    {
+        if (HasImageSource && ImagePlacement == ImagePlacement.Background)
+            return LayoutDefaults.FormatCssUrl(ImageSource);
+
+        return LayoutDefaults.FormatCssUrl(ModifierOrEmpty.BackgroundImageSourceValue);
+    }
+
     private string BuildCssClasses() => new CssBuilder()
         .Add("ui-text")
         .Add($"variant-{Variant.ToString().ToLowerInvariant()}")
+        .Add("with-inline-image", when: ShouldRenderInlineImage)
         .Add("no-wrap", when: !Wrap && !HasLineClamp)
         .Add("line-clamp", when: HasLineClamp)
         .AddRaw(ModifierClass)
@@ -37,8 +65,15 @@
     private string BuildStyles() => new StyleBuilder()
         .Add("color", ResolvedColor)
         .Add("text-align", LayoutDefaults.ToCss(Align))
+        .Add("--_txt-dir", LayoutDefaults.ToFlexDirectionCss(ImagePlacement))
+        .Add("--_txt-img-size", ImageSize)
+        .Add("--_txt-img-fit", LayoutDefaults.ToCss(ImageFit))
         .AddIf(Weight.HasValue, "font-weight", Weight.HasValue ? LayoutDefaults.ToCss(Weight.Value) : null)
         .AddIf(HasLineClamp, "-webkit-line-clamp", MaxLines?.ToString())
+        .Add("background-image", ResolveBackgroundImageCss())
+        .AddIf(HasImageSource && ImagePlacement == ImagePlacement.Background, "background-size", LayoutDefaults.ToCss(ImageFit))
+        .AddIf(HasImageSource && ImagePlacement == ImagePlacement.Background, "background-position", LayoutDefaults.Image.DefaultObjectPosition)
+        .AddIf(HasImageSource && ImagePlacement == ImagePlacement.Background, "background-repeat", LayoutDefaults.Image.DefaultBackgroundRepeat)
         .AddRaw(ModifierStyle)
         .Build();
 }

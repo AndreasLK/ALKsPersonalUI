@@ -35,6 +35,14 @@ public static class LayoutDefaults
         public const string MonoSize = "0.85rem";
     }
 
+    public static class Image
+    {
+        public const string DefaultInlineSize = "1.25rem";
+        public const string DefaultObjectPosition = "center";
+        public const string DefaultBackgroundRepeat = "no-repeat";
+        public const string DefaultFallbackLabel = "Image";
+    }
+
     public static string ToCss(HorizontalAlignment alignment) => alignment switch
     {
         HorizontalAlignment.Start => "flex-start",
@@ -93,4 +101,32 @@ public static class LayoutDefaults
         TextAlignment.Justify => "justify",
         _ => "left"
     };
+
+    public static string ToCss(ImageFit imageFit) => imageFit switch
+    {
+        ImageFit.Contain => "contain",
+        ImageFit.Fill => "fill",
+        ImageFit.ScaleDown => "scale-down",
+        ImageFit.None => "none",
+        _ => "cover"
+    };
+
+    public static string ToFlexDirectionCss(ImagePlacement placement) => placement switch
+    {
+        ImagePlacement.End => "row-reverse",
+        ImagePlacement.Top => "column",
+        ImagePlacement.Bottom => "column-reverse",
+        _ => "row"
+    };
+
+    public static string? FormatCssUrl(string? imageSource)
+    {
+        if (string.IsNullOrWhiteSpace(imageSource))
+            return null;
+
+        if (imageSource.StartsWith("url(", StringComparison.OrdinalIgnoreCase))
+            return imageSource;
+
+        return $"url('{imageSource}')";
+    }
 }

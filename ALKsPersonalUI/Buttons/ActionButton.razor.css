@@ -45,6 +45,10 @@
     border-radius: inherit;
     transition: transform var(--_btn-speed, 0.06s) cubic-bezier(0.2, 0, 0, 1), box-shadow var(--_btn-speed, 0.06s) ease-in, filter calc(var(--_btn-speed, 0.06s) * 2) ease-out;
     transform: translateY(0) scale(1);
+    background-image: var(--_btn-bg-image, none);
+    background-size: var(--_btn-bg-size, cover);
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .action-btn.press-inwardscale .btn-front,
@@ -56,9 +60,30 @@
     position: relative;
     z-index: 2;
     display: inline-flex;
+    flex-direction: var(--_btn-content-dir, row);
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+}
+
+.btn-image {
+    width: var(--_btn-img-size, 1.35em);
+    height: var(--_btn-img-size, 1.35em);
+    object-fit: var(--_btn-img-fit, cover);
+    border-radius: calc(var(--_btn-radius, 6px) * 0.65);
+    flex-shrink: 0;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.action-btn.has-replaced-text .btn-content {
+    width: 100%;
+    height: 100%;
+}
+
+.action-btn.has-replaced-text .btn-image {
+    width: var(--_btn-img-size, 100%);
+    height: var(--_btn-img-size, 100%);
 }
 
 .btn-hold-fill {

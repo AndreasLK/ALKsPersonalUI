@@ -14,6 +14,10 @@
                           role="radio"
                           aria-checked="@isSelected"
                           Text="@FormatItemText(item)"
+                          ImageSource="@ResolveItemImageSource(item)"
+                          ImageSize="@ItemImageSize"
+                          ImageFit="@ItemImageFit"
+                          ImagePlacement="@ItemImagePlacement"
                           OnClick="@(() => SelectItemAsync(item))" />
         }
     }
@@ -24,6 +28,10 @@
     [Parameter] public TItem? Value { get; set; }
     [Parameter] public EventCallback<TItem?> ValueChanged { get; set; }
     [Parameter] public Func<TItem, string>? ItemDisplayTextSelector { get; set; }
+    [Parameter] public Func<TItem, string?>? ItemImageSourceSelector { get; set; }
+    [Parameter] public string? ItemImageSize { get; set; }
+    [Parameter] public ImageFit ItemImageFit { get; set; } = ImageFit.Cover;
+    [Parameter] public ImagePlacement ItemImagePlacement { get; set; } = ImagePlacement.Start;
     [Parameter] public bool Disabled { get; set; }
 
     private UIModifier BuildContainerModifier() => UIModifier.Empty
@@ -60,6 +68,14 @@
         return ItemDisplayTextSelector is not null
             ? ItemDisplayTextSelector(item)
             : (item.ToString() ?? string.Empty);
+    }
+
+    private string? ResolveItemImageSource(TItem item)
+    {
+        if (item is null || ItemImageSourceSelector is null)
+            return null;
+
+        return ItemImageSourceSelector(item);
     }
 
     private async Task SelectItemAsync(TItem selected)

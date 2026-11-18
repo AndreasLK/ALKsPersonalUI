@@ -28,9 +28,21 @@
         </span>
     }
 
-    @if (HasLabelText)
+    @if (HasLabelContent)
     {
-        <span class="checkbox-label">@Label</span>
+        <span class="checkbox-label-group" style="@BuildLabelGroupStyles()">
+            @if (ShouldRenderInlineLabelImage)
+            {
+                <img class="checkbox-label-image"
+                     src="@LabelImageSource"
+                     alt="@ResolvedLabelImageAlt"
+                     draggable="false" />
+            }
+            @if (ShouldRenderLabelText)
+            {
+                <span class="checkbox-label">@Label</span>
+            }
+        </span>
     }
 </label>
 
@@ -38,11 +50,31 @@
     [Parameter] public bool Checked { get; set; }
     [Parameter] public EventCallback<bool> CheckedChanged { get; set; }
     [Parameter] public string? Label { get; set; }
+    [Parameter] public string? LabelImageSource { get; set; }
+    [Parameter] public string? LabelImageAlt { get; set; }
+    [Parameter] public string? LabelImageSize { get; set; }
+    [Parameter] public ImageFit LabelImageFit { get; set; } = ImageFit.Cover;
+    [Parameter] public ImagePlacement LabelImagePlacement { get; set; } = ImagePlacement.Start;
     [Parameter] public string? AriaLabel { get; set; }
     [Parameter] public bool RenderAsToggleSwitch { get; set; }
     [Parameter] public bool Disabled { get; set; }
 
     private bool HasLabelText => !string.IsNullOrWhiteSpace(Label);
+    private bool HasLabelImage => !string.IsNullOrWhiteSpace(LabelImageSource);
+    private bool HasLabelContent => HasLabelText || HasLabelImage;
+    private bool ShouldRenderInlineLabelImage => HasLabelImage && LabelImagePlacement != ImagePlacement.Background;
+    private bool ShouldRenderLabelText => HasLabelText && (!HasLabelImage || LabelImagePlacement != ImagePlacement.ReplaceText);
+    private string ResolvedLabelImageAlt => LabelImageAlt ?? Label ?? string.Empty;
+
+    private string BuildLabelGroupStyles() => new StyleBuilder()
+        .Add("--_cb-label-dir", LayoutDefaults.ToFlexDirectionCss(LabelImagePlacement))
+        .Add("--_cb-img-size", LabelImageSize)
+        .Add("--_cb-img-fit", LayoutDefaults.ToCss(LabelImageFit))
+        .AddIf(HasLabelImage && LabelImagePlacement == ImagePlacement.Background, "background-image", LayoutDefaults.FormatCssUrl(LabelImageSource))
+        .AddIf(HasLabelImage && LabelImagePlacement == ImagePlacement.Background, "background-size", LayoutDefaults.ToCss(LabelImageFit))
+        .AddIf(HasLabelImage && LabelImagePlacement == ImagePlacement.Background, "background-position", LayoutDefaults.Image.DefaultObjectPosition)
+        .AddIf(HasLabelImage && LabelImagePlacement == ImagePlacement.Background, "background-repeat", LayoutDefaults.Image.DefaultBackgroundRepeat)
+        .Build();
 
     private async Task OnCheckboxChangedAsync(ChangeEventArgs changeEvent)
     {

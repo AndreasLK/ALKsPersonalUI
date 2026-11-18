@@ -68,3 +68,22 @@ public enum TextAlignment
     End,
     Justify
 }
+
+public enum ImageFit
+{
+    Cover,
+    Contain,
+    Fill,
+    ScaleDown,
+    None
+}
+
+public enum ImagePlacement
+{
+    Start,
+    End,
+    Top,
+    Bottom,
+    ReplaceText,
+    Background
+}

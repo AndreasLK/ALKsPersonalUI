@@ -1,0 +1,73 @@
+@inherits UIComponentBase
+
+<figure class="@BuildFigureCssClasses()" style="@BuildFigureStyles()" @attributes="AdditionalAttributes">
+    @if (CanRenderImageElement)
+    {
+        <img class="ui-image-element"
+             src="@Source"
+             alt="@ResolvedAltText"
+             draggable="false"
+             style="@BuildImageElementStyles()"
+             @onerror="MarkCurrentSourceAsFailed" />
+    }
+    else
+    {
+        <div class="ui-image-fallback" role="img" aria-label="@ResolvedFallbackText">
+            @ResolvedFallbackText
+        </div>
+    }
+
+    @if (HasCaptionText)
+    {
+        <figcaption class="ui-image-caption">@Caption</figcaption>
+    }
+
+    @if (HasOverlayContent)
+    {
+        <div class="ui-image-overlay">@ChildContent</div>
+    }
+</figure>
+
+@code {
+    [Parameter] public string? Source { get; set; }
+    [Parameter] public string? Alt { get; set; }
+    [Parameter] public ImageFit Fit { get; set; } = ImageFit.Cover;
+    [Parameter] public string ObjectPosition { get; set; } = LayoutDefaults.Image.DefaultObjectPosition;
+    [Parameter] public string? FallbackText { get; set; }
+    [Parameter] public string? Caption { get; set; }
+
+    private string? _failedSource;
+
+    private bool HasValidSource => !string.IsNullOrWhiteSpace(Source);
+    private bool HasImageLoadFailed => HasValidSource && string.Equals(_failedSource, Source, StringComparison.Ordinal);
+    private bool CanRenderImageElement => HasValidSource && !HasImageLoadFailed;
+    private bool HasCaptionText => !string.IsNullOrWhiteSpace(Caption);
+    private bool HasOverlayContent => ChildContent is not null;
+
+    private string ResolvedAltText => Alt ?? Caption ?? FallbackText ?? string.Empty;
+    private string ResolvedFallbackText => FallbackText ?? Alt ?? Caption ?? LayoutDefaults.Image.DefaultFallbackLabel;
+
+    private void MarkCurrentSourceAsFailed()
+    {
+        _failedSource = Source;
+    }
+
+    private string BuildFigureCssClasses() => new CssBuilder()
+        .Add("ui-image-frame")
+        .Add("has-caption", when: HasCaptionText)
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private string BuildFigureStyles() => new StyleBuilder()
+        .Add("--_img-radius", ModifierOrEmpty.BorderRadiusValue ?? "var(--ui-radius-md)")
+        .Add("--_img-bg", ModifierOrEmpty.BackgroundValue ?? "var(--ui-bg-header)")
+        .Add("--_img-border", ModifierOrEmpty.BorderColorValue ?? "var(--ui-border)")
+        .AddRaw(ModifierStyle)
+        .Build();
+
+    private string BuildImageElementStyles() => new StyleBuilder()
+        .Add("object-fit", LayoutDefaults.ToCss(Fit))
+        .Add("object-position", ObjectPosition)
+        .Build();
+}
+

@@ -9,13 +9,14 @@
 
     <button type="button"
             class="@BuildTriggerButtonCssClasses()"
+            style="@BuildItemBackgroundImageStyle(CurrentValue)"
             disabled="@Disabled"
             aria-haspopup="listbox"
             aria-expanded="@_isMenuOpen"
             aria-label="@AriaLabel"
             @onclick="ToggleDropdownMenu"
             @onkeydown="HandleKeyboardNavigationAsync">
-        <span class="select-label">@FormatItemDisplayText(CurrentValue)</span>
+        @RenderDropdownItemContent(CurrentValue, FormatItemDisplayText(CurrentValue))
         <span class="select-chevron" aria-hidden="true">@InputDefaults.Dropdown.ChevronSymbol</span>
     </button>
 
@@ -28,8 +29,9 @@
                 <li role="option"
                     aria-selected="@isOptionSelected"
                     class="@BuildOptionCssClasses(isOptionSelected)"
+                    style="@BuildItemBackgroundImageStyle(optionItem)"
                     @onclick="() => SelectOptionAsync(optionItem)">
-                    <span>@FormatItemDisplayText(optionItem)</span>
+                    @RenderDropdownItemContent(optionItem, FormatItemDisplayText(optionItem))
                     @if (isOptionSelected)
                     {
                         <span class="option-check" aria-hidden="true">
@@ -49,6 +51,10 @@
     [Parameter] public TItem? SelectedValue { get; set; }
     [Parameter] public EventCallback<TItem?> SelectedValueChanged { get; set; }
     [Parameter] public Func<TItem, string>? ItemDisplayTextSelector { get; set; }
+    [Parameter] public Func<TItem, string?>? ItemImageSourceSelector { get; set; }
+    [Parameter] public string? ItemImageSize { get; set; }
+    [Parameter] public ImageFit ItemImageFit { get; set; } = ImageFit.Cover;
+    [Parameter] public ImagePlacement ItemImagePlacement { get; set; } = ImagePlacement.Start;
     [Parameter] public string Placeholder { get; set; } = InputDefaults.Dropdown.DefaultPlaceholder;
     [Parameter] public string? AriaLabel { get; set; }
     [Parameter] public bool Disabled { get; set; }
@@ -57,6 +63,57 @@
     private TItem? CurrentValue => Value ?? SelectedValue;
     private bool ShouldRenderMenuItems => _isMenuOpen && Items is not null;
 
+    private RenderFragment RenderDropdownItemContent(TItem? item, string displayText) => __builder =>
+    {
+        var imageSource = ResolveItemImageSource(item);
+        var hasImageSource = !string.IsNullOrWhiteSpace(imageSource);
+        var showInlineImage = hasImageSource && ItemImagePlacement != ImagePlacement.Background;
+        var showDisplayText = !hasImageSource || ItemImagePlacement != ImagePlacement.ReplaceText;
+
+        <span class="select-item-content" style="@BuildItemContentDirectionStyle()">
+            @if (showInlineImage)
+            {
+                <img class="select-item-image"
+                     src="@imageSource"
+                     alt="@displayText"
+                     draggable="false" />
+            }
+            @if (showDisplayText)
+            {
+                <span class="select-label">@displayText</span>
+            }
+        </span>
+    };
+
+    private string? ResolveItemImageSource(TItem? item)
+    {
+        if (item is null || ItemImageSourceSelector is null)
+            return null;
+
+        return ItemImageSourceSelector(item);
+    }
+
+    private string BuildItemContentDirectionStyle() => new StyleBuilder()
+        .Add("flex-direction", LayoutDefaults.ToFlexDirectionCss(ItemImagePlacement))
+        .Build();
+
+    private string BuildItemBackgroundImageStyle(TItem? item)
+    {
+        if (ItemImagePlacement != ImagePlacement.Background)
+            return string.Empty;
+
+        var imageSource = ResolveItemImageSource(item);
+        if (string.IsNullOrWhiteSpace(imageSource))
+            return string.Empty;
+
+        return new StyleBuilder()
+            .Add("background-image", LayoutDefaults.FormatCssUrl(imageSource))
+            .Add("background-size", LayoutDefaults.ToCss(ItemImageFit))
+            .Add("background-position", LayoutDefaults.Image.DefaultObjectPosition)
+            .Add("background-repeat", LayoutDefaults.Image.DefaultBackgroundRepeat)
+            .Build();
+    }
+
     private string BuildContainerCssClasses() => new CssBuilder()
         .Add("ui-select-container")
         .AddRaw(ModifierClass)
@@ -64,6 +121,8 @@
 
     private string BuildContainerStyles() => new StyleBuilder()
         .Add("--_dd-width", ModifierOrEmpty.WidthValue ?? InputDefaults.Dropdown.DefaultWidth)
+        .Add("--_dd-img-size", ItemImageSize)
+        .Add("--_dd-img-fit", LayoutDefaults.ToCss(ItemImageFit))
         .Add("--_dd-bg", ModifierOrEmpty.BackgroundValue ?? "var(--ui-bg-surface)")
         .Add("--_dd-menu-bg", "var(--ui-bg-elevated)")
         .Add("--_dd-border", ModifierOrEmpty.BorderColorValue ?? "var(--ui-border)")

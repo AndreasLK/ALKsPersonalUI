@@ -2,9 +2,21 @@
 
 <Window Modifier="@ModifierOrEmpty.ForTitledWindowFrame()"
         @attributes="AdditionalAttributes">
-    <div class="title-bar" style="@ModifierOrEmpty.BuildTitleBarStyle()">
+    <div class="title-bar" style="@BuildTitleBarInlineStyle()">
         <div class="title-spacer"></div>
-        <span class="title-text">@Title</span>
+        <div class="title-heading" style="@BuildTitleHeadingInlineStyle()">
+            @if (ShouldRenderInlineTitleImage)
+            {
+                <img class="title-image"
+                     src="@TitleImageSource"
+                     alt="@ResolvedTitleImageAlt"
+                     draggable="false" />
+            }
+            @if (ShouldRenderTitleText)
+            {
+                <span class="title-text">@Title</span>
+            }
+        </div>
         <div class="title-actions">@HeaderActions</div>
     </div>
     <div class="body-content" style="@ModifierOrEmpty.BuildTitledWindowBodyStyle()">
@@ -14,5 +26,34 @@
 
 @code {
     [Parameter] public string Title { get; set; } = WindowDefaults.DefaultTitle;
+    [Parameter] public string? TitleImageSource { get; set; }
+    [Parameter] public string? TitleImageAlt { get; set; }
+    [Parameter] public string? TitleImageSize { get; set; }
+    [Parameter] public ImageFit TitleImageFit { get; set; } = ImageFit.Cover;
+    [Parameter] public ImagePlacement TitleImagePlacement { get; set; } = ImagePlacement.Start;
     [Parameter] public RenderFragment? HeaderActions { get; set; }
+
+    private bool HasTitleImageSource => !string.IsNullOrWhiteSpace(TitleImageSource);
+    private bool ShouldRenderInlineTitleImage => HasTitleImageSource && TitleImagePlacement != ImagePlacement.Background;
+    private bool ShouldRenderTitleText => !string.IsNullOrWhiteSpace(Title) && (!HasTitleImageSource || TitleImagePlacement != ImagePlacement.ReplaceText);
+    private string ResolvedTitleImageAlt => TitleImageAlt ?? Title;
+
+    private string BuildTitleBarInlineStyle()
+    {
+        var baseStyle = ModifierOrEmpty.BuildTitleBarStyle();
+        if (!HasTitleImageSource || TitleImagePlacement != ImagePlacement.Background)
+            return baseStyle;
+
+        return new StyleBuilder()
+            .AddRaw(baseStyle)
+            .Add("--_tw-header-bg-image", LayoutDefaults.FormatCssUrl(TitleImageSource))
+            .Add("--_tw-header-bg-size", LayoutDefaults.ToCss(TitleImageFit))
+            .Build();
+    }
+
+    private string BuildTitleHeadingInlineStyle() => new StyleBuilder()
+        .Add("--_tw-title-dir", LayoutDefaults.ToFlexDirectionCss(TitleImagePlacement))
+        .Add("--_tw-title-img-size", TitleImageSize)
+        .Add("--_tw-title-img-fit", LayoutDefaults.ToCss(TitleImageFit))
+        .Build();
 }

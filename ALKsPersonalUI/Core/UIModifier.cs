@@ -25,7 +25,14 @@ public sealed class UIModifier
     public string? JustifyContentValue { get; private set; }
     public string? OverflowValue { get; private set; }
     public string? BackgroundValue { get; private set; }
+    public string? BackgroundImageSourceValue { get; private set; }
+    public string? BackgroundSizeValue { get; private set; }
+    public string? BackgroundPositionValue { get; private set; }
+    public string? BackgroundRepeatValue { get; private set; }
     public string? HeaderBackgroundValue { get; private set; }
+    public string? HeaderBackgroundImageSourceValue { get; private set; }
+    public string? HeaderBackgroundSizeValue { get; private set; }
+    public string? HeaderBackgroundPositionValue { get; private set; }
     public string? BorderColorValue { get; private set; }
     public string? BorderRadiusValue { get; private set; }
     public string? BaseColorValue { get; private set; }
@@ -206,9 +213,33 @@ public sealed class UIModifier
         return this;
     }
 
+    public UIModifier BackgroundImage(
+        string imageSource,
+        ImageFit imageFit = ImageFit.Cover,
+        string backgroundPosition = LayoutDefaults.Image.DefaultObjectPosition,
+        string backgroundRepeat = LayoutDefaults.Image.DefaultBackgroundRepeat)
+    {
+        BackgroundImageSourceValue = imageSource;
+        BackgroundSizeValue = LayoutDefaults.ToCss(imageFit);
+        BackgroundPositionValue = backgroundPosition;
+        BackgroundRepeatValue = backgroundRepeat;
+        return this;
+    }
+
     public UIModifier HeaderBackground(string headerBackgroundColor)
     {
         HeaderBackgroundValue = headerBackgroundColor;
+        return this;
+    }
+
+    public UIModifier HeaderBackgroundImage(
+        string imageSource,
+        ImageFit imageFit = ImageFit.Cover,
+        string backgroundPosition = LayoutDefaults.Image.DefaultObjectPosition)
+    {
+        HeaderBackgroundImageSourceValue = imageSource;
+        HeaderBackgroundSizeValue = LayoutDefaults.ToCss(imageFit);
+        HeaderBackgroundPositionValue = backgroundPosition;
         return this;
     }
 
@@ -343,6 +374,10 @@ public sealed class UIModifier
     public string BuildWindowStyle() => new StyleBuilder()
         .Add("--_w-radius", BorderRadiusValue ?? WindowDefaults.DefaultBorderRadius)
         .Add("--_w-bg", BackgroundValue ?? WindowDefaults.DefaultBackground)
+        .Add("--_w-bg-image", LayoutDefaults.FormatCssUrl(BackgroundImageSourceValue))
+        .Add("--_w-bg-size", BackgroundSizeValue)
+        .Add("--_w-bg-pos", BackgroundPositionValue)
+        .Add("--_w-bg-repeat", BackgroundRepeatValue)
         .Add("--_w-border", BorderColorValue ?? WindowDefaults.DefaultBorderColor)
         .Add("--_w-display", DisplayValue ?? WindowDefaults.DefaultDisplay)
         .Add("--_w-flex-dir", FlexDirectionValue ?? WindowDefaults.DefaultFlexDirection)
@@ -366,6 +401,7 @@ public sealed class UIModifier
         .MinHeight(MinHeightValue ?? WindowDefaults.DefaultMinHeight)
         .BorderRadius(BorderRadiusValue ?? WindowDefaults.DefaultBorderRadius)
         .Background(BackgroundValue ?? WindowDefaults.DefaultBackground)
+        .CopyBackgroundImageFrom(this)
         .BorderColor(BorderColorValue ?? WindowDefaults.DefaultBorderColor)
         .Padding(WindowDefaults.ZeroPadding)
         .Gap(WindowDefaults.ZeroPadding)
@@ -378,6 +414,9 @@ public sealed class UIModifier
 
     public string BuildTitleBarStyle(string? fallbackHeaderBackground = null) => new StyleBuilder()
         .Add("--_tw-header-bg", HeaderBackgroundValue ?? fallbackHeaderBackground ?? WindowDefaults.DefaultHeaderBackground)
+        .Add("--_tw-header-bg-image", LayoutDefaults.FormatCssUrl(HeaderBackgroundImageSourceValue))
+        .Add("--_tw-header-bg-size", HeaderBackgroundSizeValue)
+        .Add("--_tw-header-bg-pos", HeaderBackgroundPositionValue)
         .Add("--_tw-border", BorderColorValue ?? WindowDefaults.DefaultBorderColor)
         .Add("--_tw-radius", BorderRadiusValue ?? WindowDefaults.DefaultBorderRadius)
         .Build();
@@ -406,6 +445,10 @@ public sealed class UIModifier
         .Add("gap", GapValue)
         .Add("overflow", OverflowValue)
         .Add("background-color", BackgroundValue)
+        .Add("background-image", LayoutDefaults.FormatCssUrl(BackgroundImageSourceValue))
+        .Add("background-size", BackgroundSizeValue)
+        .Add("background-position", BackgroundPositionValue)
+        .Add("background-repeat", BackgroundRepeatValue)
         .Add("border-color", BorderColorValue)
         .Add("border-radius", BorderRadiusValue)
         .Add("color", TextColorValue)
@@ -413,6 +456,18 @@ public sealed class UIModifier
         .AddRaw(_extraFrameStyles.Build())
         .AddRaw(_extraBodyStyles.Build())
         .Build();
+
+    private UIModifier CopyBackgroundImageFrom(UIModifier sourceModifier)
+    {
+        if (string.IsNullOrWhiteSpace(sourceModifier.BackgroundImageSourceValue))
+            return this;
+
+        BackgroundImageSourceValue = sourceModifier.BackgroundImageSourceValue;
+        BackgroundSizeValue = sourceModifier.BackgroundSizeValue;
+        BackgroundPositionValue = sourceModifier.BackgroundPositionValue;
+        BackgroundRepeatValue = sourceModifier.BackgroundRepeatValue;
+        return this;
+    }
 
     public string BuildFrameExtras() => _extraFrameStyles.Build();
     public string BuildClass() => _cssClassBuilder.Build();

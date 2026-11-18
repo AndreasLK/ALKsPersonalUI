@@ -7,6 +7,10 @@
     gap: var(--_w-gap, 0.5rem);
     border-radius: var(--_w-radius, var(--ui-radius-md));
     background-color: var(--_w-bg, var(--ui-bg-surface));
+    background-image: var(--_w-bg-image, none);
+    background-size: var(--_w-bg-size, cover);
+    background-position: var(--_w-bg-pos, center);
+    background-repeat: var(--_w-bg-repeat, no-repeat);
     border: 1px solid var(--_w-border, var(--ui-border));
     width: var(--_w-width, fit-content);
     height: var(--_w-height, fit-content);

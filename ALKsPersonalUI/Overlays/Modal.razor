@@ -9,6 +9,11 @@
          @onkeydown="CloseIfEscapeKeyPressed">
         <div class="modal-wrapper" @onclick:stopPropagation="true">
             <TitledWindow Title="@Title"
+                          TitleImageSource="@TitleImageSource"
+                          TitleImageAlt="@TitleImageAlt"
+                          TitleImageSize="@TitleImageSize"
+                          TitleImageFit="@TitleImageFit"
+                          TitleImagePlacement="@TitleImagePlacement"
                           Modifier="@BuildModalWindowModifier()"
                           role="dialog"
                           aria-modal="true"
@@ -33,6 +38,11 @@
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
     [Parameter] public string Title { get; set; } = OverlayDefaults.Modal.DefaultTitle;
+    [Parameter] public string? TitleImageSource { get; set; }
+    [Parameter] public string? TitleImageAlt { get; set; }
+    [Parameter] public string? TitleImageSize { get; set; }
+    [Parameter] public ImageFit TitleImageFit { get; set; } = ImageFit.Cover;
+    [Parameter] public ImagePlacement TitleImagePlacement { get; set; } = ImagePlacement.Start;
     [Parameter] public bool CloseOnBackdropClick { get; set; } = true;
     [Parameter] public RenderFragment? FooterContent { get; set; }
 
