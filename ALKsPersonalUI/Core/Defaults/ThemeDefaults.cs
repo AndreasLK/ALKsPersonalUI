@@ -2,6 +2,8 @@
 
 public static class ThemeDefaults
 {
+    public const int LiveUpdateThrottleMs = 33;
+
     public static class PresetNames
     {
         public const string Default = "Default";

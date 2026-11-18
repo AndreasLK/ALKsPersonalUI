@@ -104,5 +104,41 @@ public class UIThemeAndLibraryTests
         Assert.Equal(ButtonPressEffect.ConcaveInset, themeService.Current.DefaultPressEffect);
         Assert.Equal(TouchInputMode.Always, themeService.Current.DefaultTouchInputMode);
     }
+
+    [Fact]
+    public void UITheme_ToJsonAndFromJson_RoundTripsPropertiesAndFallsBackOnInvalidJson()
+    {
+        var original = UITheme.FromSeed("Museum", "#e11d48", "#101018", "#f43f5e");
+        var json = original.ToJson(indented: true);
+
+        var roundTripped = UITheme.FromJson(json);
+        Assert.Equal("Museum", roundTripped.Name);
+        Assert.Equal(original.AccentColor, roundTripped.AccentColor);
+        Assert.Equal(original.ActionColor, roundTripped.ActionColor);
+
+        var fallback = UITheme.FromJson("{ invalid json ");
+        Assert.Equal(ThemeDefaults.PresetNames.Default, fallback.Name);
+    }
+
+    [Theory]
+    [InlineData(ThemeDefaults.PresetNames.Default)]
+    [InlineData(ThemeDefaults.PresetNames.Cyberpunk)]
+    [InlineData(ThemeDefaults.PresetNames.Emerald)]
+    [InlineData(ThemeDefaults.PresetNames.NordicLight)]
+    public void UITheme_AllPresets_RoundTripBackAndForthThroughJson(string presetName)
+    {
+        var service = new UIThemeService();
+        service.ApplyPreset(presetName);
+        var original = service.Current.Clone();
+
+        var json1 = original.ToJson(indented: false);
+        var parsed = UITheme.FromJson(json1);
+        var json2 = parsed.ToJson(indented: false);
+
+        Assert.Equal(json1, json2);
+        Assert.Equal(original.Name, parsed.Name);
+        Assert.Equal(original.AccentColor, parsed.AccentColor);
+        Assert.Equal(original.ApplicationBackgroundColor, parsed.ApplicationBackgroundColor);
+    }
 }
 

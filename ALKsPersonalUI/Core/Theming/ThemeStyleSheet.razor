@@ -1,0 +1,22 @@
+@implements IDisposable
+@inject UIThemeService ThemeService
+
+<style>:root { @ThemeService.Current.ToCssVariables() }</style>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ThemeService.OnChange += HandleThemeChanged;
+    }
+
+    private void HandleThemeChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnChange -= HandleThemeChanged;
+    }
+}
+

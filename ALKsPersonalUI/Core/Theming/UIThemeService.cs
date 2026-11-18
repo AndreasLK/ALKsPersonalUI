@@ -102,4 +102,18 @@ public sealed class UIThemeService
     };
 
     private void NotifyThemeChanged() => OnChange?.Invoke();
+
+    public string ExportCurrentThemeJson(bool indented = true) => Current.ToJson(indented);
+
+    public bool TryApplyFromJson(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return false;
+        }
+
+        var parsed = UITheme.FromJson(json);
+        SetTheme(parsed);
+        return true;
+    }
 }
