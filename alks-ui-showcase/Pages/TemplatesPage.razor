@@ -30,10 +30,27 @@
             <KioskShell IsPreview="true" IdleTimeoutSeconds="30">
                 <Column Padding="1.5rem" Gap="0.75rem" AlignItems="HorizontalAlignment.Center">
                     <Pill Text="Kiosk Preview" Variant="Pill.PillVariant.Accent" />
-                    <Text Variant="TypographyVariant.Title">Welcome to the Interactive Kiosk</Text>
-                    <Text Variant="TypographyVariant.Body" Color="var(--ui-text-muted)">
-                        Tap anywhere to begin your session.
-                    </Text>
+                    @if (!_kioskStarted)
+                    {
+                        <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Title">Welcome to the Interactive Kiosk</ALKsPersonalUI.Layout.Text>
+                        <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Body" Color="var(--ui-text-muted)">
+                            Select a service below to begin your session.
+                        </ALKsPersonalUI.Layout.Text>
+                        <ActionButton Text="Start Session" Variant="ActionButton.ButtonVariant.Solid" OnClick="@(() => _kioskStarted = true)" />
+                    }
+                    else
+                    {
+                        <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Title">Check-In &amp; Tickets</ALKsPersonalUI.Layout.Text>
+                        <Row Gap="0.75rem" Wrap="true" JustifyContent="Arrangement.Center">
+                            <ActionButton Text="Express Check-In" Variant="ActionButton.ButtonVariant.Outline" OnClick="@(() => _kioskSelection = "Express Check-In selected")" />
+                            <ActionButton Text="Print Pass" Variant="ActionButton.ButtonVariant.Outline" OnClick="@(() => _kioskSelection = "Pass queued for printing")" />
+                            <ActionButton Text="End Session" Variant="ActionButton.ButtonVariant.Outline" OnClick="ResetKiosk" />
+                        </Row>
+                        @if (!string.IsNullOrEmpty(_kioskSelection))
+                        {
+                            <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Caption" Color="var(--ui-accent)">@_kioskSelection</ALKsPersonalUI.Layout.Text>
+                        }
+                    }
                 </Column>
             </KioskShell>
         </Column>
@@ -50,7 +67,7 @@
                           Score="@_quizScore">
                 <Column Gap="0.75rem">
                     <ActionButton Text="Pure C# &amp; CSS" Variant="ActionButton.ButtonVariant.Outline" OnClick="@(() => AnswerQuiz(true))" />
-                    <ActionButton Text="jQuery Plugins" Variant="ActionButton.ButtonVariant.Outline" OnClick="@(() => AnswerQuiz(false))" />
+                    <ActionButton Text="HTML &amp; CSS Only (No Blazor)" Variant="ActionButton.ButtonVariant.Outline" OnClick="@(() => AnswerQuiz(false))" />
                 </Column>
             </QuizTemplate>
         </Column>
@@ -61,10 +78,30 @@
             <Text Variant="TypographyVariant.Body">
                 Arcade/game HUD shell with score, lives, and central stage.
             </Text>
-            <GameTemplate Title="Space Dodge" Score="@_gameScore" Lives="3">
+            <GameTemplate Title="Sector Target" Score="@_gameScore" Lives="@_gameLives">
                 <Column Padding="1.5rem" Gap="1rem" AlignItems="HorizontalAlignment.Center">
-                    <Text Variant="TypographyVariant.Body">Game Stage Content</Text>
-                    <ActionButton Text="+100 Points" Variant="ActionButton.ButtonVariant.Solid" OnClick="@(() => _gameScore += 100)" />
+                    @if (_gameLives > 0)
+                    {
+                        <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Body" Color="var(--ui-text-muted)">
+                            Hit the active sector (@(_activeTarget + 1)) to score! Missing costs 1 life.
+                        </ALKsPersonalUI.Layout.Text>
+                        <Row Gap="0.75rem" JustifyContent="Arrangement.Center">
+                            @for (int i = 0; i < TargetCount; i++)
+                            {
+                                int sectorIndex = i;
+                                bool isTarget = sectorIndex == _activeTarget;
+                                <ActionButton Text="@($"Sector {sectorIndex + 1}")"
+                                              Variant="@(isTarget ? ActionButton.ButtonVariant.Solid : ActionButton.ButtonVariant.Outline)"
+                                              OnClick="@(() => HitSector(sectorIndex))" />
+                            }
+                        </Row>
+                    }
+                    else
+                    {
+                        <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Title">Game Over</ALKsPersonalUI.Layout.Text>
+                        <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Body" Color="var(--ui-text-muted)">Final Score: @_gameScore</ALKsPersonalUI.Layout.Text>
+                        <ActionButton Text="Play Again" Variant="ActionButton.ButtonVariant.Solid" OnClick="ResetGame" />
+                    }
                 </Column>
             </GameTemplate>
         </Column>
@@ -72,9 +109,47 @@
 </Column>
 
 @code {
+    private const int TargetCount = 3;
+    private const int PointsPerHit = 100;
+    private const int InitialLives = 3;
+
+    private bool _kioskStarted;
+    private string? _kioskSelection;
     private int _quizQuestion = 1;
     private int _quizScore;
-    private int _gameScore = 250;
+    private int _gameScore;
+    private int _gameLives = InitialLives;
+    private int _activeTarget;
+
+    private void ResetKiosk()
+    {
+        _kioskStarted = false;
+        _kioskSelection = null;
+    }
+
+    private void HitSector(int sectorIndex)
+    {
+        if (_gameLives <= 0)
+            return;
+
+        if (sectorIndex == _activeTarget)
+        {
+            _gameScore += PointsPerHit;
+        }
+        else
+        {
+            _gameLives--;
+        }
+
+        _activeTarget = (_activeTarget + 1) % TargetCount;
+    }
+
+    private void ResetGame()
+    {
+        _gameScore = 0;
+        _gameLives = InitialLives;
+        _activeTarget = 0;
+    }
 
     private void AnswerQuiz(bool isCorrect)
     {
