@@ -30,7 +30,17 @@
             }
             else
             {
-                @Text
+                @if (ShouldRenderInlineImage)
+                {
+                    <img class="btn-image"
+                         src="@ImageSource"
+                         alt="@ResolvedImageAlt"
+                         draggable="false" />
+                }
+                @if (ShouldRenderTextLabel)
+                {
+                    <span>@Text</span>
+                }
             }
         </span>
     </span>
@@ -38,6 +48,11 @@
 
 @code {
     [Parameter] public string? Text { get; set; }
+    [Parameter] public string? ImageSource { get; set; }
+    [Parameter] public string? ImageAlt { get; set; }
+    [Parameter] public string? ImageSize { get; set; }
+    [Parameter] public ImageFit ImageFit { get; set; } = ImageFit.Cover;
+    [Parameter] public ImagePlacement ImagePlacement { get; set; } = ImagePlacement.Start;
     [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
     [Parameter] public EventCallback OnLongPress { get; set; }
     [Parameter] public bool IsDisabled { get; set; }
@@ -67,6 +82,35 @@
     private bool IsHoldToConfirmEnabled => HoldToConfirmDurationMilliseconds > 0;
     private bool HasSpecialPressBehavior => IsHoldToConfirmEnabled || OnLongPress.HasDelegate || AutoRepeat;
     private string HtmlButtonType => Type.ToString().ToLowerInvariant();
+    private bool HasImageSource => !string.IsNullOrWhiteSpace(ImageSource);
+    private bool ShouldRenderInlineImage => HasImageSource && ImagePlacement != ImagePlacement.Background;
+    private bool ShouldRenderTextLabel => !string.IsNullOrWhiteSpace(Text) && (!HasImageSource || ImagePlacement != ImagePlacement.ReplaceText);
+    private bool IsTextReplacedByImage => HasImageSource && ImagePlacement == ImagePlacement.ReplaceText;
+    private string ResolvedImageAlt => ImageAlt ?? Text ?? string.Empty;
+
+    private string? ResolveBackgroundImageCss()
+    {
+        if (HasImageSource && ImagePlacement == ImagePlacement.Background)
+            return LayoutDefaults.FormatCssUrl(ImageSource);
+
+        return LayoutDefaults.FormatCssUrl(ModifierOrEmpty.BackgroundImageSourceValue);
+    }
+
+    private string ResolveBackgroundSizeCss()
+    {
+        if (HasImageSource && ImagePlacement == ImagePlacement.Background)
+            return LayoutDefaults.ToCss(ImageFit);
+
+        return ModifierOrEmpty.BackgroundSizeValue ?? "cover";
+    }
+
+    private string? ResolveButtonImageSize()
+    {
+        if (!string.IsNullOrWhiteSpace(ImageSize))
+            return ImageSize;
+
+        return IsTextReplacedByImage ? "100%" : null;
+    }
 
     private ButtonPressEffect ConfiguredPressEffect =>
         PressEffect ?? ThemeService.Current.DefaultPressEffect;
@@ -110,12 +154,18 @@
         .Add(ResolvedPressEffectClass)
         .Add("is-loading", when: IsLoading)
         .Add("is-holding", when: _isHoldToConfirmActive)
+        .Add("has-replaced-text", when: IsTextReplacedByImage)
         .AddRaw(ModifierClass)
         .Build();
 
     private string BuildButtonInlineStyles() => new StyleBuilder()
         .Add("--_btn-base", ModifierOrEmpty.BaseColorValue ?? ButtonDefaults.DefaultBaseColor)
         .Add("--_btn-text", ModifierOrEmpty.TextColorValue ?? ButtonDefaults.DefaultTextColor)
+        .Add("--_btn-bg-image", ResolveBackgroundImageCss())
+        .Add("--_btn-bg-size", ResolveBackgroundSizeCss())
+        .Add("--_btn-content-dir", LayoutDefaults.ToFlexDirectionCss(ImagePlacement))
+        .Add("--_btn-img-size", ResolveButtonImageSize())
+        .Add("--_btn-img-fit", LayoutDefaults.ToCss(ImageFit))
         .Add("--_btn-depth", ModifierOrEmpty.ButtonExtrusionDepthValue ?? ButtonDefaults.DefaultButtonExtrusionDepth)
         .Add("--_btn-scale", ModifierOrEmpty.InwardPressScaleFactorValue ?? "var(--ui-press-scale, 0.93)")
         .Add("--_btn-speed", ModifierOrEmpty.PressAnimationDurationValue ?? ButtonDefaults.DefaultPressAnimationDuration)

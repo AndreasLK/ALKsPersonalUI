@@ -10,6 +10,11 @@
 
     [Parameter, EditorRequired] public string Id { get; set; } = string.Empty;
     [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? ImageSource { get; set; }
+    [Parameter] public string? ImageAlt { get; set; }
+    [Parameter] public string? ImageSize { get; set; }
+    [Parameter] public ImageFit ImageFit { get; set; } = ImageFit.Cover;
+    [Parameter] public ImagePlacement ImagePlacement { get; set; } = ImagePlacement.Start;
     [Parameter] public bool Disabled { get; set; } = false;
     [Parameter] public RenderFragment? ChildContent { get; set; }
 

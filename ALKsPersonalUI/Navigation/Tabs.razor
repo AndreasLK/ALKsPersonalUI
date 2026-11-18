@@ -21,11 +21,15 @@
                                   Shape="ActionButton.ButtonShape.Rounded"
                                   Modifier="@BuildTabButtonModifier(isTabActive)"
                                   IsDisabled="@tabPanel.Disabled"
+                                  Text="@tabPanel.Title"
+                                  ImageSource="@tabPanel.ImageSource"
+                                  ImageAlt="@tabPanel.ImageAlt"
+                                  ImageSize="@tabPanel.ImageSize"
+                                  ImageFit="@tabPanel.ImageFit"
+                                  ImagePlacement="@tabPanel.ImagePlacement"
                                   OnClick="() => SelectTabAsync(tabPanel.Id)"
                                   role="tab"
-                                  aria-selected="@isTabActive">
-                        @tabPanel.Title
-                    </ActionButton>
+                                  aria-selected="@isTabActive" />
                 }
             </div>
         </Window>

@@ -9,27 +9,13 @@
             aria-pressed="@Active"
             @onclick="InvokeClickIfEnabledAsync"
             @attributes="AdditionalAttributes">
-        @if (ChildContent is not null)
-        {
-            @ChildContent
-        }
-        else
-        {
-            @Text
-        }
+        @RenderPillInnerContent
     </button>
 }
 else
 {
     <span class="@BuildPillCssClasses()" style="@BuildPillStyles()" @attributes="AdditionalAttributes">
-        @if (ChildContent is not null)
-        {
-            @ChildContent
-        }
-        else
-        {
-            @Text
-        }
+        @RenderPillInnerContent
     </span>
 }
 
@@ -37,12 +23,51 @@ else
     public enum PillVariant { Neutral, Accent, Success, Warning, Danger }
 
     [Parameter] public string? Text { get; set; }
+    [Parameter] public string? ImageSource { get; set; }
+    [Parameter] public string? ImageAlt { get; set; }
+    [Parameter] public string? ImageSize { get; set; }
+    [Parameter] public ImageFit ImageFit { get; set; } = ImageFit.Cover;
+    [Parameter] public ImagePlacement ImagePlacement { get; set; } = ImagePlacement.Start;
     [Parameter] public PillVariant Variant { get; set; } = PillVariant.Neutral;
     [Parameter] public bool Active { get; set; }
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
 
     private bool IsInteractiveButton => OnClick.HasDelegate;
+    private bool HasImageSource => !string.IsNullOrWhiteSpace(ImageSource);
+    private bool ShouldRenderInlineImage => HasImageSource && ImagePlacement != ImagePlacement.Background;
+    private bool ShouldRenderTextLabel => !string.IsNullOrWhiteSpace(Text) && (!HasImageSource || ImagePlacement != ImagePlacement.ReplaceText);
+    private string ResolvedImageAlt => ImageAlt ?? Text ?? string.Empty;
+
+    private RenderFragment RenderPillInnerContent => __builder =>
+    {
+        if (ChildContent is not null)
+        {
+            @ChildContent
+            return;
+        }
+
+        if (ShouldRenderInlineImage)
+        {
+            <img class="ui-pill-image"
+                 src="@ImageSource"
+                 alt="@ResolvedImageAlt"
+                 draggable="false" />
+        }
+
+        if (ShouldRenderTextLabel)
+        {
+            <span>@Text</span>
+        }
+    };
+
+    private string? ResolveBackgroundImageCss()
+    {
+        if (HasImageSource && ImagePlacement == ImagePlacement.Background)
+            return LayoutDefaults.FormatCssUrl(ImageSource);
+
+        return LayoutDefaults.FormatCssUrl(ModifierOrEmpty.BackgroundImageSourceValue);
+    }
 
     private string BuildPillCssClasses() => new CssBuilder()
         .Add("ui-pill")
@@ -54,6 +79,11 @@ else
 
     private string BuildPillStyles() => new StyleBuilder()
         .Add("--_pill-bg", ModifierOrEmpty.BackgroundValue ?? "var(--ui-bg-surface)")
+        .Add("--_pill-bg-image", ResolveBackgroundImageCss())
+        .Add("--_pill-bg-size", HasImageSource && ImagePlacement == ImagePlacement.Background ? LayoutDefaults.ToCss(ImageFit) : ModifierOrEmpty.BackgroundSizeValue)
+        .Add("--_pill-dir", LayoutDefaults.ToFlexDirectionCss(ImagePlacement))
+        .Add("--_pill-img-size", ImageSize)
+        .Add("--_pill-img-fit", LayoutDefaults.ToCss(ImageFit))
         .Add("--_pill-border", ModifierOrEmpty.BorderColorValue ?? "var(--ui-border)")
         .Add("--_pill-text", ModifierOrEmpty.TextColorValue ?? "var(--ui-text)")
         .Add("--_pill-accent", ModifierOrEmpty.AccentColorValue ?? "var(--ui-accent)")

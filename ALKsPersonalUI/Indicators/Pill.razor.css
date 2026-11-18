@@ -1,5 +1,6 @@
 .ui-pill {
     display: inline-flex;
+    flex-direction: var(--_pill-dir, row);
     align-items: center;
     justify-content: center;
     gap: 0.4rem;
@@ -14,8 +15,22 @@
     touch-action: manipulation;
     border: 1px solid var(--_pill-border, var(--ui-border));
     background-color: color-mix(in srgb, var(--_pill-bg, var(--ui-bg-surface)), white 8%);
+    background-image: var(--_pill-bg-image, none);
+    background-size: var(--_pill-bg-size, cover);
+    background-position: center;
+    background-repeat: no-repeat;
     color: var(--_pill-text, var(--ui-text));
     transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.ui-pill-image {
+    width: var(--_pill-img-size, 1.15em);
+    height: var(--_pill-img-size, 1.15em);
+    object-fit: var(--_pill-img-fit, cover);
+    border-radius: var(--ui-radius-pill);
+    flex-shrink: 0;
+    user-select: none;
+    -webkit-user-drag: none;
 }
 
     .ui-pill.interactive {

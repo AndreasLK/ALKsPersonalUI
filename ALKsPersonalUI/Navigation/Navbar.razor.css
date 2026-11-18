@@ -14,6 +14,7 @@
 
 .navbar-brand {
     display: inline-flex;
+    flex-direction: var(--_nav-brand-dir, row);
     align-items: center;
     gap: 0.5rem;
     text-decoration: none;
@@ -22,6 +23,16 @@
     font-size: 1.1rem;
     letter-spacing: 0.02em;
     white-space: nowrap;
+}
+
+.brand-image {
+    width: var(--_nav-brand-img-size, 1.5rem);
+    height: var(--_nav-brand-img-size, 1.5rem);
+    object-fit: var(--_nav-brand-img-fit, cover);
+    border-radius: 6px;
+    flex-shrink: 0;
+    user-select: none;
+    -webkit-user-drag: none;
 }
 
 .navbar-links-desktop {

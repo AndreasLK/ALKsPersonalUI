@@ -105,6 +105,23 @@
         transform: translateX(calc(var(--_cb-size, 1.35rem) * 0.85));
     }
 
+.checkbox-label-group {
+    display: inline-flex;
+    flex-direction: var(--_cb-label-dir, row);
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.checkbox-label-image {
+    width: var(--_cb-img-size, 1.35rem);
+    height: var(--_cb-img-size, 1.35rem);
+    object-fit: var(--_cb-img-fit, cover);
+    border-radius: 4px;
+    flex-shrink: 0;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
 .checkbox-label {
     font-size: 0.95rem;
     line-height: 1.2;
