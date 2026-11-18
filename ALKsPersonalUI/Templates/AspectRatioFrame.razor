@@ -1,0 +1,29 @@
+@inherits UIComponentBase
+
+<div class="@BuildCssClasses()"
+     style="@BuildStyles()"
+     @attributes="AdditionalAttributes">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public int AspectWidth { get; set; } = 16;
+    [Parameter] public int AspectHeight { get; set; } = 9;
+    [Parameter] public string? MaxWidth { get; set; }
+    [Parameter] public string? MaxHeight { get; set; }
+
+    private int SafeAspectWidth => AspectWidth > 0 ? AspectWidth : 16;
+    private int SafeAspectHeight => AspectHeight > 0 ? AspectHeight : 9;
+
+    private string BuildCssClasses() => new CssBuilder()
+        .Add("ui-aspect-frame")
+        .AddRaw(ModifierClass)
+        .Build();
+
+    private string BuildStyles() => new StyleBuilder()
+        .Add("aspect-ratio", $"{SafeAspectWidth} / {SafeAspectHeight}")
+        .Add("max-width", MaxWidth)
+        .Add("max-height", MaxHeight)
+        .AddRaw(ModifierStyle)
+        .Build();
+}

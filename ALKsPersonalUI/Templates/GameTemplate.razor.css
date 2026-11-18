@@ -1,0 +1,54 @@
+.ui-game-template {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 100dvh;
+    background-color: var(--ui-bg-app);
+    color: var(--ui-text);
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.ui-game-template.preview {
+    min-height: 100%;
+}
+
+.ui-game-hud {
+    flex-shrink: 0;
+    padding: 0.75rem 1rem;
+    background-color: var(--ui-bg-header);
+    border-bottom: 1px solid var(--ui-border);
+    z-index: 10;
+}
+
+.ui-game-stage {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.ui-game-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background-color: color-mix(in srgb, var(--ui-bg-app), transparent 22%);
+    backdrop-filter: blur(6px);
+    z-index: 20;
+    box-sizing: border-box;
+}
+
+.ui-game-controls {
+    flex-shrink: 0;
+    padding: 0.85rem 1rem;
+    background-color: var(--ui-bg-elevated);
+    border-top: 1px solid var(--ui-border);
+    z-index: 10;
+}

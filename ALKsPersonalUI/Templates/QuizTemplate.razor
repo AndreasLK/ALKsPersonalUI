@@ -1,0 +1,91 @@
+@inherits UIComponentBase
+
+<div class="@BuildCssClasses()"
+     style="@ModifierStyle"
+     @attributes="AdditionalAttributes">
+    @if (HasHeaderArea)
+    {
+        <header class="ui-quiz-header">
+            @if (ShouldShowProgressBar)
+            {
+                <ProgressBar Value="@CurrentStep!.Value"
+                             Max="@TotalSteps!.Value" />
+            }
+            @if (HeaderContent is not null)
+            {
+                <div class="ui-quiz-header-content">
+                    @HeaderContent
+                </div>
+            }
+        </header>
+    }
+
+    @if (MediaContent is not null)
+    {
+        <div class="ui-quiz-media">
+            @MediaContent
+        </div>
+    }
+
+    @if (QuestionContent is not null)
+    {
+        <section class="ui-quiz-question">
+            @QuestionContent
+        </section>
+    }
+
+    @if (OptionsContent is not null)
+    {
+        <section class="ui-quiz-options">
+            @OptionsContent
+        </section>
+    }
+
+    @if (ChildContent is not null)
+    {
+        <div class="ui-quiz-body">
+            @ChildContent
+        </div>
+    }
+
+    @if (FeedbackContent is not null)
+    {
+        <section class="ui-quiz-feedback">
+            @FeedbackContent
+        </section>
+    }
+
+    @if (FooterContent is not null)
+    {
+        <footer class="ui-quiz-footer">
+            @FooterContent
+        </footer>
+    }
+</div>
+
+@code {
+    [Parameter] public RenderFragment? HeaderContent { get; set; }
+    [Parameter] public RenderFragment? MediaContent { get; set; }
+    [Parameter] public RenderFragment? QuestionContent { get; set; }
+    [Parameter] public RenderFragment? OptionsContent { get; set; }
+    [Parameter] public RenderFragment? FeedbackContent { get; set; }
+    [Parameter] public RenderFragment? FooterContent { get; set; }
+    [Parameter] public int? CurrentStep { get; set; }
+    [Parameter] public int? TotalSteps { get; set; }
+    [Parameter] public bool ShowProgressBar { get; set; } = true;
+    [Parameter] public bool IsPreview { get; set; }
+
+    private bool ShouldShowProgressBar =>
+        ShowProgressBar &&
+        CurrentStep.HasValue &&
+        TotalSteps.HasValue &&
+        TotalSteps.Value > 0;
+
+    private bool HasHeaderArea => ShouldShowProgressBar || HeaderContent is not null;
+
+    private string BuildCssClasses() => new CssBuilder()
+        .Add("ui-quiz-template")
+        .Add("preview", when: IsPreview)
+        .AddRaw(ModifierClass)
+        .Build();
+}

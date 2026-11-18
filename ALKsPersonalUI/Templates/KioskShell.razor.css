@@ -1,0 +1,45 @@
+.ui-kiosk-shell {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+.ui-kiosk-shell.preview {
+    min-height: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.ui-kiosk-shell.preview ::deep .ui-scaffold {
+    min-height: 100%;
+}
+
+.ui-kiosk-connection-banner {
+    width: 100%;
+    padding: 0.6rem 1rem;
+    background-color: color-mix(in srgb, var(--ui-warning), var(--ui-bg-elevated) 75%);
+    border-bottom: 1px solid var(--ui-warning);
+    color: var(--ui-text);
+    text-align: center;
+    font-weight: 600;
+    box-sizing: border-box;
+    z-index: 200;
+}
+
+.ui-kiosk-attract-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: color-mix(in srgb, var(--ui-bg-app), transparent 8%);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+}
+
+.ui-kiosk-shell.preview .ui-kiosk-attract-overlay {
+    position: absolute;
+}

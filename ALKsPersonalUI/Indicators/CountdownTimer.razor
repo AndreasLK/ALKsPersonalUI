@@ -1,0 +1,161 @@
+@inherits UIComponentBase
+@implements IAsyncDisposable
+
+<div class="@BuildCssClasses()"
+     style="@ModifierStyle"
+     role="timer"
+     aria-live="off"
+     @attributes="AdditionalAttributes">
+    <div class="ui-countdown-display">
+        <span class="ui-countdown-time">@FormattedRemainingTime</span>
+    </div>
+
+    @if (ShowProgressBar)
+    {
+        <ProgressBar Value="@_remainingSeconds"
+                     Max="@EffectiveTotalSeconds"
+                     ShowPercentage="false"
+                     Variant="@ResolveTimerVariant()" />
+    }
+</div>
+
+@code {
+    [Parameter] public int TotalSeconds { get; set; } = 30;
+    [Parameter] public bool AutoStart { get; set; } = true;
+    [Parameter] public bool IsPreview { get; set; }
+    [Parameter] public bool ShowProgressBar { get; set; } = true;
+    [Parameter] public EventCallback OnCompleted { get; set; }
+    [Parameter] public EventCallback<int> OnTick { get; set; }
+
+    private int _remainingSeconds;
+    private int _configuredTotalSeconds;
+    private bool _isRunning;
+    private CancellationTokenSource? _timerCts;
+    private Task? _timerLoopTask;
+
+    private int EffectiveTotalSeconds => Math.Max(1, TotalSeconds);
+    private string FormattedRemainingTime => TimeSpan.FromSeconds(Math.Max(0, _remainingSeconds)).ToString(@"mm\:ss");
+
+    protected override void OnInitialized()
+    {
+        _configuredTotalSeconds = Math.Max(0, TotalSeconds);
+        _remainingSeconds = _configuredTotalSeconds;
+    }
+
+    protected override void OnParametersSet()
+    {
+        var normalizedTotal = Math.Max(0, TotalSeconds);
+        if (normalizedTotal == _configuredTotalSeconds)
+            return;
+
+        _configuredTotalSeconds = normalizedTotal;
+        if (!_isRunning)
+            _remainingSeconds = normalizedTotal;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !AutoStart || IsPreview || _remainingSeconds <= 0)
+            return;
+
+        await StartAsync();
+    }
+
+    public Task StartAsync()
+    {
+        if (IsPreview || _isRunning || _remainingSeconds <= 0)
+            return Task.CompletedTask;
+
+        CancelAndDisposeTimerSource();
+        _timerCts = new CancellationTokenSource();
+        _isRunning = true;
+        _timerLoopTask = RunCountdownLoopAsync(_timerCts.Token);
+        return Task.CompletedTask;
+    }
+
+    public void Pause()
+    {
+        _isRunning = false;
+        CancelAndDisposeTimerSource();
+    }
+
+    public void Reset()
+    {
+        Pause();
+        _remainingSeconds = Math.Max(0, TotalSeconds);
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RunCountdownLoopAsync(CancellationToken cancellationToken)
+    {
+        using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        try
+        {
+            while (await periodicTimer.WaitForNextTickAsync(cancellationToken))
+            {
+                if (_remainingSeconds <= 0)
+                    break;
+
+                _remainingSeconds--;
+                await InvokeAsync(NotifyTickAndRefreshAsync);
+
+                if (_remainingSeconds <= 0)
+                    break;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task NotifyTickAndRefreshAsync()
+    {
+        await OnTick.InvokeAsync(_remainingSeconds);
+        if (_remainingSeconds == 0)
+        {
+            _isRunning = false;
+            await OnCompleted.InvokeAsync();
+        }
+        StateHasChanged();
+    }
+
+    private Pill.PillVariant ResolveTimerVariant()
+    {
+        if (_remainingSeconds <= 5)
+            return Pill.PillVariant.Danger;
+
+        var ratio = (double)_remainingSeconds / EffectiveTotalSeconds;
+        return ratio <= 0.35 ? Pill.PillVariant.Warning : Pill.PillVariant.Accent;
+    }
+
+    private void CancelAndDisposeTimerSource()
+    {
+        if (_timerCts is null)
+            return;
+
+        _timerCts.Cancel();
+        _timerCts.Dispose();
+        _timerCts = null;
+    }
+
+    private string BuildCssClasses() => new CssBuilder()
+        .Add("ui-countdown")
+        .Add("urgent", when: _remainingSeconds <= 5)
+        .AddRaw(ModifierClass)
+        .Build();
+
+    public async ValueTask DisposeAsync()
+    {
+        Pause();
+        if (_timerLoopTask is null)
+            return;
+
+        try
+        {
+            await _timerLoopTask;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+}
