@@ -1,0 +1,57 @@
+@inherits UIComponentBase
+
+<nav class="@BuildNavCssClasses()"
+     style="@ModifierStyle"
+     aria-label="@AriaLabel"
+     @attributes="AdditionalAttributes">
+    <ol class="breadcrumbs-list">
+        @for (var index = 0; index < Items.Count; index++)
+        {
+            var item = Items[index];
+            var isLast = index == Items.Count - 1;
+            <li class="breadcrumbs-item">
+                @if (isLast)
+                {
+                    <span class="breadcrumbs-current" aria-current="page">@item.Label</span>
+                }
+                else
+                {
+                    <button type="button"
+                            class="breadcrumbs-link"
+                            @onclick="() => HandleItemClickedAsync(item)">
+                        @item.Label
+                    </button>
+                    <span class="breadcrumbs-separator" aria-hidden="true">@Separator</span>
+                }
+            </li>
+        }
+    </ol>
+</nav>
+
+@code {
+    public sealed record BreadcrumbItem(string Id, string Label);
+
+    [Parameter] public IReadOnlyList<BreadcrumbItem> Items { get; set; } = [];
+    [Parameter] public string Separator { get; set; } = NavigationDefaults.Breadcrumbs.DefaultSeparator;
+    [Parameter] public string AriaLabel { get; set; } = NavigationDefaults.Breadcrumbs.DefaultAriaLabel;
+    [Parameter] public EventCallback<BreadcrumbItem> OnItemClicked { get; set; }
+
+    private async Task HandleItemClickedAsync(BreadcrumbItem item)
+    {
+        if (!OnItemClicked.HasDelegate)
+        {
+            return;
+        }
+
+        await OnItemClicked.InvokeAsync(item);
+    }
+
+    private string BuildNavCssClasses()
+    {
+        return new CssBuilder()
+            .Add("breadcrumbs")
+            .AddRaw(ModifierClass)
+            .Build();
+    }
+}
+

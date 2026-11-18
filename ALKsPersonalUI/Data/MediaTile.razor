@@ -1,0 +1,93 @@
+@inherits UIComponentBase
+
+<div class="@BuildTileCssClasses()"
+     style="@ModifierStyle"
+     role="button"
+     tabindex="0"
+     aria-pressed="@(IsSelectionMode ? IsSelected : null)"
+     @onclick="HandleClickAsync"
+     @onkeydown="HandleKeyDownAsync"
+     @attributes="AdditionalAttributes">
+    <div class="media-tile-preview">
+        <Image Source="@ImageSource"
+               Alt="@(ImageAlt ?? Title)"
+               Fit="@ImageFit.Cover"
+               FallbackText="@Title" />
+
+        @if (IsSelectionMode || IsSelected)
+        {
+            <button type="button"
+                    class="media-tile-check"
+                    aria-label="@(IsSelected ? $"Deselect {Title}" : $"Select {Title}")"
+                    @onclick="HandleToggleSelectAsync"
+                    @onclick:stopPropagation="true">
+                @if (IsSelected)
+                {
+                    <span>@InputDefaults.Symbols.Checkmark</span>
+                }
+            </button>
+        }
+    </div>
+
+    <div class="media-tile-meta">
+        <span class="media-tile-title">@Title</span>
+        @if (!string.IsNullOrWhiteSpace(Subtitle))
+        {
+            <span class="media-tile-subtitle">@Subtitle</span>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? ImageSource { get; set; }
+    [Parameter] public string? ImageAlt { get; set; }
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public bool IsSelected { get; set; }
+    [Parameter] public bool IsSelectionMode { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public EventCallback<bool> OnToggleSelect { get; set; }
+
+    private async Task HandleClickAsync()
+    {
+        if (IsSelectionMode && OnToggleSelect.HasDelegate)
+        {
+            await OnToggleSelect.InvokeAsync(!IsSelected);
+            return;
+        }
+
+        if (OnClick.HasDelegate)
+        {
+            await OnClick.InvokeAsync();
+        }
+    }
+
+    private async Task HandleToggleSelectAsync()
+    {
+        if (!OnToggleSelect.HasDelegate)
+        {
+            return;
+        }
+
+        await OnToggleSelect.InvokeAsync(!IsSelected);
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key is not ("Enter" or " "))
+        {
+            return;
+        }
+
+        await HandleClickAsync();
+    }
+
+    private string BuildTileCssClasses()
+    {
+        return new CssBuilder()
+            .Add("media-tile")
+            .Add("media-tile-selected", IsSelected)
+            .AddRaw(ModifierClass)
+            .Build();
+    }
+}
