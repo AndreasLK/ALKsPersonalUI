@@ -39,16 +39,17 @@
     [Parameter] public string LoadingText { get; set; } = LoaderDefaults.Orbital.DefaultLoadingText;
     [Parameter] public bool FillParent { get; set; }
     [Parameter] public double Scale { get; set; } = LoaderDefaults.Orbital.DefaultScale;
-    [Parameter] public int SystemSize { get; set; } = LoaderDefaults.Orbital.DefaultSystemSizePixels;
+    [Parameter] public int SystemSize { get; set; } = LoaderDefaults.Orbital.DefaultSystemSizePx;
     [Parameter] public double OrbitTilt { get; set; } = LoaderDefaults.Orbital.DefaultOrbitTiltDegrees;
     [Parameter] public int SatelliteCount { get; set; } = LoaderDefaults.Orbital.DefaultSatelliteCount;
-    [Parameter] public int SatelliteSize { get; set; } = LoaderDefaults.Orbital.DefaultSatelliteSizePixels;
+    [Parameter] public int SatelliteSize { get; set; } = LoaderDefaults.Orbital.DefaultSatelliteSizePx;
     [Parameter] public double OrbitDuration { get; set; } = LoaderDefaults.Orbital.DefaultOrbitDurationSeconds;
     [Parameter] public double PrecessionDuration { get; set; } = LoaderDefaults.Orbital.DefaultPrecessionDurationSeconds;
+
     [Parameter] public string BaseColor { get; set; } = LoaderDefaults.Orbital.DefaultBaseColor;
     [Parameter] public string TintBlueshift { get; set; } = LoaderDefaults.Orbital.DefaultBlueshiftColor;
     [Parameter] public string TintRedshift { get; set; } = LoaderDefaults.Orbital.DefaultRedshiftColor;
-    [Parameter] public int ShiftIntensity { get; set; } = LoaderDefaults.Orbital.DefaultShiftIntensityPercent;
+    [Parameter] public int ShiftIntensity { get; set; } = LoaderDefaults.Orbital.DefaultDopplerShiftIntensityPercent;
 
     private bool HasCenterPayload => ChildContent is not null;
     private bool HasLoadingText => !string.IsNullOrWhiteSpace(LoadingText);

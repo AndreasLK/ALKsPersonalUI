@@ -5,7 +5,6 @@
 <PageTitle>ALK's Personal UI - Planetary Loaders & Spinners</PageTitle>
 
 <Column Modifier="@(UIModifier.New.FillMaxWidth())" Gap="2rem">
-
     <TitledWindow Title="SimpleSpinner & 3D OrbitalLoader Wrapping Procedural <Mars />"
                   Modifier="@ShowcaseStyles.SectionWindow">
         <Grid MinColumnWidth="400px" Gap="1.5rem">
@@ -13,9 +12,9 @@
                 <Column Gap="1rem" HorizontalAlignment="HorizontalAlignment.Center" Modifier="@(UIModifier.New.FillMaxWidth())">
                     <Text Variant="TypographyVariant.Subtitle" Weight="FontWeight.Bold" Value="1. <SimpleSpinner> (Conic Velocity Ring)" />
                     <Row Gap="2rem" Modifier="@(UIModifier.New.Padding(24))">
-                        <SimpleSpinner Modifier="@(UIModifier.New.Width(28).Thickness(3).BaseColor("#3b82f6"))" />
-                        <SimpleSpinner Modifier="@(UIModifier.New.Width(44).Thickness(5).BaseColor("#ffcc00").AnimationSpeed("1.2s"))" />
-                        <SimpleSpinner Modifier="@(UIModifier.New.Width(58).Thickness(6).BaseColor("#22c55e").AnimationSpeed("0.6s"))" />
+                        <SimpleSpinner Modifier="@(UIModifier.New.Width(28).StrokeThickness(3).BaseColor("#3b82f6"))" />
+                        <SimpleSpinner Modifier="@(UIModifier.New.Width(44).StrokeThickness(5).BaseColor("#ffcc00").PressAnimationDuration("1.2s"))" />
+                        <SimpleSpinner Modifier="@(UIModifier.New.Width(58).StrokeThickness(6).BaseColor("#22c55e").PressAnimationDuration("0.6s"))" />
                     </Row>
                 </Column>
 
@@ -66,7 +65,6 @@
             </Window>
         </Grid>
     </TitledWindow>
-
 </Column>
 
 @code {
@@ -84,7 +82,7 @@
 
     private const string SpinnerSnippet = @"<SimpleSpinner Modifier=""@(UIModifier.New
     .Width(44)
-    .Thickness(5)
+    .StrokeThickness(5)
     .BaseColor(""#ffcc00"")
-    .AnimationSpeed(""1.2s""))"" />";
+    .PressAnimationDuration(""1.2s""))"" />";
 }

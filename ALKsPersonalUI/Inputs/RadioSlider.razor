@@ -3,7 +3,6 @@
 <div class="@BuildRootCssClasses()"
      style="@BuildRootStyles()"
      @attributes="AdditionalAttributes">
-
     <div class="radio-scale">
         <svg viewBox="@SliderDefaults.RotaryDial.SvgViewBox" class="scale-graphics">
             @for (int tickIndex = 0; tickIndex <= TotalTicks; tickIndex++)
@@ -43,23 +42,20 @@
             @onpointermove="HandlePointerMove"
             @onpointerup="HandlePointerUp"
             @onpointercancel="HandlePointerUp">
-
         <span class="dial-front">
             <span class="@BuildIndicatorCssClasses()"
                   style="--_rs-rotation: @(GeometryMath.FormatInvariant(CurrentRotationDegrees))deg;"></span>
-
             @if (ShowSelectedValue)
             {
                 <span class="dial-readout">@SelectedValue@SelectionUnit</span>
             }
-
             <span class="dial-hit-area" onpointerdown="this.setPointerCapture(event.pointerId)"></span>
         </span>
     </button>
 </div>
 
 @code {
-    [Parameter] public double DialPixelSize { get; set; } = 250.0;
+    [Parameter] public double DialSizePx { get; set; } = 250.0;
     [Parameter] public int MaxAngle { get; set; } = SliderDefaults.RotaryDial.DefaultMaxAngleDegrees;
     [Parameter] public double? CustomStartAngle { get; set; }
 
@@ -81,7 +77,7 @@
         .Build();
 
     private string BuildRootStyles() => new StyleBuilder()
-        .Add("--_rs-size", ModifierOrEmpty.WidthValue ?? $"{GeometryMath.FormatInvariant(DialPixelSize)}px")
+        .Add("--_rs-size", ModifierOrEmpty.WidthValue ?? $"{GeometryMath.FormatInvariant(DialSizePx)}px")
         .AddRaw(ModifierOrEmpty.BuildFrameExtras())
         .Build();
 
@@ -89,8 +85,8 @@
     {
         var tickAngleDegrees = StartingAngleOffsetDegrees + (tickIndex * DegreesPerTick);
         var formattedAngle = GeometryMath.FormatInvariant(tickAngleDegrees);
-        var center = GeometryMath.FormatInvariant(SliderDefaults.RotaryDial.SvgCenterCoordinate);
-        return $"rotate({formattedAngle}, {center}, {center})";
+        var svgCenterCoordinateText = GeometryMath.FormatInvariant(SliderDefaults.RotaryDial.SvgCenterCoordinate);
+        return $"rotate({formattedAngle}, {svgCenterCoordinateText}, {svgCenterCoordinateText})";
     }
 
     private string BuildDialButtonCssClasses() => new CssBuilder()
@@ -108,11 +104,12 @@
         if (!HasValidRange || MaxAngle <= 0)
             return;
 
-        var buttonRadius = (DialPixelSize * 0.70) / GeometryMath.HalfDivisor;
+        var buttonRadius = (DialSizePx * 0.70) / GeometryMath.HalfDivisor;
         var deltaX = pointerEvent.OffsetX - buttonRadius;
         var deltaY = pointerEvent.OffsetY - buttonRadius;
 
         var pointerAngleDegrees = GeometryMath.CalculatePointerAngleInDegrees(deltaX, deltaY);
+
         var normalizedProgress = Math.Clamp(
             (pointerAngleDegrees - StartingAngleOffsetDegrees) / MaxAngle,
             GeometryMath.NormalizedMin,

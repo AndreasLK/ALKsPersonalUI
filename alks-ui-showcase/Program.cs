@@ -12,13 +12,14 @@ builder.Services.AddPersonalUILibrary(options =>
 {
     options.DefaultPressEffect = ButtonPressEffect.Auto;
     options.DefaultTouchInputMode = TouchInputMode.Auto;
+
     options.AddSeedTheme(
         name: "SunsetTouch",
         accentColor: "#f97316",
-        appBackground: "#16100c",
+        applicationBackgroundColor: "#16100c",
         actionColor: "#fb923c",
-        isDark: true,
-        pressEffect: ButtonPressEffect.Auto);
+        isDarkTheme: true,
+        defaultPressEffect: ButtonPressEffect.Auto);
 });
 
 await builder.Build().RunAsync();

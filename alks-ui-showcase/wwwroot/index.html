@@ -34,6 +34,23 @@
         <a class="dismiss" style="cursor: pointer; position: absolute; right: 1.25rem; top: 0.5rem;">&#x2715;</a>
     </div>
 
+    <script>
+                window.alkPlayground = {
+                    getCaretIndex: function (element) {
+                        return element ? (element.selectionStart || 0) : 0;
+                    },
+                    replaceTokenAtCaret: function (element, replaceStart, replaceEnd, insertText, cursorOffsetFromEnd) {
+                        if (!element) return "";
+                        const current = element.value || "";
+                        const updated = current.substring(0, replaceStart) + insertText + current.substring(replaceEnd);
+                        element.value = updated;
+                        const newPos = replaceStart + insertText.length + (cursorOffsetFromEnd || 0);
+                        element.focus();
+                        element.setSelectionRange(newPos, newPos);
+                        return updated;
+                    }
+                };
+    </script>
     <script src="_framework/blazor.webassembly.js"></script>
 </body>
 

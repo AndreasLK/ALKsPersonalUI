@@ -5,7 +5,6 @@
 <PageTitle>ALK's Personal UI - Form Inputs & Validation</PageTitle>
 
 <Column Modifier="@(UIModifier.New.FillMaxWidth())" Gap="2rem">
-
     <TitledWindow Title="TextInput & Password Input (Live Validation, SecretString & Auto-Touch Keyboard)"
                   Modifier="@ShowcaseStyles.SectionWindow">
         <Text Variant="TypographyVariant.Body"
@@ -22,8 +21,9 @@
                                TouchMode="TouchInputMode.Always"
                                KeyboardSetup="@KeyboardSetup.TouchStandard"
                                Placeholder="Click or tap to open ScreenKeyboard..."
-                               Rules="_usernameRules"
+                               ValidationRules="_usernameRules"
                                Modifier="@(UIModifier.New.FillMaxWidth().Padding(10, 14))" />
+
                     <Row Gap="0.5rem" VerticalAlignment="VerticalAlignment.Center">
                         <Text Variant="TypographyVariant.Caption" Muted="true" Value="Live Bound Value:" />
                         <Pill Variant="Pill.PillVariant.Accent" Text="@(_sampleUsername ?? "(empty)")" />
@@ -53,8 +53,9 @@
                                IsPassword="true"
                                @bind-SecretValue="_sampleSecret"
                                Placeholder="Enter password (min 8 chars + digit)..."
-                               Rules="_passwordRules"
+                               ValidationRules="_passwordRules"
                                Modifier="@(UIModifier.New.FillMaxWidth().Padding(10, 14))" />
+
                     <Row Gap="0.5rem" VerticalAlignment="VerticalAlignment.Center">
                         <Text Variant="TypographyVariant.Caption" Muted="true" Value="SecretValue.ToString():" />
                         <Text Variant="TypographyVariant.Mono" Color="#f59e0b" Value="@_sampleSecret.ToString()" />
@@ -85,12 +86,12 @@
     <TitledWindow Title="NumberInput<TValue>, Checkbox, Switch & Dropdown<TItem>"
                   Modifier="@ShowcaseStyles.SectionWindow">
         <Grid MinColumnWidth="360px" Gap="1.5rem">
-
             @* NUMBER INPUT CARD *@
             <Window Modifier="@ShowcaseStyles.FullHeightCardWindow">
                 <Column Gap="0.75rem" Modifier="@(UIModifier.New.FillMaxWidth())">
                     <Text Variant="TypographyVariant.Subtitle" Weight="FontWeight.Bold" Value="1. Generic <NumberInput<TValue>>" />
                     <Text Variant="TypographyVariant.Caption" Muted="true" Value="Supports any INumber<T> (int, decimal, double). Hold +/- to auto-repeat, or tap the number to open TouchNumpad:" />
+
                     <NumberInput TValue="decimal"
                                  @bind-Value="_demoPrice"
                                  TouchMode="TouchInputMode.Always"
@@ -99,11 +100,13 @@
                                  Max="500m"
                                  AriaLabel="Unit Price"
                                  Suffix="kr." />
+
                     <Row Gap="0.5rem" VerticalAlignment="VerticalAlignment.Center">
                         <Text Variant="TypographyVariant.Caption" Muted="true" Value="Bound Value:" />
                         <Pill Variant="Pill.PillVariant.Success" Text="@($"{_demoPrice:0.00} kr.")" />
                     </Row>
                 </Column>
+
                 <Column Gap="0.45rem" Modifier="@(UIModifier.New.FillMaxWidth())">
                     <Row HorizontalArrangement="Arrangement.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Modifier="@(UIModifier.New.FillMaxWidth())">
                         <Text Variant="TypographyVariant.Caption" Muted="true" Value="NumberInput Markup:" />
@@ -123,13 +126,15 @@
             <Window Modifier="@ShowcaseStyles.FullHeightCardWindow">
                 <Column Gap="0.75rem" Modifier="@(UIModifier.New.FillMaxWidth())">
                     <Text Variant="TypographyVariant.Subtitle" Weight="FontWeight.Bold" Value="2. <Checkbox> & Toggle Switch" />
-                    <Text Variant="TypographyVariant.Caption" Muted="true" Value="Set IsSwitch='true' to render a sliding pill toggle instead of a checkmark box:" />
+                    <Text Variant="TypographyVariant.Caption" Muted="true" Value="Set RenderAsToggleSwitch='true' to render a sliding pill toggle instead of a checkmark box:" />
+
                     <Checkbox @bind-Checked="_demoCheck" Label="Standard SVG Checkbox" />
                     <Checkbox @bind-Checked="_demoSwitch"
-                              IsSwitch="true"
-                              Label="Pill Switch Mode (IsSwitch = true)"
+                              RenderAsToggleSwitch="true"
+                              Label="Pill Switch Mode (RenderAsToggleSwitch = true)"
                               Modifier="@(UIModifier.New.AccentColor("#22c55e"))" />
                 </Column>
+
                 <Column Gap="0.45rem" Modifier="@(UIModifier.New.FillMaxWidth())">
                     <Row HorizontalArrangement="Arrangement.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Modifier="@(UIModifier.New.FillMaxWidth())">
                         <Text Variant="TypographyVariant.Caption" Muted="true" Value="Checkbox & Switch Markup:" />
@@ -149,16 +154,19 @@
             <Window Modifier="@ShowcaseStyles.FullHeightCardWindow">
                 <Column Gap="0.75rem" Modifier="@(UIModifier.New.FillMaxWidth())">
                     <Text Variant="TypographyVariant.Subtitle" Weight="FontWeight.Bold" Value="3. Generic <Dropdown<TItem>>" />
-                    <Text Variant="TypographyVariant.Caption" Muted="true" Value="Supports custom objects via TextSelector, keyboard arrow navigation, and enlarged touch options:" />
+                    <Text Variant="TypographyVariant.Caption" Muted="true" Value="Supports custom objects via ItemDisplayTextSelector, keyboard arrow navigation, and enlarged touch options:" />
+
                     <Dropdown TItem="string"
                               Items="_danishStores"
                               @bind-Value="_selectedStore"
                               Modifier="@(UIModifier.New.FillMaxWidth())" />
+
                     <Row Gap="0.5rem" VerticalAlignment="VerticalAlignment.Center">
                         <Text Variant="TypographyVariant.Caption" Muted="true" Value="Selected Store:" />
                         <Pill Variant="Pill.PillVariant.Accent" Text="@_selectedStore" />
                     </Row>
                 </Column>
+
                 <Column Gap="0.45rem" Modifier="@(UIModifier.New.FillMaxWidth())">
                     <Row HorizontalArrangement="Arrangement.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Modifier="@(UIModifier.New.FillMaxWidth())">
                         <Text Variant="TypographyVariant.Caption" Muted="true" Value="Dropdown Markup:" />
@@ -173,10 +181,8 @@
                     </Window>
                 </Column>
             </Window>
-
         </Grid>
     </TitledWindow>
-
 </Column>
 
 @code {
@@ -209,7 +215,6 @@
     {
         if (_sampleSecret.IsEmpty)
             return "(empty or invalid)";
-
         var fullHash = _sampleSecret.Hash("my-app-salt");
         return fullHash[..20] + "...";
     }
@@ -218,7 +223,7 @@
            @bind-Value=""_username""
            TouchMode=""TouchInputMode.Auto""
            KeyboardSetup=""@KeyboardSetup.TouchStandard""
-           Rules=""_usernameRules""
+           ValidationRules=""_usernameRules""
            Modifier=""@(UIModifier.New.FillMaxWidth())"" />
 
 @code {
@@ -234,7 +239,7 @@
 <TextInput Label=""Password""
            IsPassword=""true""
            @bind-SecretValue=""_secret""
-           Rules=""_passwordRules""
+           ValidationRules=""_passwordRules""
            Modifier=""@(UIModifier.New.FillMaxWidth())"" />
 
 @code {
@@ -253,7 +258,7 @@
     private const string CheckboxSnippet = @"<Checkbox @bind-Checked=""_agreed"" Label=""Accept terms"" />
 
 <Checkbox @bind-Checked=""_enabled""
-          IsSwitch=""true""
+          RenderAsToggleSwitch=""true""
           Label=""Enable Kiosk Mode""
           Modifier=""@(UIModifier.New.AccentColor(""#22c55e""))"" />";
 

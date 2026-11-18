@@ -21,12 +21,12 @@ public sealed class PersonalUIOptions
     public PersonalUIOptions AddSeedTheme(
         string name,
         string accentColor,
-        string appBackground = "#121316",
+        string applicationBackgroundColor = "#121316",
         string? actionColor = null,
-        bool isDark = true,
-        ButtonPressEffect pressEffect = ButtonPressEffect.Auto)
+        bool isDarkTheme = true,
+        ButtonPressEffect defaultPressEffect = ButtonPressEffect.Auto)
     {
-        CustomPresets[name] = () => UITheme.FromSeed(name, accentColor, appBackground, actionColor, isDark, pressEffect);
+        CustomPresets[name] = () => UITheme.FromSeed(name, accentColor, applicationBackgroundColor, actionColor, isDarkTheme, defaultPressEffect);
         return this;
     }
 }

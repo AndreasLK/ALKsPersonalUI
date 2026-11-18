@@ -29,6 +29,7 @@
                 }
             </div>
         </Window>
+
         <div class="tabs-body">@ChildContent</div>
     </div>
 </CascadingValue>
@@ -102,8 +103,8 @@
 
     private string ResolveTabBaseColor(bool isTabActive)
     {
-        var accent = ModifierOrEmpty.AccentColorValue ?? NavigationDefaults.Tabs.DefaultAccentColor;
-        return isTabActive ? accent : NavigationDefaults.Tabs.InactiveTabColor;
+        var resolvedAccentColor = ModifierOrEmpty.AccentColorValue ?? NavigationDefaults.Tabs.DefaultAccentColor;
+        return isTabActive ? resolvedAccentColor : NavigationDefaults.Tabs.InactiveTabColor;
     }
 
     private void SetInitialActiveTab(string initialTabId)
@@ -142,7 +143,6 @@
             return _registeredTabs;
 
         SynchronizeBreadcrumbTrailWithSelection(ActiveTabId ?? string.Empty);
-
         return _breadcrumbTrailTabIds
             .Select(trailTabId => _registeredTabs.FirstOrDefault(tab => tab.Id == trailTabId))
             .OfType<TabPanel>();

@@ -4,69 +4,75 @@
 @inject NavigationManager Nav
 @implements IDisposable
 
-<Scaffold Modifier="@(UIModifier.New.AlignItems(HorizontalAlignment.Center).Padding(20, 20, 64, 20))">
+<Scaffold Modifier="@(UIModifier.New.AlignItems(HorizontalAlignment.Center).Padding(16, 16, 64, 16))">
     <TopBar>
         <Box ContentAlignment="BoxAlignment.Center"
-             Modifier="@(UIModifier.New.FillMaxWidth().Padding(16, 20, 8, 20))">
-            <Window Modifier="@(UIModifier.New.FillMaxWidth().MaxWidth(1340).Padding(16, 22).Gap(14).Background("var(--ui-bg-elevated)").BorderRadius("var(--ui-radius-lg)"))">
+             Modifier="@(UIModifier.New.FillMaxWidth().Padding(12, 16, 8, 16))">
+            <Window Modifier="@(UIModifier.New.FillMaxWidth().MaxWidth(1340).Padding(14, 20).Gap(12).Background("var(--ui-bg-elevated)").BorderRadius("var(--ui-radius-lg)"))">
                 <Row HorizontalArrangement="Arrangement.SpaceBetween"
                      VerticalAlignment="VerticalAlignment.Center"
                      Wrap="true"
-                     Gap="1rem"
+                     Gap="0.75rem"
                      Modifier="@(UIModifier.New.FillMaxWidth())">
-                    <Row Gap="0.75rem" VerticalAlignment="VerticalAlignment.Center" Wrap="true">
+                    <Row Gap="0.65rem" VerticalAlignment="VerticalAlignment.Center" Wrap="true">
                         <Text Variant="TypographyVariant.H2" Value="ALK's Personal UI" />
-                        <Pill Variant="Pill.PillVariant.Accent" Text="v2.0.0 Studio & Docs" />
+                        <Pill Variant="Pill.PillVariant.Accent" Text="v3.0.0-alpha.1 Studio" />
                     </Row>
 
-                    <Row Gap="0.5rem" Wrap="true" VerticalAlignment="VerticalAlignment.Center">
-                        <Text Variant="TypographyVariant.Caption" Muted="true" Value="Theme Preset:" />
+                    <Row Gap="0.45rem" Wrap="true" VerticalAlignment="VerticalAlignment.Center">
+                        <Text Variant="TypographyVariant.Caption" Muted="true" Value="Theme:" />
                         @foreach (var preset in ThemeService.RegisteredPresets)
                         {
                             <Pill Text="@preset"
                                   Active="@(string.Equals(ThemeService.Current.Name, preset, StringComparison.OrdinalIgnoreCase))"
-                                  Modifier="@(UIModifier.New.Padding(6, 14))"
+                                  Modifier="@(UIModifier.New.Padding(5, 12))"
                                   OnClick="@(() => SelectThemePreset(preset))" />
                         }
+                        <Pill Variant="Pill.PillVariant.Neutral"
+                              Active="@_showGlobalSettings"
+                              Text="@(_showGlobalSettings ? "Hide Global Physics ▲" : "Global Physics & Touch ▼")"
+                              OnClick="@(() => _showGlobalSettings = !_showGlobalSettings)" />
                     </Row>
                 </Row>
 
-                <Divider />
+                @if (_showGlobalSettings)
+                {
+                    <Divider />
+                    <Row HorizontalArrangement="Arrangement.SpaceBetween"
+                         VerticalAlignment="VerticalAlignment.Center"
+                         Wrap="true"
+                         Gap="1rem"
+                         Modifier="@(UIModifier.New.FillMaxWidth())">
+                        <Row Gap="0.6rem" Wrap="true" VerticalAlignment="VerticalAlignment.Center">
+                            <Text Variant="TypographyVariant.Caption" Muted="true" Value="Global Button Physics:" />
+                            <SegmentedControl TItem="ButtonPressEffect"
+                                              Items="_pressEffects"
+                                              Value="@ThemeService.Current.DefaultPressEffect"
+                                              ValueChanged="OnGlobalPressEffectChanged"
+                                              ItemDisplayTextSelector="FormatPressEffect" />
+                        </Row>
 
-                <Row HorizontalArrangement="Arrangement.SpaceBetween"
-                     VerticalAlignment="VerticalAlignment.Center"
-                     Wrap="true"
-                     Gap="1rem"
-                     Modifier="@(UIModifier.New.FillMaxWidth())">
-                    <Row Gap="0.6rem" Wrap="true" VerticalAlignment="VerticalAlignment.Center">
-                        <Text Variant="TypographyVariant.Caption" Muted="true" Value="Global Button Physics:" />
-                        <SegmentedControl TItem="ButtonPressEffect"
-                                          Items="_pressEffects"
-                                          Value="@ThemeService.Current.DefaultPressEffect"
-                                          ValueChanged="OnGlobalPressEffectChanged"
-                                          TextSelector="FormatPressEffect" />
+                        <Row Gap="0.6rem" Wrap="true" VerticalAlignment="VerticalAlignment.Center">
+                            <Text Variant="TypographyVariant.Caption" Muted="true" Value="Global Touch Popups:" />
+                            <SegmentedControl TItem="TouchInputMode"
+                                              Items="_touchModes"
+                                              Value="@ThemeService.Current.DefaultTouchInputMode"
+                                              ValueChanged="OnGlobalTouchModeChanged"
+                                              ItemDisplayTextSelector="FormatTouchMode" />
+                        </Row>
                     </Row>
-
-                    <Row Gap="0.6rem" Wrap="true" VerticalAlignment="VerticalAlignment.Center">
-                        <Text Variant="TypographyVariant.Caption" Muted="true" Value="Global Touch Popups:" />
-                        <SegmentedControl TItem="TouchInputMode"
-                                          Items="_touchModes"
-                                          Value="@ThemeService.Current.DefaultTouchInputMode"
-                                          ValueChanged="OnGlobalTouchModeChanged"
-                                          TextSelector="FormatTouchMode" />
-                    </Row>
-                </Row>
+                }
 
                 <Divider />
 
                 @* PAGE NAVIGATION BAR *@
-                <Row Gap="0.45rem" Wrap="true" VerticalAlignment="VerticalAlignment.Center" Modifier="@(UIModifier.New.FillMaxWidth())">
+                <Row Gap="0.4rem" Wrap="true" VerticalAlignment="VerticalAlignment.Center" Modifier="@(UIModifier.New.FillMaxWidth())">
                     @foreach (var navItem in _navPages)
                     {
                         var isActive = IsRouteActive(navItem.Href);
                         <ActionButton Variant="@(isActive ? ActionButton.ButtonVariant.Solid : ActionButton.ButtonVariant.Ghost)"
                                       Size="ActionButton.ButtonSize.Small"
-                                      Modifier="@(UIModifier.New.BaseColor(isActive ? "var(--ui-accent)" : "var(--ui-text)").TextColor("var(--ui-text)").Padding(7, 14))"
+                                      Modifier="@(UIModifier.New.BaseColor(isActive ? "var(--ui-accent)" : (navItem.Href == "/playground" ? "var(--ui-action)" : "var(--ui-text)")).TextColor(isActive ? "var(--ui-text)" : (navItem.Href == "/playground" ? "var(--ui-action)" : "var(--ui-text)")).Padding(7, 13))"
                                       Text="@navItem.Title"
                                       OnClick="@(() => Nav.NavigateTo(navItem.Href))" />
                     }
@@ -85,18 +91,21 @@
 @code {
     private sealed record NavPageItem(string Title, string Href);
 
+    private bool _showGlobalSettings = false;
+
     private static readonly NavPageItem[] _navPages =
     [
-        new("1. Quickstart & Guide", "/"),
-        new("2. Buttons & Builder", "/buttons"),
-        new("3. Keyboard & Numpad", "/keyboard"),
-        new("4. Form Inputs", "/inputs"),
-        new("5. Layout & Windows", "/layout"),
-        new("6. Sliders & Dials", "/sliders"),
-        new("7. Overlays & Sheets", "/overlays"),
-        new("8. Theme Debugger", "/themes"),
-        new("9. Loaders & Mars", "/loaders"),
-        new("10. UIModifier API", "/api")
+        new("1. Quickstart", "/"),
+        new("⚡ 2. Live UI Playground", "/playground"),
+        new("3. Buttons & Builder", "/buttons"),
+        new("4. Keyboard & Numpad", "/keyboard"),
+        new("5. Form Inputs", "/inputs"),
+        new("6. Layout & Windows", "/layout"),
+        new("7. Sliders & Dials", "/sliders"),
+        new("8. Overlays & Sheets", "/overlays"),
+        new("9. Theme Studio", "/themes"),
+        new("10. Loaders & Mars", "/loaders"),
+        new("11. UIModifier API", "/api")
     ];
 
     private static readonly ButtonPressEffect[] _pressEffects =
@@ -128,7 +137,6 @@
         var relative = "/" + Nav.ToBaseRelativePath(Nav.Uri).Split('?')[0].Trim('/');
         if (href == "/" && (relative == "/" || relative.Equals("/cheatsheet", StringComparison.OrdinalIgnoreCase)))
             return true;
-
         return string.Equals(relative, href, StringComparison.OrdinalIgnoreCase);
     }
 

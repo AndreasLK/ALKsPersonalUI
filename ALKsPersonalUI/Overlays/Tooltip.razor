@@ -26,7 +26,7 @@
     [Parameter, EditorRequired] public string Text { get; set; } = string.Empty;
     [Parameter] public TooltipPosition Position { get; set; } = TooltipPosition.Top;
 
-    private readonly string _uniqueTooltipElementId = $"{OverlayDefaults.Tooltip.IdPrefix}{Guid.NewGuid():N}";
+    private readonly string _uniqueTooltipElementId = $"{OverlayDefaults.Tooltip.TooltipElementIdPrefix}{Guid.NewGuid():N}";
     private bool _isTouchOpen;
 
     private bool HasTooltipText => !string.IsNullOrWhiteSpace(Text);

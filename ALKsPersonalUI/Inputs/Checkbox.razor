@@ -9,7 +9,7 @@
            @onchange="OnCheckboxChangedAsync"
            @attributes="AdditionalAttributes" />
 
-    @if (IsSwitch)
+    @if (RenderAsToggleSwitch)
     {
         <span class="switch-track" aria-hidden="true">
             <span class="switch-thumb"></span>
@@ -39,7 +39,7 @@
     [Parameter] public EventCallback<bool> CheckedChanged { get; set; }
     [Parameter] public string? Label { get; set; }
     [Parameter] public string? AriaLabel { get; set; }
-    [Parameter] public bool IsSwitch { get; set; }
+    [Parameter] public bool RenderAsToggleSwitch { get; set; }
     [Parameter] public bool Disabled { get; set; }
 
     private bool HasLabelText => !string.IsNullOrWhiteSpace(Label);

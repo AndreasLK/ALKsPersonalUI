@@ -5,7 +5,6 @@
 <PageTitle>ALK's Personal UI - UIModifier Architecture & Complete API Reference</PageTitle>
 
 <Column Modifier="@(UIModifier.New.FillMaxWidth())" Gap="2rem">
-
     <TitledWindow Title="How UIModifier Works Under the Hood (Frame vs. Body Styles & Reusable Presets)"
                   Modifier="@ShowcaseStyles.SectionWindow">
         <Text Variant="TypographyVariant.Body"
@@ -18,6 +17,7 @@
                 <Text Variant="TypographyVariant.Body"
                       Muted="true"
                       Value="Define static UIModifier properties in a shared C# class to keep your Razor markup clean. When you want to tweak a shared preset for one specific component, call .Clone() first so you never mutate the shared instance:" />
+
                 <Window Modifier="@ShowcaseStyles.CodeWindow">
                     <Text Variant="TypographyVariant.Mono" Color="#93c5fd" Modifier="@ShowcaseStyles.PreText" Value="@ClonePatternSnippet" />
                 </Window>
@@ -33,6 +33,7 @@
                 <Text Variant="TypographyVariant.Body"
                       Muted="true"
                       Value="When you pass a UIModifier to <TitledWindow>, outer sizing and borders (.Width(), .Height(), .BorderRadius(), .BorderColor()) apply to the outer window frame, while layout properties (.Padding(), .Gap(), .Row(), .Column()) automatically route to the inner body container below the title bar!" />
+
                 <Window Modifier="@ShowcaseStyles.CodeWindow">
                     <Text Variant="TypographyVariant.Mono" Color="#93c5fd" Modifier="@ShowcaseStyles.PreText" Value="@FrameVsBodySnippet" />
                 </Window>
@@ -45,18 +46,17 @@
         </Grid>
     </TitledWindow>
 
-    <TitledWindow Title="Complete UIModifier Method Reference (Filter by Category or Search)"
+    <TitledWindow Title="Complete v3 UIModifier Method Reference (Filter by Category or Search)"
                   Modifier="@ShowcaseStyles.SectionWindow">
         <Text Variant="TypographyVariant.Body"
               Muted="true"
-              Value="Every fluent method available on UIModifier.New, organized by category with its generated CSS output and usage example:" />
+              Value="Every fluent method available on UIModifier.New in v3.0, organized by category with its generated CSS output and usage example:" />
 
         <DataTable TItem="ModifierApiItem"
                    Items="_modifierApiItems"
                    Columns="_modifierApiColumns"
                    Modifier="@(UIModifier.New.FillMaxWidth())" />
     </TitledWindow>
-
 </Column>
 
 @code {
@@ -70,7 +70,7 @@
     [
         new("Sizing", ".Width(double px) / .Width(string css)", "width: {val}", "UIModifier.New.Width(320)"),
         new("Sizing", ".Height(double px) / .Height(string css)", "height: {val}", "UIModifier.New.Height(\"100vh\")"),
-        new("Sizing", ".Size(double px) / .Size(w, h)", "width + height", "UIModifier.New.Size(48)"),
+        new("Sizing", ".Size(double uniformPx) / .Size(widthPx, heightPx)", "width + height", "UIModifier.New.Size(48)"),
         new("Sizing", ".MinWidth(px) / .MinHeight(px)", "min-width / min-height", "UIModifier.New.MinHeight(180)"),
         new("Sizing", ".MaxWidth(px) / .MaxHeight(px)", "max-width / max-height", "UIModifier.New.MaxWidth(1280)"),
         new("Sizing", ".FillMaxWidth() / .FillMaxHeight() / .FillMaxSize()", "width: 100% / height: 100%", "UIModifier.New.FillMaxWidth()"),
@@ -78,9 +78,9 @@
         new("Sizing", ".Weight(double flexWeight = 1.0)", "flex-grow: {w}; flex-shrink: 1; flex-basis: 0%", "UIModifier.New.Weight(2)"),
         new("Sizing", ".AspectRatio(w, h)", "aspect-ratio: w / h", "UIModifier.New.AspectRatio(16, 9)"),
 
-        new("Spacing", ".Padding(double px) / .Padding(v, h)", "padding: {v} {h}", "UIModifier.New.Padding(16, 24)"),
-        new("Spacing", ".Padding(top, right, bottom, left)", "padding: {t} {r} {b} {l}", "UIModifier.New.Padding(8, 16, 24, 16)"),
-        new("Spacing", ".Margin(double px) / .Margin(v, h)", "margin: {v} {h}", "UIModifier.New.Margin(0, 12)"),
+        new("Spacing", ".Padding(double uniformPx) / .Padding(verticalPx, horizontalPx)", "padding: {v} {h}", "UIModifier.New.Padding(16, 24)"),
+        new("Spacing", ".Padding(topPx, rightPx, bottomPx, leftPx)", "padding: {t} {r} {b} {l}", "UIModifier.New.Padding(8, 16, 24, 16)"),
+        new("Spacing", ".Margin(double uniformPx) / .Margin(verticalPx, horizontalPx)", "margin: {v} {h}", "UIModifier.New.Margin(0, 12)"),
         new("Spacing", ".Gap(double px) / .Gap(string css)", "gap: {val}", "UIModifier.New.Gap(16)"),
 
         new("Layout", ".Row() / .Column()", "display: flex; flex-direction: row/column", "UIModifier.New.Row().Gap(12)"),
@@ -92,17 +92,18 @@
         new("Surface", ".Background(string cssColor)", "--_w-bg / background-color", "UIModifier.New.Background(\"var(--ui-bg-elevated)\")"),
         new("Surface", ".HeaderBackground(string cssColor)", "--_tw-header-bg", "UIModifier.New.HeaderBackground(\"#090d16\")"),
         new("Surface", ".BorderColor(string cssColor)", "--_w-border / border-color", "UIModifier.New.BorderColor(\"var(--ui-accent)\")"),
-        new("Surface", ".Border(double px, string color)", "border: {px}px solid {color}", "UIModifier.New.Border(2, \"#3b82f6\")"),
+        new("Surface", ".Border(double thicknessPx, string borderColor)", "border: {px}px solid {color}", "UIModifier.New.Border(2, \"#3b82f6\")"),
         new("Surface", ".BorderRadius(double px)", "--_w-radius / border-radius", "UIModifier.New.BorderRadius(16)"),
         new("Surface", ".ClipRounded(px) / .ClipCircle()", "border-radius + overflow: hidden", "UIModifier.New.ClipCircle()"),
         new("Surface", ".BoxShadow(string shadow) / .Opacity(double)", "box-shadow / opacity", "UIModifier.New.Opacity(0.85)"),
 
-        new("Buttons", ".BaseColor(string cssColor)", "--_btn-base (button face/border color)", "UIModifier.New.BaseColor(\"#22c55e\")"),
-        new("Buttons", ".TextColor(string cssColor)", "--_btn-text / color", "UIModifier.New.TextColor(\"#111111\")"),
-        new("Buttons", ".AccentColor(string cssColor)", "--_cb-accent / --_dd-accent", "UIModifier.New.AccentColor(\"#f97316\")"),
-        new("Buttons", ".Depth(double px)", "--_btn-depth (3D press shadow height)", "UIModifier.New.Depth(4)"),
-        new("Buttons", ".PressScale(double ratio)", "--_btn-scale (inward touch squish ratio)", "UIModifier.New.PressScale(0.90)"),
-        new("Buttons", ".AnimationSpeed(string cssTime)", "--_btn-speed / --loader-speed", "UIModifier.New.AnimationSpeed(\"0.08s\")"),
+        new("Buttons & Loaders", ".BaseColor(string cssColor)", "--_btn-base / --loader-color", "UIModifier.New.BaseColor(\"#22c55e\")"),
+        new("Buttons & Loaders", ".TextColor(string cssColor)", "--_btn-text / color", "UIModifier.New.TextColor(\"#111111\")"),
+        new("Buttons & Loaders", ".AccentColor(string cssColor)", "--_cb-accent / --_dd-accent", "UIModifier.New.AccentColor(\"#f97316\")"),
+        new("Buttons & Loaders", ".ButtonExtrusionDepth(double px)", "--_btn-depth (3D press shadow height)", "UIModifier.New.ButtonExtrusionDepth(4)"),
+        new("Buttons & Loaders", ".InwardPressScaleFactor(double scaleFactor)", "--_btn-scale (inward touch squish ratio)", "UIModifier.New.InwardPressScaleFactor(0.90)"),
+        new("Buttons & Loaders", ".PressAnimationDuration(string duration)", "--_btn-speed / --loader-speed", "UIModifier.New.PressAnimationDuration(\"0.08s\")"),
+        new("Buttons & Loaders", ".StrokeThickness(double px)", "--loader-thickness / --_div-thickness", "UIModifier.New.StrokeThickness(4)"),
 
         new("Typography", ".FontSize(double px) / .FontWeight(FontWeight)", "font-size / font-weight", "UIModifier.New.FontSize(18).FontWeight(FontWeight.Bold)"),
         new("Scroll & CSS", ".VerticalScroll() / .HorizontalScroll()", "overflow-y: auto / overflow-x: auto", "UIModifier.New.VerticalScroll()"),

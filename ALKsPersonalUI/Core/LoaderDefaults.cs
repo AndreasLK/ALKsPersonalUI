@@ -14,16 +14,16 @@ public static class LoaderDefaults
     {
         public const string DefaultLoadingText = "Loading...";
         public const double DefaultScale = 1.0;
-        public const int DefaultSystemSizePixels = 90;
+        public const int DefaultSystemSizePx = 90;
         public const double DefaultOrbitTiltDegrees = 80.0;
         public const int DefaultSatelliteCount = 9;
-        public const int DefaultSatelliteSizePixels = 3;
+        public const int DefaultSatelliteSizePx = 3;
         public const double DefaultOrbitDurationSeconds = 4.0;
         public const double DefaultPrecessionDurationSeconds = 45.0;
         public const string DefaultBaseColor = "#fff099";
         public const string DefaultBlueshiftColor = "#00ffff";
         public const string DefaultRedshiftColor = "#ff0000";
-        public const int DefaultShiftIntensityPercent = 25;
+        public const int DefaultDopplerShiftIntensityPercent = 25;
         public const string ResponsiveSystemSize = "66.6cqmin";
         public const string ResponsiveSatelliteSize = "2.2cqmin";
     }
@@ -31,7 +31,7 @@ public static class LoaderDefaults
     public static class Mars
     {
         public const double DefaultScale = 1.0;
-        public const double DefaultPlanetSizePixels = 40.0;
+        public const double DefaultPlanetSizePx = 40.0;
         public const string ResponsivePlanetSize = "30cqmin";
         public const double DefaultDayDurationSeconds = 24.0;
         public const int DefaultMinFeatures = 10;

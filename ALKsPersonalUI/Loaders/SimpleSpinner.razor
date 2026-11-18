@@ -10,9 +10,9 @@
 
     private string BuildSpinnerInlineStyles() => new StyleBuilder()
         .Add("--loader-size", ModifierOrEmpty.WidthValue ?? LoaderDefaults.SimpleSpinner.DefaultSize)
-        .Add("--loader-thickness", ModifierOrEmpty.ThicknessValue ?? LoaderDefaults.SimpleSpinner.DefaultThickness)
+        .Add("--loader-thickness", ModifierOrEmpty.StrokeThicknessValue ?? LoaderDefaults.SimpleSpinner.DefaultThickness)
         .Add("--loader-color", ModifierOrEmpty.TextColorValue ?? ModifierOrEmpty.BaseColorValue ?? LoaderDefaults.SimpleSpinner.DefaultColor)
-        .Add("--loader-speed", ModifierOrEmpty.AnimationSpeedValue ?? LoaderDefaults.SimpleSpinner.DefaultSpeed)
+        .Add("--loader-speed", ModifierOrEmpty.PressAnimationDurationValue ?? LoaderDefaults.SimpleSpinner.DefaultSpeed)
         .AddRaw(ModifierOrEmpty.BuildFrameExtras())
         .Build();
 }

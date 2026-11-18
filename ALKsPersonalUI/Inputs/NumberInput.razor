@@ -112,14 +112,15 @@
         .Padding("0.3rem", "0")
         .BaseColor(ModifierOrEmpty.BaseColorValue ?? InputDefaults.NumberInput.DefaultButtonColor)
         .TextColor(ModifierOrEmpty.TextColorValue ?? InputDefaults.NumberInput.DefaultButtonTextColor)
-        .Depth(ModifierOrEmpty.DepthValue ?? InputDefaults.NumberInput.StepButtonDepth);
+        .ButtonExtrusionDepth(ModifierOrEmpty.ButtonExtrusionDepthValue ?? InputDefaults.NumberInput.StepButtonExtrusionDepth);
 
-    private void HandleFieldPointerDown(PointerEventArgs e)
+    private void HandleFieldPointerDown(PointerEventArgs pointerEvent)
     {
         if (Disabled)
             return;
 
-        _isLastPointerTouch = e.PointerType is "touch" or "pen";
+        _isLastPointerTouch = pointerEvent.PointerType is "touch" or "pen";
+
         if (ResolvedTouchMode == TouchInputMode.Always ||
             (ResolvedTouchMode == TouchInputMode.Auto && _isLastPointerTouch))
         {

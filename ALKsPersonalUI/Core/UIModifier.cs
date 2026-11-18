@@ -6,7 +6,7 @@ public sealed class UIModifier
 {
     private StyleBuilder _extraFrameStyles = new();
     private StyleBuilder _extraBodyStyles = new();
-    private CssBuilder _cssBuilder = new();
+    private CssBuilder _cssClassBuilder = new();
 
     public static UIModifier Empty => new();
     public static UIModifier New => new();
@@ -31,19 +31,19 @@ public sealed class UIModifier
     public string? BaseColorValue { get; private set; }
     public string? TextColorValue { get; private set; }
     public string? AccentColorValue { get; private set; }
-    public string? DepthValue { get; private set; }
-    public string? AnimationSpeedValue { get; private set; }
+    public string? ButtonExtrusionDepthValue { get; private set; }
+    public string? PressAnimationDurationValue { get; private set; }
     public string? FontSizeValue { get; private set; }
-    public string? ThicknessValue { get; private set; }
-    public string? PressScaleValue { get; private set; }
+    public string? StrokeThicknessValue { get; private set; }
+    public string? InwardPressScaleFactorValue { get; private set; }
 
     public UIModifier Clone()
     {
-        var copy = (UIModifier)MemberwiseClone();
-        copy._extraFrameStyles = new StyleBuilder().AddRaw(_extraFrameStyles.Build());
-        copy._extraBodyStyles = new StyleBuilder().AddRaw(_extraBodyStyles.Build());
-        copy._cssBuilder = new CssBuilder().AddRaw(_cssBuilder.Build());
-        return copy;
+        var clonedModifier = (UIModifier)MemberwiseClone();
+        clonedModifier._extraFrameStyles = new StyleBuilder().AddRaw(_extraFrameStyles.Build());
+        clonedModifier._extraBodyStyles = new StyleBuilder().AddRaw(_extraBodyStyles.Build());
+        clonedModifier._cssClassBuilder = new CssBuilder().AddRaw(_cssClassBuilder.Build());
+        return clonedModifier;
     }
 
     public UIModifier Width(string width)
@@ -52,7 +52,7 @@ public sealed class UIModifier
         return this;
     }
 
-    public UIModifier Width(double pixels) => Width(FormatPixels(pixels));
+    public UIModifier Width(double px) => Width(FormatPx(px));
 
     public UIModifier Height(string height)
     {
@@ -60,12 +60,12 @@ public sealed class UIModifier
         return this;
     }
 
-    public UIModifier Height(double pixels) => Height(FormatPixels(pixels));
+    public UIModifier Height(double px) => Height(FormatPx(px));
 
     public UIModifier Size(string uniformSize) => Width(uniformSize).Height(uniformSize);
-    public UIModifier Size(double uniformPixels) => Size(FormatPixels(uniformPixels));
+    public UIModifier Size(double uniformPx) => Size(FormatPx(uniformPx));
     public UIModifier Size(string width, string height) => Width(width).Height(height);
-    public UIModifier Size(double widthPixels, double heightPixels) => Width(widthPixels).Height(heightPixels);
+    public UIModifier Size(double widthPx, double heightPx) => Width(widthPx).Height(heightPx);
 
     public UIModifier MinWidth(string minWidth)
     {
@@ -73,7 +73,7 @@ public sealed class UIModifier
         return this;
     }
 
-    public UIModifier MinWidth(double pixels) => MinWidth(FormatPixels(pixels));
+    public UIModifier MinWidth(double px) => MinWidth(FormatPx(px));
 
     public UIModifier MinHeight(string minHeight)
     {
@@ -81,20 +81,24 @@ public sealed class UIModifier
         return this;
     }
 
-    public UIModifier MinHeight(double pixels) => MinHeight(FormatPixels(pixels));
+    public UIModifier MinHeight(double px) => MinHeight(FormatPx(px));
 
     public UIModifier MaxWidth(string maxWidth) => FrameStyle("max-width", maxWidth);
-    public UIModifier MaxWidth(double pixels) => MaxWidth(FormatPixels(pixels));
+    public UIModifier MaxWidth(double px) => MaxWidth(FormatPx(px));
+
     public UIModifier MaxHeight(string maxHeight) => FrameStyle("max-height", maxHeight);
-    public UIModifier MaxHeight(double pixels) => MaxHeight(FormatPixels(pixels));
+    public UIModifier MaxHeight(double px) => MaxHeight(FormatPx(px));
 
     public UIModifier FillMaxWidth() => Width("100%");
     public UIModifier FillMaxHeight() => Height("100%");
     public UIModifier FillMaxSize() => Width("100%").Height("100%");
+
     public UIModifier WrapContentWidth() => Width("fit-content");
     public UIModifier WrapContentHeight() => Height("fit-content");
     public UIModifier WrapContentSize() => Width("fit-content").Height("fit-content");
+
     public UIModifier Weight(double flexWeight = 1.0) => FlexGrow(flexWeight).FlexShrink(1).FrameStyle("flex-basis", "0%");
+
     public UIModifier AspectRatio(string ratio) => FrameStyle("aspect-ratio", ratio);
     public UIModifier AspectRatio(double widthRatio, double heightRatio) =>
         AspectRatio($"{GeometryMath.FormatInvariant(widthRatio)} / {GeometryMath.FormatInvariant(heightRatio)}");
@@ -108,7 +112,7 @@ public sealed class UIModifier
         return this;
     }
 
-    public UIModifier Padding(double uniformPixels) => Padding(FormatPixels(uniformPixels));
+    public UIModifier Padding(double uniformPx) => Padding(FormatPx(uniformPx));
 
     public UIModifier Padding(string vertical, string horizontal)
     {
@@ -118,8 +122,8 @@ public sealed class UIModifier
         return this;
     }
 
-    public UIModifier Padding(double verticalPixels, double horizontalPixels) =>
-        Padding(FormatPixels(verticalPixels), FormatPixels(horizontalPixels));
+    public UIModifier Padding(double verticalPx, double horizontalPx) =>
+        Padding(FormatPx(verticalPx), FormatPx(horizontalPx));
 
     public UIModifier Padding(string top, string right, string bottom, string left)
     {
@@ -130,15 +134,15 @@ public sealed class UIModifier
     }
 
     public UIModifier Padding(double topPx, double rightPx, double bottomPx, double leftPx) =>
-        Padding(FormatPixels(topPx), FormatPixels(rightPx), FormatPixels(bottomPx), FormatPixels(leftPx));
+        Padding(FormatPx(topPx), FormatPx(rightPx), FormatPx(bottomPx), FormatPx(leftPx));
 
     public UIModifier Margin(string margin) => FrameStyle("margin", margin);
-    public UIModifier Margin(double uniformPixels) => Margin(FormatPixels(uniformPixels));
+    public UIModifier Margin(double uniformPx) => Margin(FormatPx(uniformPx));
     public UIModifier Margin(string vertical, string horizontal) => FrameStyle("margin", $"{vertical} {horizontal}");
-    public UIModifier Margin(double verticalPx, double horizontalPx) => Margin(FormatPixels(verticalPx), FormatPixels(horizontalPx));
+    public UIModifier Margin(double verticalPx, double horizontalPx) => Margin(FormatPx(verticalPx), FormatPx(horizontalPx));
     public UIModifier Margin(string top, string right, string bottom, string left) => FrameStyle("margin", $"{top} {right} {bottom} {left}");
     public UIModifier Margin(double topPx, double rightPx, double bottomPx, double leftPx) =>
-        Margin(FormatPixels(topPx), FormatPixels(rightPx), FormatPixels(bottomPx), FormatPixels(leftPx));
+        Margin(FormatPx(topPx), FormatPx(rightPx), FormatPx(bottomPx), FormatPx(leftPx));
 
     public UIModifier Display(string display)
     {
@@ -186,7 +190,7 @@ public sealed class UIModifier
         return this;
     }
 
-    public UIModifier Gap(double pixels) => Gap(FormatPixels(pixels));
+    public UIModifier Gap(double px) => Gap(FormatPx(px));
 
     public UIModifier FlexWrap(string wrap) => BodyStyle("flex-wrap", wrap);
     public UIModifier Wrap() => FlexWrap("wrap");
@@ -220,13 +224,14 @@ public sealed class UIModifier
         return this;
     }
 
-    public UIModifier BorderRadius(double pixels) => BorderRadius(FormatPixels(pixels));
-    public UIModifier ClipRounded(double pixels) => BorderRadius(pixels).Overflow("hidden");
+    public UIModifier BorderRadius(double px) => BorderRadius(FormatPx(px));
+    public UIModifier ClipRounded(double px) => BorderRadius(px).Overflow("hidden");
     public UIModifier ClipCircle() => BorderRadius("9999px").Overflow("hidden");
 
     public UIModifier Border(string borderShorthand) => FrameStyle("border", borderShorthand);
     public UIModifier Border(string thickness, string borderColor) => FrameStyle("border", $"{thickness} solid {borderColor}").BorderColor(borderColor);
-    public UIModifier Border(double thicknessPixels, string borderColor) => Border(FormatPixels(thicknessPixels), borderColor);
+    public UIModifier Border(double thicknessPx, string borderColor) => Border(FormatPx(thicknessPx), borderColor);
+
     public UIModifier BoxShadow(string shadow) => FrameStyle("box-shadow", shadow);
     public UIModifier Opacity(double opacity) => FrameStyle("opacity", opacity.ToString(CultureInfo.InvariantCulture));
 
@@ -248,17 +253,17 @@ public sealed class UIModifier
         return this;
     }
 
-    public UIModifier Depth(string depth)
+    public UIModifier ButtonExtrusionDepth(string depth)
     {
-        DepthValue = depth;
+        ButtonExtrusionDepthValue = depth;
         return this;
     }
 
-    public UIModifier Depth(double pixels) => Depth(FormatPixels(pixels));
+    public UIModifier ButtonExtrusionDepth(double px) => ButtonExtrusionDepth(FormatPx(px));
 
-    public UIModifier AnimationSpeed(string speed)
+    public UIModifier PressAnimationDuration(string duration)
     {
-        AnimationSpeedValue = speed;
+        PressAnimationDurationValue = duration;
         return this;
     }
 
@@ -268,17 +273,17 @@ public sealed class UIModifier
         return this;
     }
 
-    public UIModifier FontSize(double pixels) => FontSize(FormatPixels(pixels));
+    public UIModifier FontSize(double px) => FontSize(FormatPx(px));
     public UIModifier FontWeight(string fontWeight) => FrameStyle("font-weight", fontWeight);
     public UIModifier FontWeight(FontWeight weight) => FontWeight(LayoutDefaults.ToCss(weight));
 
-    public UIModifier Thickness(string thickness)
+    public UIModifier StrokeThickness(string thickness)
     {
-        ThicknessValue = thickness;
+        StrokeThicknessValue = thickness;
         return this;
     }
 
-    public UIModifier Thickness(double pixels) => Thickness(FormatPixels(pixels));
+    public UIModifier StrokeThickness(double px) => StrokeThickness(FormatPx(px));
 
     public UIModifier Overflow(string overflow)
     {
@@ -290,6 +295,7 @@ public sealed class UIModifier
     public UIModifier OverflowY(string overflowY) => BodyStyle("overflow-y", overflowY);
     public UIModifier VerticalScroll() => OverflowY("auto");
     public UIModifier HorizontalScroll() => OverflowX("auto");
+
     public UIModifier Position(string position) => FrameStyle("position", position);
     public UIModifier ZIndex(int zIndex) => FrameStyle("z-index", zIndex.ToString(CultureInfo.InvariantCulture));
     public UIModifier Cursor(string cursor) => FrameStyle("cursor", cursor);
@@ -310,27 +316,27 @@ public sealed class UIModifier
     public UIModifier Style(string propertyName, string? propertyValue) =>
         FrameStyle(propertyName, propertyValue);
 
-    public UIModifier RawStyle(string? rawCss)
+    public UIModifier RawStyle(string? rawCssDeclarations)
     {
-        _extraFrameStyles.AddRaw(rawCss);
+        _extraFrameStyles.AddRaw(rawCssDeclarations);
         return this;
     }
 
-    public UIModifier RawBodyStyle(string? rawCss)
+    public UIModifier RawBodyStyle(string? rawCssDeclarations)
     {
-        _extraBodyStyles.AddRaw(rawCss);
+        _extraBodyStyles.AddRaw(rawCssDeclarations);
         return this;
     }
 
     public UIModifier Class(string? className, bool when = true)
     {
-        _cssBuilder.Add(className, when);
+        _cssClassBuilder.Add(className, when);
         return this;
     }
 
-    public UIModifier PressScale(double scaleFactor)
+    public UIModifier InwardPressScaleFactor(double scaleFactor)
     {
-        PressScaleValue = GeometryMath.FormatInvariant(scaleFactor);
+        InwardPressScaleFactorValue = GeometryMath.FormatInvariant(scaleFactor);
         return this;
     }
 
@@ -368,7 +374,7 @@ public sealed class UIModifier
         .JustifyContent("flex-start")
         .Overflow("hidden")
         .RawStyle(_extraFrameStyles.Build())
-        .Class(_cssBuilder.Build());
+        .Class(_cssClassBuilder.Build());
 
     public string BuildTitleBarStyle(string? fallbackHeaderBackground = null) => new StyleBuilder()
         .Add("--_tw-header-bg", HeaderBackgroundValue ?? fallbackHeaderBackground ?? WindowDefaults.DefaultHeaderBackground)
@@ -409,8 +415,8 @@ public sealed class UIModifier
         .Build();
 
     public string BuildFrameExtras() => _extraFrameStyles.Build();
-    public string BuildClass() => _cssBuilder.Build();
+    public string BuildClass() => _cssClassBuilder.Build();
 
-    private static string FormatPixels(double pixels) =>
-        $"{GeometryMath.FormatInvariant(pixels)}px";
+    private static string FormatPx(double px) =>
+        $"{GeometryMath.FormatInvariant(px)}px";
 }
