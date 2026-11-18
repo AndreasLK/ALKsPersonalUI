@@ -62,3 +62,4 @@ public class LeaderboardTests : BunitContext
         Assert.Contains("leaderboard-row-highlighted", rows[1].ClassName);
     }
 }
+
