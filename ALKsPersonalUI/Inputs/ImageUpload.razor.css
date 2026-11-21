@@ -1,0 +1,90 @@
+.image-upload {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    width: 100%;
+}
+
+.image-upload-zone {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 6.5rem;
+    padding: 1.25rem;
+    border: 2px dashed var(--ui-border, rgba(255, 255, 255, 0.2));
+    border-radius: var(--ui-radius-md, 0.75rem);
+    background: var(--ui-bg-surface, #1c1c28);
+    color: var(--ui-text, #ffffff);
+    cursor: pointer;
+    text-align: center;
+    transition: border-color var(--ui-anim-speed, 120ms) ease, background-color var(--ui-anim-speed, 120ms) ease;
+}
+
+.image-upload-zone:hover,
+.image-upload-zone:focus-within {
+    border-color: var(--ui-accent, #7c3aed);
+    background: color-mix(in srgb, var(--ui-accent, #7c3aed) 10%, var(--ui-bg-surface, #1c1c28));
+}
+
+.image-upload-disabled .image-upload-zone {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.image-upload-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: inherit;
+    width: 100%;
+    height: 100%;
+}
+
+.image-upload-prompt {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.image-upload-hint {
+    font-size: 0.78rem;
+    color: var(--ui-text-muted, #9ca3af);
+}
+
+.image-upload-error {
+    font-size: 0.82rem;
+    color: var(--ui-danger, #ef4444);
+}
+
+.image-upload-previews {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+    gap: 0.5rem;
+}
+
+.image-upload-preview-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.35rem;
+    border-radius: var(--ui-radius-sm, 0.5rem);
+    background: var(--ui-bg-surface, #1c1c28);
+    border: 1px solid var(--ui-border, rgba(255, 255, 255, 0.12));
+}
+
+.image-upload-preview-img {
+    width: 100%;
+    height: 4.5rem;
+    object-fit: cover;
+    border-radius: var(--ui-radius-xs, 0.35rem);
+}
+
+.image-upload-preview-name {
+    font-size: 0.72rem;
+    color: var(--ui-text-muted, #9ca3af);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
