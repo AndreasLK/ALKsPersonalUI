@@ -1,6 +1,5 @@
 @page "/json-showcase"
 @using System.Globalization
-@using ALKsPersonalUI.Showcase.Shared
 @implements IAsyncDisposable
 
 <Column Gap="1.5rem" Modifier="@(UIModifier.New.FillMaxWidth().MaxWidth(1100))">
@@ -248,7 +247,9 @@
                             new JsonUiNode { Type = "TextArea", Props = new() { ["Label"] = "Notes", ["Rows"] = "3" } },
                             new JsonUiNode { Type = "NumberInput", Props = new() { ["Label"] = "Quantity" } },
                             new JsonUiNode { Type = "Checkbox", Props = new() { ["Label"] = "Publish immediately" } },
-                            new JsonUiNode { Type = "FileUpload", Props = new() { ["PromptText"] = "Drop images here" } }
+                            new JsonUiNode { Type = "FileUpload", Props = new() { ["PromptText"] = "Drop files here" } },
+                            new JsonUiNode { Type = "ImageUpload", Props = new() { ["PromptText"] = "Tap to choose images", ["ShowPreview"] = "true" } },
+                            new JsonUiNode { Type = "ImageUpload", Props = new() { ["PromptText"] = "Upload image folder (recursive)", ["AllowFolderUpload"] = "true", ["ShowPreview"] = "true" } }
                         ]
                     }
                 ]

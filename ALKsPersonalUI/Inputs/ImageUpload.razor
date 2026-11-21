@@ -1,0 +1,162 @@
+@using Microsoft.AspNetCore.Components.Forms
+@inherits UIComponentBase
+
+<div class="@BuildWrapperCssClasses()"
+     style="@ModifierStyle"
+     @attributes="AdditionalAttributes">
+    <label class="image-upload-zone">
+        <InputFile class="image-upload-input"
+                   multiple="@(AllowMultiple || AllowFolderUpload)"
+                   accept="@AcceptedExtensions"
+                   disabled="@IsDisabled"
+                   webkitdirectory="@AllowFolderUpload"
+                   directory="@AllowFolderUpload"
+                   OnChange="HandleFilesSelectedAsync" />
+        <span class="image-upload-prompt">@PromptText</span>
+        <span class="image-upload-hint">
+            @(AllowFolderUpload ? "Select a folder (includes all subfolders)" : AcceptedExtensions)
+        </span>
+    </label>
+
+    @if (!string.IsNullOrWhiteSpace(_validationError))
+    {
+        <span class="image-upload-error" role="alert" aria-live="polite">@_validationError</span>
+    }
+
+    @if (ShowPreview && _previews.Count > 0)
+    {
+        <div class="image-upload-previews">
+            @foreach (var preview in _previews)
+            {
+                <div class="image-upload-preview-card">
+                    <img class="image-upload-preview-img" src="@preview.DataUrl" alt="@preview.Name" />
+                    <span class="image-upload-preview-name" title="@preview.Name">@preview.Name</span>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const int BytesPerMegabyte = 1024 * 1024;
+    private const int DefaultMaxPreviewBytes = 5 * BytesPerMegabyte;
+
+    /// <summary>Allow selecting multiple images.</summary>
+    [Parameter] public bool AllowMultiple { get; set; } = true;
+
+    /// <summary>Allow selecting an entire folder including all nested subfolders.</summary>
+    [Parameter] public bool AllowFolderUpload { get; set; }
+
+    /// <summary>Comma-separated list of accepted image extensions.</summary>
+    [Parameter] public string AcceptedExtensions { get; set; } = ".png,.jpg,.jpeg,.gif,.webp,.svg,.bmp";
+
+    /// <summary>Maximum allowed size per file in bytes.</summary>
+    [Parameter] public long MaxFileSizeBytes { get; set; } = InputDefaults.FileUpload.DefaultMaxFileSizeBytes;
+
+    /// <summary>Maximum number of files processed in a single selection.</summary>
+    [Parameter] public int MaxAllowedFiles { get; set; } = 200;
+
+    /// <summary>Prompt text displayed inside the dropzone.</summary>
+    [Parameter] public string PromptText { get; set; } = "Tap to choose images";
+
+    /// <summary>Whether to render thumbnail previews for selected images.</summary>
+    [Parameter] public bool ShowPreview { get; set; } = true;
+
+    /// <summary>Disables the upload control.</summary>
+    [Parameter] public bool IsDisabled { get; set; }
+
+    /// <summary>Invoked with all valid selected image files.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<IBrowserFile>> OnImagesSelected { get; set; }
+
+    private string? _validationError;
+    private readonly List<ImagePreviewItem> _previews = [];
+
+    private sealed record ImagePreviewItem(string Name, string DataUrl);
+
+    private async Task HandleFilesSelectedAsync(InputFileChangeEventArgs args)
+    {
+        _validationError = null;
+        _previews.Clear();
+
+        var selectedFiles = (AllowMultiple || AllowFolderUpload)
+            ? args.GetMultipleFiles(MaxAllowedFiles)
+            : [args.File];
+
+        var validFiles = new List<IBrowserFile>(selectedFiles.Count);
+        foreach (var file in selectedFiles)
+        {
+            if (!IsExtensionAllowed(file.Name))
+            {
+                // Skip non-image files when scanning a folder; fail fast on explicit file picks.
+                if (AllowFolderUpload)
+                {
+                    continue;
+                }
+
+                _validationError = $"'{file.Name}' is not a supported image format.";
+                return;
+            }
+
+            if (file.Size > MaxFileSizeBytes)
+            {
+                _validationError = $"'{file.Name}' exceeds the maximum size of {MaxFileSizeBytes / BytesPerMegabyte} MB.";
+                return;
+            }
+
+            validFiles.Add(file);
+
+            if (ShowPreview && file.Size <= DefaultMaxPreviewBytes)
+            {
+                await AddPreviewAsync(file);
+            }
+        }
+
+        if (OnImagesSelected.HasDelegate)
+        {
+            await OnImagesSelected.InvokeAsync(validFiles);
+        }
+    }
+
+    private async Task AddPreviewAsync(IBrowserFile file)
+    {
+        try
+        {
+            await using var stream = file.OpenReadStream(DefaultMaxPreviewBytes);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "image/png" : file.ContentType;
+            var base64 = Convert.ToBase64String(ms.ToArray());
+            _previews.Add(new ImagePreviewItem(file.Name, $"data:{contentType};base64,{base64}"));
+        }
+        catch
+        {
+            // Ignore preview generation failures so valid file selection still succeeds.
+        }
+    }
+
+    private bool IsExtensionAllowed(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(AcceptedExtensions))
+        {
+            return true;
+        }
+
+        var extension = Path.GetExtension(fileName);
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            return false;
+        }
+
+        var allowed = AcceptedExtensions.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return allowed.Any(ext => string.Equals(ext, extension, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string BuildWrapperCssClasses()
+    {
+        return new CssBuilder()
+            .Add("image-upload")
+            .Add("image-upload-disabled", IsDisabled)
+            .AddRaw(ModifierClass)
+            .Build();
+    }
+}

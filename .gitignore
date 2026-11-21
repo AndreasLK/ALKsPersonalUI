@@ -363,3 +363,8 @@ MigrationBackup/
 FodyWeavers.xsd
 *.zip
 *.tar.gz
+
+
+# Graphify and AI agent tooling
+graphify-out/
+.agents/
