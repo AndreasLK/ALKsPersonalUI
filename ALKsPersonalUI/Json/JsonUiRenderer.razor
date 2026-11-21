@@ -1,4 +1,4 @@
-@using ALKsPersonalUI.Showcase.Shared
+@using ALKsPersonalUI.Json
 
 @if (Node is not null)
 {
@@ -38,7 +38,7 @@
                 break;
 
             case "TitledWindow":
-                <TitledWindow Title="@node.GetProp("Title", "Window")" Modifier="@ShowcaseStyles.SectionWindow">
+                <TitledWindow Title="@node.GetProp("Title", "Window")">
                     @RenderChildren(node)
                 </TitledWindow>
                 break;
@@ -142,6 +142,13 @@
             case "FileUpload":
                 <FileUpload PromptText="@node.GetProp("PromptText", "Tap to choose files")"
                             AllowMultiple="@node.GetBool("AllowMultiple", true)" />
+                break;
+
+            case "ImageUpload":
+                <ImageUpload PromptText="@node.GetProp("PromptText", "Tap to choose images")"
+                             AllowMultiple="@node.GetBool("AllowMultiple", true)"
+                             AllowFolderUpload="@node.GetBool("AllowFolderUpload", false)"
+                             ShowPreview="@node.GetBool("ShowPreview", true)" />
                 break;
 
             case "Breadcrumbs":

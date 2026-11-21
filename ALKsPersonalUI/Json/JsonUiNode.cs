@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace ALKsPersonalUI.Showcase.Shared;
+namespace ALKsPersonalUI.Json;
 
 public sealed class JsonUiNode
 {
@@ -23,7 +23,7 @@ public sealed class JsonUiNode
             : fallback;
 
     public double GetDouble(string key, double fallback = 0) =>
-        Props is not null && Props.TryGetValue(key, out var value) && double.TryParse(value, out var parsed)
+        Props is not null && Props.TryGetValue(key, out var value) && double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsed)
             ? parsed
             : fallback;
 
