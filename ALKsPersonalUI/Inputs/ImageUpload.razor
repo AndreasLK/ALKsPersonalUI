@@ -1,26 +1,72 @@
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
 @inherits UIComponentBase
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
 
 <div class="@BuildWrapperCssClasses()"
      style="@ModifierStyle"
      @attributes="AdditionalAttributes">
-    <label class="image-upload-zone">
-        <InputFile class="image-upload-input"
-                   multiple="@(AllowMultiple || AllowFolderUpload)"
-                   accept="@AcceptedExtensions"
-                   disabled="@IsDisabled"
-                   webkitdirectory="@AllowFolderUpload"
-                   directory="@AllowFolderUpload"
-                   OnChange="HandleFilesSelectedAsync" />
-        <span class="image-upload-prompt">@PromptText</span>
-        <span class="image-upload-hint">
-            @(AllowFolderUpload ? "Select a folder (includes all subfolders)" : AcceptedExtensions)
-        </span>
-    </label>
+    @if (AllowFolderUpload)
+    {
+        <label class="image-upload-zone">
+            <InputFile @key="_folderInputRenderKey"
+                       @ref="_folderInputRef"
+                       class="image-upload-input"
+                       multiple="true"
+                       accept="@AcceptedExtensions"
+                       disabled="@IsDisabled"
+                       webkitdirectory
+                       directory
+                       OnChange="HandleFolderFilesSelectedAsync" />
+            <span class="image-upload-prompt">@PromptText</span>
+            <span class="image-upload-hint">Select a folder (includes all subfolders)</span>
+        </label>
+
+        <div class="image-upload-actions">
+            <label class="@BuildSecondaryPickerCssClasses()">
+                <InputFile @key="_fileInputRenderKey"
+                           @ref="_fileInputRef"
+                           class="image-upload-input"
+                           multiple="@AllowMultiple"
+                           accept="@AcceptedExtensions"
+                           disabled="@IsDisabled"
+                           OnChange="HandleIndividualFilesSelectedAsync" />
+                <span>@(AllowMultiple ? "Select Individual Images" : "Select Individual Image")</span>
+            </label>
+        </div>
+    }
+    else
+    {
+        <label class="image-upload-zone">
+            <InputFile @key="_fileInputRenderKey"
+                       @ref="_fileInputRef"
+                       class="image-upload-input"
+                       multiple="@AllowMultiple"
+                       accept="@AcceptedExtensions"
+                       disabled="@IsDisabled"
+                       OnChange="HandleIndividualFilesSelectedAsync" />
+            <span class="image-upload-prompt">@PromptText</span>
+            <span class="image-upload-hint">@AcceptedExtensions</span>
+        </label>
+    }
 
     @if (!string.IsNullOrWhiteSpace(_validationError))
     {
         <span class="image-upload-error" role="alert" aria-live="polite">@_validationError</span>
+    }
+
+    @if (_selectedFileCount > 0 || _previews.Count > 0)
+    {
+        <div class="image-upload-summary">
+            <span class="image-upload-summary-text">@BuildSelectionSummaryText()</span>
+            <button type="button"
+                    class="image-upload-clear-btn"
+                    disabled="@IsDisabled"
+                    @onclick="Clear">
+                Clear
+            </button>
+        </div>
     }
 
     @if (ShowPreview && _previews.Count > 0)
@@ -29,8 +75,10 @@
             @foreach (var preview in _previews)
             {
                 <div class="image-upload-preview-card">
-                    <img class="image-upload-preview-img" src="@preview.DataUrl" alt="@preview.Name" />
-                    <span class="image-upload-preview-name" title="@preview.Name">@preview.Name</span>
+                    <img class="image-upload-preview-img" src="@preview.DataUrl" alt="@preview.DisplayName" />
+                    <span class="image-upload-preview-name" title="@(preview.RelativePath ?? preview.DisplayName)">
+                        @(preview.RelativePath ?? preview.DisplayName)
+                    </span>
                 </div>
             }
         </div>
@@ -38,13 +86,19 @@
 </div>
 
 @code {
-    private const int BytesPerMegabyte = 1024 * 1024;
-    private const int DefaultMaxPreviewBytes = 5 * BytesPerMegabyte;
+    private const int BytesPerKilobyte = 1024;
+    private const int BytesPerMegabyte = BytesPerKilobyte * BytesPerKilobyte;
+    private const int DefaultMaxPreviewItems = 24;
+    private const int DefaultMaxPreviewDimensionPixels = 240;
+    private const long DefaultMaxPreviewBytesTotal = 2 * BytesPerMegabyte;
+    private const int MaxThumbnailStreamBytes = 256 * BytesPerKilobyte;
+    private const int MaxSvgInlinePreviewBytes = 64 * BytesPerKilobyte;
+    private const string JsModulePath = "./_content/ALKsPersonalUI/imageUpload.js";
 
     /// <summary>Allow selecting multiple images.</summary>
     [Parameter] public bool AllowMultiple { get; set; } = true;
 
-    /// <summary>Allow selecting an entire folder including all nested subfolders.</summary>
+    /// <summary>Allow selecting an entire folder including all nested subfolders alongside individual image picking.</summary>
     [Parameter] public bool AllowFolderUpload { get; set; }
 
     /// <summary>Comma-separated list of accepted image extensions.</summary>
@@ -59,8 +113,17 @@
     /// <summary>Prompt text displayed inside the dropzone.</summary>
     [Parameter] public string PromptText { get; set; } = "Tap to choose images";
 
-    /// <summary>Whether to render thumbnail previews for selected images.</summary>
+    /// <summary>Whether to render bounded thumbnail previews for selected images.</summary>
     [Parameter] public bool ShowPreview { get; set; } = true;
+
+    /// <summary>Maximum number of thumbnail previews rendered at once to protect WASM memory.</summary>
+    [Parameter] public int MaxPreviewItems { get; set; } = DefaultMaxPreviewItems;
+
+    /// <summary>Maximum width and height in pixels for generated thumbnail previews.</summary>
+    [Parameter] public int MaxPreviewDimensionPixels { get; set; } = DefaultMaxPreviewDimensionPixels;
+
+    /// <summary>Maximum total decoded byte budget across all generated thumbnail previews.</summary>
+    [Parameter] public long MaxPreviewBytesTotal { get; set; } = DefaultMaxPreviewBytesTotal;
 
     /// <summary>Disables the upload control.</summary>
     [Parameter] public bool IsDisabled { get; set; }
@@ -68,70 +131,243 @@
     /// <summary>Invoked with all valid selected image files.</summary>
     [Parameter] public EventCallback<IReadOnlyList<IBrowserFile>> OnImagesSelected { get; set; }
 
+    /// <summary>Invoked with all valid selected image files paired with normalized folder-relative paths.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<SelectedImageFile>> OnImagesWithPathsSelected { get; set; }
+
+    private InputFile? _folderInputRef;
+    private InputFile? _fileInputRef;
+    private IJSObjectReference? _jsModule;
     private string? _validationError;
     private readonly List<ImagePreviewItem> _previews = [];
+    private long _currentPreviewBytes;
+    private int _selectedFileCount;
+    private int _folderInputRenderKey;
+    private int _fileInputRenderKey;
 
-    private sealed record ImagePreviewItem(string Name, string DataUrl);
+    private sealed record ImagePreviewItem(string DisplayName, string? RelativePath, string DataUrl);
 
-    private async Task HandleFilesSelectedAsync(InputFileChangeEventArgs args)
+    /// <summary>
+    /// Clears current validation errors, selection counts, thumbnail previews, and resets the underlying file inputs.
+    /// </summary>
+    public void Clear()
     {
         _validationError = null;
-        _previews.Clear();
+        ResetPreviewState();
+        // Bump render keys so browsers re-create the <input type="file"> elements and allow re-picking the same path.
+        _folderInputRenderKey++;
+        _fileInputRenderKey++;
+    }
 
-        var selectedFiles = (AllowMultiple || AllowFolderUpload)
+    private Task HandleFolderFilesSelectedAsync(InputFileChangeEventArgs args)
+        => ProcessSelectionAsync(args, _folderInputRef?.Element, isFolderSelection: true);
+
+    private Task HandleIndividualFilesSelectedAsync(InputFileChangeEventArgs args)
+        => ProcessSelectionAsync(args, _fileInputRef?.Element, isFolderSelection: false);
+
+    private async Task ProcessSelectionAsync(
+        InputFileChangeEventArgs args,
+        ElementReference? inputElement,
+        bool isFolderSelection)
+    {
+        if (IsDisabled)
+        {
+            return;
+        }
+
+        _validationError = null;
+        ResetPreviewState();
+
+        var allowMultipleFiles = isFolderSelection || AllowMultiple;
+        if (allowMultipleFiles && args.FileCount > MaxAllowedFiles)
+        {
+            _validationError = $"Selected {args.FileCount} files, which exceeds the maximum of {MaxAllowedFiles}.";
+            return;
+        }
+
+        var selectedFiles = allowMultipleFiles
             ? args.GetMultipleFiles(MaxAllowedFiles)
             : [args.File];
 
+        // Read browser webkitRelativePath values before validation filtering so indices match selectedFiles 1-to-1.
+        var relativePaths = await TryGetRelativePathsAsync(inputElement);
+
         var validFiles = new List<IBrowserFile>(selectedFiles.Count);
-        foreach (var file in selectedFiles)
+        var validFilesWithPaths = new List<SelectedImageFile>(selectedFiles.Count);
+
+        for (var index = 0; index < selectedFiles.Count; index++)
         {
+            var file = selectedFiles[index];
             if (!IsExtensionAllowed(file.Name))
             {
                 // Skip non-image files when scanning a folder; fail fast on explicit file picks.
-                if (AllowFolderUpload)
+                if (isFolderSelection || AllowFolderUpload)
                 {
                     continue;
                 }
 
+                ResetPreviewState();
                 _validationError = $"'{file.Name}' is not a supported image format.";
                 return;
             }
 
             if (file.Size > MaxFileSizeBytes)
             {
+                ResetPreviewState();
                 _validationError = $"'{file.Name}' exceeds the maximum size of {MaxFileSizeBytes / BytesPerMegabyte} MB.";
                 return;
             }
 
-            validFiles.Add(file);
+            var rawRelativePath = index < relativePaths.Count ? relativePaths[index] : null;
+            var normalizedPath = NormalizeRelativePath(rawRelativePath);
 
-            if (ShowPreview && file.Size <= DefaultMaxPreviewBytes)
-            {
-                await AddPreviewAsync(file);
-            }
+            validFiles.Add(file);
+            validFilesWithPaths.Add(new SelectedImageFile(file, normalizedPath));
+
+            await TryAddPreviewAsync(file, normalizedPath);
         }
+
+        _selectedFileCount = validFiles.Count;
 
         if (OnImagesSelected.HasDelegate)
         {
             await OnImagesSelected.InvokeAsync(validFiles);
         }
+
+        if (OnImagesWithPathsSelected.HasDelegate)
+        {
+            await OnImagesWithPathsSelected.InvokeAsync(validFilesWithPaths);
+        }
     }
 
-    private async Task AddPreviewAsync(IBrowserFile file)
+    private async Task<IReadOnlyList<string?>> TryGetRelativePathsAsync(ElementReference? inputElement)
+    {
+        if (inputElement is null)
+        {
+            return [];
+        }
+
+        try
+        {
+            _jsModule ??= await JSRuntime.InvokeAsync<IJSObjectReference>("import", JsModulePath);
+            var paths = await _jsModule.InvokeAsync<string?[]>("getRelativePaths", inputElement.Value);
+            return paths ?? [];
+        }
+        catch
+        {
+            // Fall back to null relative paths when JS interop is unavailable (e.g., strict bUnit tests or disconnected circuits).
+            return [];
+        }
+    }
+
+    private async Task TryAddPreviewAsync(IBrowserFile file, string? relativePath)
+    {
+        if (!ShowPreview || MaxPreviewItems <= 0 || _previews.Count >= MaxPreviewItems || _currentPreviewBytes >= MaxPreviewBytesTotal)
+        {
+            return;
+        }
+
+        if (string.Equals(Path.GetExtension(file.Name), ".svg", StringComparison.OrdinalIgnoreCase))
+        {
+            await TryAddDirectBoundedPreviewAsync(file, relativePath, "image/svg+xml", MaxSvgInlinePreviewBytes);
+            return;
+        }
+
+        try
+        {
+            var maxDimension = Math.Max(1, MaxPreviewDimensionPixels);
+            var thumbnailFormat = ResolveThumbnailFormat(file);
+            var resizedThumbnail = await file.RequestImageFileAsync(thumbnailFormat, maxDimension, maxDimension);
+
+            if (resizedThumbnail.Size > MaxThumbnailStreamBytes || _currentPreviewBytes + resizedThumbnail.Size > MaxPreviewBytesTotal)
+            {
+                return;
+            }
+
+            await TryAddDirectBoundedPreviewAsync(resizedThumbnail, relativePath, thumbnailFormat, MaxThumbnailStreamBytes);
+        }
+        catch
+        {
+            // Only fall back to direct reading for tiny files (e.g., small unit-test mocks); never load multi-MB originals into WASM LOH.
+            if (file.Size <= MaxSvgInlinePreviewBytes)
+            {
+                var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "image/png" : file.ContentType;
+                await TryAddDirectBoundedPreviewAsync(file, relativePath, contentType, MaxSvgInlinePreviewBytes);
+            }
+        }
+    }
+
+    private async Task TryAddDirectBoundedPreviewAsync(
+        IBrowserFile sourceFile,
+        string? relativePath,
+        string contentType,
+        int maxStreamBytes)
     {
         try
         {
-            await using var stream = file.OpenReadStream(DefaultMaxPreviewBytes);
-            using var ms = new MemoryStream();
-            await stream.CopyToAsync(ms);
-            var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "image/png" : file.ContentType;
-            var base64 = Convert.ToBase64String(ms.ToArray());
-            _previews.Add(new ImagePreviewItem(file.Name, $"data:{contentType};base64,{base64}"));
+            if (sourceFile.Size > maxStreamBytes || _currentPreviewBytes + sourceFile.Size > MaxPreviewBytesTotal)
+            {
+                return;
+            }
+
+            await using var stream = sourceFile.OpenReadStream(maxStreamBytes);
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer);
+
+            if (_currentPreviewBytes + buffer.Length > MaxPreviewBytesTotal)
+            {
+                return;
+            }
+
+            _currentPreviewBytes += buffer.Length;
+            var base64 = Convert.ToBase64String(buffer.ToArray());
+            _previews.Add(new ImagePreviewItem(sourceFile.Name, relativePath, $"data:{contentType};base64,{base64}"));
         }
         catch
         {
             // Ignore preview generation failures so valid file selection still succeeds.
         }
+    }
+
+    private static string ResolveThumbnailFormat(IBrowserFile file)
+    {
+        var extension = Path.GetExtension(file.Name);
+        if (string.Equals(extension, ".jpg", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(extension, ".jpeg", StringComparison.OrdinalIgnoreCase))
+        {
+            return "image/jpeg";
+        }
+
+        return "image/webp";
+    }
+
+    private static string? NormalizeRelativePath(string? rawRelativePath)
+    {
+        if (string.IsNullOrWhiteSpace(rawRelativePath))
+        {
+            return null;
+        }
+
+        var normalized = rawRelativePath.Trim().Replace('\\', '/').TrimStart('/');
+        return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
+    }
+
+    private void ResetPreviewState()
+    {
+        _previews.Clear();
+        _currentPreviewBytes = 0;
+        _selectedFileCount = 0;
+    }
+
+    private string BuildSelectionSummaryText()
+    {
+        var fileLabel = _selectedFileCount == 1 ? "image" : "images";
+        if (!ShowPreview || _previews.Count == 0 || _selectedFileCount <= _previews.Count)
+        {
+            return $"{_selectedFileCount} {fileLabel} selected";
+        }
+
+        var omittedCount = _selectedFileCount - _previews.Count;
+        return $"{_selectedFileCount} {fileLabel} selected ({_previews.Count} previewed, +{omittedCount} more)";
     }
 
     private bool IsExtensionAllowed(string fileName)
@@ -158,5 +394,35 @@
             .Add("image-upload-disabled", IsDisabled)
             .AddRaw(ModifierClass)
             .Build();
+    }
+
+    private string BuildSecondaryPickerCssClasses()
+    {
+        return new CssBuilder()
+            .Add("image-upload-secondary-btn")
+            .Add("image-upload-secondary-disabled", IsDisabled)
+            .Build();
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        ResetPreviewState();
+
+        if (_jsModule is not null)
+        {
+            try
+            {
+                await _jsModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // Ignore disconnected Blazor Server circuits during teardown.
+            }
+            finally
+            {
+                _jsModule = null;
+            }
+        }
     }
 }
