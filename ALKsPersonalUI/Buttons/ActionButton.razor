@@ -13,6 +13,9 @@
         @onpointerup="CancelPressTimers"
         @onpointerleave="CancelPressTimers"
         @onpointercancel="CancelPressTimers"
+        @onkeydown="HandleKeyDownAsync"
+        @onkeyup="HandleKeyUp"
+        @onblur="CancelPressTimers"
         @attributes="AdditionalAttributes">
     <span class="btn-front">
         @if (IsHoldToConfirmEnabled)
@@ -75,6 +78,7 @@
 
     private CancellationTokenSource? _pressGestureCancellationTokenSource;
     private bool _isHoldToConfirmActive;
+    private bool _isKeyboardHoldActive;
     private bool _suppressNextClick;
     private string? _detectedPointerType;
 
@@ -209,7 +213,37 @@
         if (!HasSpecialPressBehavior)
             return;
 
+        await StartPressGestureAsync();
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs keyEvent)
+    {
+        if (IsInteractionBlocked || !IsHoldToConfirmEnabled || !IsActivationKey(keyEvent.Key))
+            return;
+
+        // Ignore OS key-repeat events and active holds so holding Space/Enter does not restart the timer.
+        if (keyEvent.Repeat || _isKeyboardHoldActive)
+            return;
+
+        _isKeyboardHoldActive = true;
+        _suppressNextClick = false;
+        await StartPressGestureAsync();
+    }
+
+    private void HandleKeyUp(KeyboardEventArgs keyEvent)
+    {
+        if (!_isKeyboardHoldActive || !IsActivationKey(keyEvent.Key))
+            return;
+
         CancelPressTimers();
+    }
+
+    private static bool IsActivationKey(string? key) =>
+        key is "Enter" or " " or "Spacebar" or "Space";
+
+    private async Task StartPressGestureAsync()
+    {
+        CancelPressTimers(resetKeyboardHold: false);
         _pressGestureCancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = _pressGestureCancellationTokenSource.Token;
 
@@ -230,6 +264,7 @@
             if (!cancellationToken.IsCancellationRequested)
             {
                 _isHoldToConfirmActive = false;
+                _isKeyboardHoldActive = false;
 
                 if (IsHoldToConfirmEnabled)
                 {
@@ -272,7 +307,9 @@
         }
     }
 
-    private void CancelPressTimers()
+    private void CancelPressTimers() => CancelPressTimers(resetKeyboardHold: true);
+
+    private void CancelPressTimers(bool resetKeyboardHold)
     {
         if (_pressGestureCancellationTokenSource is not null)
         {
@@ -280,7 +317,12 @@
             _pressGestureCancellationTokenSource.Dispose();
             _pressGestureCancellationTokenSource = null;
         }
+
         _isHoldToConfirmActive = false;
+        if (resetKeyboardHold)
+        {
+            _isKeyboardHoldActive = false;
+        }
     }
 
     public void Dispose() => CancelPressTimers();
