@@ -1,4 +1,10 @@
 ﻿<Project>
+  <!-- Import SDK-generated static web asset targets when present (.NET 11+ JSON manifest packaging) -->
+  <Import Project="$(MSBuildThisFileDirectory)Microsoft.AspNetCore.StaticWebAssets.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)Microsoft.AspNetCore.StaticWebAssets.targets')" />
+  <Import Project="$(MSBuildThisFileDirectory)..\build\Microsoft.AspNetCore.StaticWebAssets.targets"
+          Condition="!Exists('$(MSBuildThisFileDirectory)Microsoft.AspNetCore.StaticWebAssets.targets') And Exists('$(MSBuildThisFileDirectory)..\build\Microsoft.AspNetCore.StaticWebAssets.targets')" />
+
   <PropertyGroup>
     <StaticWebAssetsFingerprintContent>false</StaticWebAssetsFingerprintContent>
     <StaticWebAssetFingerprintingEnabled>false</StaticWebAssetFingerprintingEnabled>
