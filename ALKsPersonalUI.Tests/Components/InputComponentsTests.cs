@@ -1,6 +1,7 @@
 using ALKsPersonalUI.Core;
 using ALKsPersonalUI.Inputs;
 using ALKsPersonalUI.Tests.TestInfrastructure;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 
 namespace ALKsPersonalUI.Tests.Components;
@@ -180,5 +181,68 @@ public class InputComponentsTests : PersonalUiTestContext
         invalidRadioCut.Find("button[role='slider']").KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
         Assert.Equal("50", invalidRadioCut.Find("button[role='slider']").GetAttribute("aria-valuenow"));
         Assert.Contains("--_rs-rotation: -90deg", invalidRadioCut.Find(".dial-indicator").GetAttribute("style"));
+    }
+
+    [Fact]
+    public void ImageUpload_AllowFolderUpload_CapturesNormalizedRelativePathsAndPreservesLegacyCallback()
+    {
+        var module = JSInterop.SetupModule("./_content/ALKsPersonalUI/imageUpload.js");
+        module.Setup<string?[]>("getRelativePaths", _ => true)
+            .SetResult(["Madaffald\\Frugt\\banana.png", "Madaffald\\notes.txt", "Madaffald/Gront/carrot.jpg"]);
+
+        IReadOnlyList<IBrowserFile>? legacyFiles = null;
+        IReadOnlyList<SelectedImageFile>? filesWithPaths = null;
+
+        var cut = Render<ImageUpload>(parameters => parameters
+            .Add(upload => upload.AllowFolderUpload, true)
+            .Add(upload => upload.OnImagesSelected, files => legacyFiles = files)
+            .Add(upload => upload.OnImagesWithPathsSelected, files => filesWithPaths = files));
+
+        var fileInputs = cut.FindAll("input[type='file']");
+        Assert.Equal(2, fileInputs.Count);
+        Assert.True(fileInputs[0].HasAttribute("webkitdirectory"));
+        Assert.False(fileInputs[1].HasAttribute("webkitdirectory"));
+
+        var folderInput = cut.FindComponents<InputFile>()[0];
+        folderInput.UploadFiles(
+            InputFileContent.CreateFromBinary([1, 2, 3], "banana.png", contentType: "image/png"),
+            InputFileContent.CreateFromBinary([4, 5], "notes.txt", contentType: "text/plain"),
+            InputFileContent.CreateFromBinary([6, 7, 8], "carrot.jpg", contentType: "image/jpeg"));
+
+        Assert.NotNull(legacyFiles);
+        Assert.Equal(2, legacyFiles.Count);
+        Assert.Equal(["banana.png", "carrot.jpg"], legacyFiles.Select(file => file.Name));
+
+        Assert.NotNull(filesWithPaths);
+        Assert.Equal(2, filesWithPaths.Count);
+        Assert.Equal("Madaffald/Frugt/banana.png", filesWithPaths[0].RelativePath);
+        Assert.Equal("Madaffald/Gront/carrot.jpg", filesWithPaths[1].RelativePath);
+        Assert.Equal(2, cut.FindAll(".image-upload-preview-card").Count);
+
+        cut.Find("button.image-upload-clear-btn").Click();
+        Assert.Empty(cut.FindAll(".image-upload-preview-card"));
+        Assert.Empty(cut.FindAll(".image-upload-summary"));
+    }
+
+    [Fact]
+    public void ImageUpload_ShowPreview_CapsPreviewItemsAndSkipsMultiMegabyteFullBase64Fallback()
+    {
+        var cut = Render<ImageUpload>(parameters => parameters
+            .Add(upload => upload.AllowMultiple, true)
+            .Add(upload => upload.MaxPreviewItems, 2)
+            .Add(upload => upload.MaxFileSizeBytes, 10 * 1024 * 1024));
+
+        var input = cut.FindComponent<InputFile>();
+        var largeImageBytes = new byte[6 * 1024 * 1024];
+
+        input.UploadFiles(
+            InputFileContent.CreateFromBinary([1, 2, 3], "one.png", contentType: "image/png"),
+            InputFileContent.CreateFromBinary(largeImageBytes, "huge.png", contentType: "image/png"),
+            InputFileContent.CreateFromBinary([4, 5, 6], "two.png", contentType: "image/png"),
+            InputFileContent.CreateFromBinary([7, 8, 9], "three.png", contentType: "image/png"));
+
+        Assert.Equal(2, cut.FindAll(".image-upload-preview-card").Count);
+        Assert.Contains("4 images selected (2 previewed, +2 more)", cut.Find(".image-upload-summary-text").TextContent);
+        Assert.DoesNotContain("huge.png", string.Join(" ", cut.FindAll(".image-upload-preview-name").Select(node => node.TextContent)));
     }
 }
