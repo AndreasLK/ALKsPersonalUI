@@ -147,4 +147,45 @@ public class ActionButtonTests : PersonalUiTestContext
         await cut.Find("button").TriggerEventAsync("onpointerdown", new PointerEventArgs());
         cut.WaitForAssertion(() => Assert.Equal(1, confirmCount), TimeSpan.FromSeconds(1));
     }
+
+    [Fact]
+    public async Task ActionButton_HoldToConfirm_SupportsKeyboardHoldWithRepeatAndCancelsOnEarlyKeyUpOrBlur()
+    {
+        var confirmCount = 0;
+        var cut = Render<ActionButton>(parameters => parameters
+            .Add(button => button.Text, "Hold Keyboard")
+            .Add(button => button.HoldToConfirmDurationMilliseconds, 60)
+            .Add(button => button.OnClick, () => confirmCount++));
+
+        var buttonElement = cut.Find("button");
+
+        // Non-activation keys must not start a hold gesture.
+        await buttonElement.TriggerEventAsync("onkeydown", new KeyboardEventArgs { Key = "Tab" });
+        Assert.DoesNotContain("is-holding", cut.Find("button").ClassName);
+
+        // Releasing Space early cancels the pending hold confirmation.
+        var earlySpaceTask = cut.Find("button").TriggerEventAsync("onkeydown", new KeyboardEventArgs { Key = " " });
+        Assert.Contains("is-holding", cut.Find("button").ClassName);
+        await cut.Find("button").TriggerEventAsync("onkeyup", new KeyboardEventArgs { Key = " " });
+        await earlySpaceTask;
+        Assert.Equal(0, confirmCount);
+        Assert.DoesNotContain("is-holding", cut.Find("button").ClassName);
+
+        // Losing focus mid-hold via Enter also cancels cleanly.
+        var blurEnterTask = cut.Find("button").TriggerEventAsync("onkeydown", new KeyboardEventArgs { Key = "Enter" });
+        await cut.Find("button").TriggerEventAsync("onblur", new FocusEventArgs());
+        await blurEnterTask;
+        Assert.Equal(0, confirmCount);
+
+        // Key-repeat events while holding Space must not restart or block completion.
+        var spaceHoldTask = cut.Find("button").TriggerEventAsync("onkeydown", new KeyboardEventArgs { Key = " " });
+        await cut.Find("button").TriggerEventAsync("onkeydown", new KeyboardEventArgs { Key = " ", Repeat = true });
+        await spaceHoldTask;
+        cut.WaitForAssertion(() => Assert.Equal(1, confirmCount), TimeSpan.FromSeconds(1));
+        await cut.Find("button").TriggerEventAsync("onkeyup", new KeyboardEventArgs { Key = " " });
+
+        // Completing a full Enter hold confirms the action once.
+        await cut.Find("button").TriggerEventAsync("onkeydown", new KeyboardEventArgs { Key = "Enter" });
+        cut.WaitForAssertion(() => Assert.Equal(2, confirmCount), TimeSpan.FromSeconds(1));
+    }
 }
