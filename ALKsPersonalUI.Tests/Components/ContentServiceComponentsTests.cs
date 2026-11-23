@@ -59,6 +59,23 @@ public class ContentServiceComponentsTests : PersonalUiTestContext
         Assert.True(input.HasAttribute("multiple"));
     }
 
+    /// <summary>
+    /// Verifies that ImageUpload renders the native file input inside the clickable label zone.
+    /// </summary>
+    [Fact]
+    public void ImageUpload_RendersInputFileInsideClickableZone()
+    {
+        var cut = Render<ImageUpload>(p => p
+            .Add(x => x.AllowMultiple, true)
+            .Add(x => x.AcceptedExtensions, ".png,.webp")
+            .Add(x => x.PromptText, "Choose artwork"));
+
+        var zoneInput = cut.Find("label.image-upload-zone input[type='file'].image-upload-input");
+        Assert.Equal(".png,.webp", zoneInput.GetAttribute("accept"));
+        Assert.True(zoneInput.HasAttribute("multiple"));
+        Assert.Contains("Choose artwork", cut.Find(".image-upload-prompt").TextContent);
+    }
+
     [Fact]
     public void SearchInput_UpdatesValueAndClearsWithCloseButton()
     {
