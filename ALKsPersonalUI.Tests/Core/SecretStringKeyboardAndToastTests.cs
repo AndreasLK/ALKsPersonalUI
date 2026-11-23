@@ -95,15 +95,31 @@ public class SecretStringKeyboardAndToastTests
         Assert.Equal(5, changeCount);
     }
 
+    /// <summary>
+    /// Verifies that ToastService automatically removes a toast after its configured duration elapses.
+    /// </summary>
     [Fact]
     public async Task ToastService_AutoDismissesToastAfterConfiguredDuration()
     {
-        var toastService = new ToastService();
+        const int toastDurationMilliseconds = 40;
+        const int autoDismissTimeoutSeconds = 3;
 
-        toastService.Show("Brief notice", ToastVariant.Info, durationMilliseconds: 40);
+        var toastService = new ToastService();
+        var dismissedSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        toastService.OnChange += () =>
+        {
+            if (toastService.GetToasts().Count == 0)
+            {
+                dismissedSource.TrySetResult();
+            }
+        };
+
+        toastService.Show("Brief notice", ToastVariant.Info, durationMilliseconds: toastDurationMilliseconds);
         Assert.Single(toastService.GetToasts());
 
-        await Task.Delay(150);
+        // Wait on the OnChange dismissal signal instead of a fixed sleep that can flake under CI threadpool load.
+        await dismissedSource.Task.WaitAsync(TimeSpan.FromSeconds(autoDismissTimeoutSeconds));
 
         Assert.Empty(toastService.GetToasts());
     }
