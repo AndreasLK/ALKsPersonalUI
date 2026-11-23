@@ -1,10 +1,11 @@
 ﻿services:
   alks-ui-showcase:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/andreaslk/alks-ui-showcase:latest
     container_name: alks-ui-showcase
     restart: unless-stopped
+    pull_policy: always
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     expose:
       - "80"
     networks:
