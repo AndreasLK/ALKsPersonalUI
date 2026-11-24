@@ -13,7 +13,7 @@
                @oninput="HandleInputAsync" />
         @if (!string.IsNullOrEmpty(Value) && !IsDisabled)
         {
-            <CloseButton OnClick="ClearAsync" AriaLabel="Clear search" />
+            <CloseButton OnClick="ClearAsync" AriaLabel="@ClearButtonAriaLabel" />
         }
     </div>
 
@@ -30,6 +30,8 @@
     [Parameter] public EventCallback<string?> ValueChanged { get; set; }
     [Parameter] public string Placeholder { get; set; } = InputDefaults.SearchInput.DefaultPlaceholder;
     [Parameter] public string AriaLabel { get; set; } = InputDefaults.SearchInput.DefaultAriaLabel;
+    /// <summary>Accessible label for the button that clears the search query.</summary>
+    [Parameter] public string ClearButtonAriaLabel { get; set; } = "Clear search";
     [Parameter] public bool IsDisabled { get; set; }
     [Parameter] public RenderFragment? FilterContent { get; set; }
 
