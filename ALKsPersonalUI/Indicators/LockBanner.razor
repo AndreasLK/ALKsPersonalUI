@@ -1,3 +1,4 @@
+@using System.Globalization
 @inherits UIComponentBase
 
 @if (!IsLocked)
@@ -12,12 +13,12 @@
      @attributes="AdditionalAttributes">
     <div class="lock-banner-info">
         <span class="lock-banner-title">
-            Locked by @(string.IsNullOrWhiteSpace(LockedByUser) ? "another editor" : LockedByUser)
+            @string.Format(CultureInfo.CurrentCulture, LockedByFormat, string.IsNullOrWhiteSpace(LockedByUser) ? UnknownEditorText : LockedByUser)
         </span>
         @if (LockedAt.HasValue)
         {
             <span class="lock-banner-time">
-                since @LockedAt.Value.ToLocalTime().ToString("g")
+                @string.Format(CultureInfo.CurrentCulture, LockedSinceFormat, LockedAt.Value.ToLocalTime().ToString("g"))
             </span>
         }
     </div>
@@ -27,13 +28,13 @@
         {
             <ActionButton Variant="ActionButton.ButtonVariant.Ghost"
                           OnClick="OnRequestUnlock">
-                Request Unlock
+                @RequestUnlockText
             </ActionButton>
         }
         @if (OnReleaseLock.HasDelegate)
         {
             <ActionButton OnClick="OnReleaseLock">
-                Release Lock
+                @ReleaseLockText
             </ActionButton>
         }
     </div>
@@ -43,6 +44,16 @@
     [Parameter] public bool IsLocked { get; set; }
     [Parameter] public string? LockedByUser { get; set; }
     [Parameter] public DateTimeOffset? LockedAt { get; set; }
+    /// <summary>Format string for the lock holder message. Receives the user name as {0}.</summary>
+    [Parameter] public string LockedByFormat { get; set; } = "Locked by {0}";
+    /// <summary>Fallback name shown when LockedByUser is empty.</summary>
+    [Parameter] public string UnknownEditorText { get; set; } = "another editor";
+    /// <summary>Format string for the lock timestamp. Receives the formatted local time as {0}.</summary>
+    [Parameter] public string LockedSinceFormat { get; set; } = "since {0}";
+    /// <summary>Label for the request unlock button.</summary>
+    [Parameter] public string RequestUnlockText { get; set; } = "Request Unlock";
+    /// <summary>Label for the release lock button.</summary>
+    [Parameter] public string ReleaseLockText { get; set; } = "Release Lock";
     [Parameter] public EventCallback OnRequestUnlock { get; set; }
     [Parameter] public EventCallback OnReleaseLock { get; set; }
 

@@ -9,7 +9,7 @@
                   AutoRepeat="true"
                   IsDisabled="@IsDecrementDisabled"
                   OnClick="DecrementValueAsync"
-                  aria-label="Decrease value">
+                  aria-label="@DecreaseAriaLabel">
         @InputDefaults.NumberInput.DecrementSymbol
     </ActionButton>
 
@@ -35,7 +35,7 @@
         {
             <button type="button"
                     class="numpad-trigger-btn"
-                    aria-label="Open touch numpad"
+                    aria-label="@OpenNumpadAriaLabel"
                     @onclick="OpenNumpadSheet">
                 @InputDefaults.NumberInput.KeypadSymbol
             </button>
@@ -46,13 +46,13 @@
                   AutoRepeat="true"
                   IsDisabled="@IsIncrementDisabled"
                   OnClick="IncrementValueAsync"
-                  aria-label="Increase value">
+                  aria-label="@IncreaseAriaLabel">
         @InputDefaults.NumberInput.IncrementSymbol
     </ActionButton>
 </Window>
 
 <BottomSheet @bind-IsOpen="_isNumpadOpen"
-             Title="@(AriaLabel ?? "Enter Number")"
+             Title="@(AriaLabel ?? NumpadModalTitle)"
              MaxWidth="360px">
     <Box ContentAlignment="BoxAlignment.Center" Modifier="@(UIModifier.New.FillMaxWidth())">
         <TouchNumpad TValue="TValue"
@@ -74,6 +74,14 @@
     [Parameter] public TValue? Max { get; set; }
     [Parameter] public string? Suffix { get; set; }
     [Parameter] public string? AriaLabel { get; set; }
+    /// <summary>Accessible label for the decrement step button.</summary>
+    [Parameter] public string DecreaseAriaLabel { get; set; } = "Decrease value";
+    /// <summary>Accessible label for the increment step button.</summary>
+    [Parameter] public string IncreaseAriaLabel { get; set; } = "Increase value";
+    /// <summary>Accessible label for the button that opens the touch numpad.</summary>
+    [Parameter] public string OpenNumpadAriaLabel { get; set; } = "Open touch numpad";
+    /// <summary>Fallback title for the touch numpad sheet when AriaLabel is not set.</summary>
+    [Parameter] public string NumpadModalTitle { get; set; } = "Enter Number";
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public TouchInputMode? TouchMode { get; set; }
 

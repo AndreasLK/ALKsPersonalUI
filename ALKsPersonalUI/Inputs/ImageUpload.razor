@@ -1,3 +1,4 @@
+@using System.Globalization
 @using Microsoft.AspNetCore.Components.Forms
 @inherits UIComponentBase
 
@@ -14,13 +15,29 @@
                    OnChange="HandleFilesSelectedAsync" />
         <span class="image-upload-prompt">@PromptText</span>
         <span class="image-upload-hint">
-            @(AllowFolderUpload ? "Select a folder (includes all subfolders)" : AcceptedExtensions)
+            @(AllowFolderUpload ? FolderHintText : AcceptedExtensions)
         </span>
     </label>
 
     @if (!string.IsNullOrWhiteSpace(_validationError))
     {
         <span class="image-upload-error" role="alert" aria-live="polite">@_validationError</span>
+    }
+
+    @if (_selectedCount > 0 || _previews.Count > 0)
+    {
+        <Row HorizontalArrangement="Arrangement.SpaceBetween"
+             VerticalAlignment="VerticalAlignment.Center"
+             Modifier="@(UIModifier.New.FillMaxWidth())">
+            <Text Value="@BuildSelectionSummaryText()"
+                  Variant="TypographyVariant.Caption"
+                  Muted="true" />
+            <ActionButton Variant="ActionButton.ButtonVariant.Outline"
+                          Size="ActionButton.ButtonSize.Small"
+                          Text="@ClearButtonText"
+                          IsDisabled="@IsDisabled"
+                          OnClick="ClearAsync" />
+        </Row>
     }
 
     @if (ShowPreview && _previews.Count > 0)
@@ -59,6 +76,21 @@
     /// <summary>Prompt text displayed inside the dropzone.</summary>
     [Parameter] public string PromptText { get; set; } = "Tap to choose images";
 
+    /// <summary>Hint text displayed inside the dropzone when folder selection is enabled.</summary>
+    [Parameter] public string FolderHintText { get; set; } = "Select a folder (includes all subfolders)";
+
+    /// <summary>Label for the button that clears the current image selection.</summary>
+    [Parameter] public string ClearButtonText { get; set; } = "Clear";
+
+    /// <summary>Optional formatter for the selected image count summary. Receives the selected count.</summary>
+    [Parameter] public Func<int, string>? SelectionSummaryFormatter { get; set; }
+
+    /// <summary>Format string for unsupported image format errors. Receives the file name as {0}.</summary>
+    [Parameter] public string UnsupportedFormatErrorFormat { get; set; } = "'{0}' is not a supported image format.";
+
+    /// <summary>Format string for oversized image errors. Receives the file name as {0} and the max size in MB as {1}.</summary>
+    [Parameter] public string FileSizeExceededErrorFormat { get; set; } = "'{0}' exceeds the maximum size of {1} MB.";
+
     /// <summary>Whether to render thumbnail previews for selected images.</summary>
     [Parameter] public bool ShowPreview { get; set; } = true;
 
@@ -69,13 +101,31 @@
     [Parameter] public EventCallback<IReadOnlyList<IBrowserFile>> OnImagesSelected { get; set; }
 
     private string? _validationError;
+    private int _selectedCount;
     private readonly List<ImagePreviewItem> _previews = [];
 
     private sealed record ImagePreviewItem(string Name, string DataUrl);
 
+    /// <summary>
+    /// Clears current validation errors, selection count, and thumbnail previews.
+    /// </summary>
+    public async Task ClearAsync()
+    {
+        _validationError = null;
+        _selectedCount = 0;
+        _previews.Clear();
+
+        // Notify listeners so external selection state stays synchronized with the cleared UI.
+        if (OnImagesSelected.HasDelegate)
+        {
+            await OnImagesSelected.InvokeAsync(Array.Empty<IBrowserFile>());
+        }
+    }
+
     private async Task HandleFilesSelectedAsync(InputFileChangeEventArgs args)
     {
         _validationError = null;
+        _selectedCount = 0;
         _previews.Clear();
 
         var selectedFiles = (AllowMultiple || AllowFolderUpload)
@@ -93,13 +143,17 @@
                     continue;
                 }
 
-                _validationError = $"'{file.Name}' is not a supported image format.";
+                _validationError = string.Format(CultureInfo.CurrentCulture, UnsupportedFormatErrorFormat, file.Name);
                 return;
             }
 
             if (file.Size > MaxFileSizeBytes)
             {
-                _validationError = $"'{file.Name}' exceeds the maximum size of {MaxFileSizeBytes / BytesPerMegabyte} MB.";
+                _validationError = string.Format(
+                    CultureInfo.CurrentCulture,
+                    FileSizeExceededErrorFormat,
+                    file.Name,
+                    MaxFileSizeBytes / BytesPerMegabyte);
                 return;
             }
 
@@ -111,10 +165,25 @@
             }
         }
 
+        _selectedCount = validFiles.Count;
+
         if (OnImagesSelected.HasDelegate)
         {
             await OnImagesSelected.InvokeAsync(validFiles);
         }
+    }
+
+    private string BuildSelectionSummaryText()
+    {
+        // Use the caller's formatter when provided; otherwise fall back to English singular/plural phrasing.
+        if (SelectionSummaryFormatter is not null)
+        {
+            return SelectionSummaryFormatter(_selectedCount);
+        }
+
+        return _selectedCount == 1
+            ? "1 image selected"
+            : $"{_selectedCount} images selected";
     }
 
     private async Task AddPreviewAsync(IBrowserFile file)

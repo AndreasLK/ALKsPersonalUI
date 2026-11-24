@@ -28,7 +28,7 @@
                 @if (!string.IsNullOrEmpty(Value))
                 {
                     <Pill Variant="Pill.PillVariant.Danger"
-                          Text="Clear"
+                          Text="@ClearText"
                           OnClick="ClearTextAsync" />
                 }
             </div>
@@ -97,7 +97,7 @@
                                       AutoRepeat="true"
                                       Modifier="@BuildFunctionKeyModifier(1.65)"
                                       Text="@InputDefaults.Symbols.Backspace"
-                                      aria-label="Backspace"
+                                      aria-label="@BackspaceAriaLabel"
                                       OnClick="BackspaceAsync" />
                     </div>
                 }
@@ -141,7 +141,7 @@
                                               Variant="@(IsShifted ? ActionButton.ButtonVariant.Solid : ActionButton.ButtonVariant.Outline)"
                                               Modifier="@BuildFunctionKeyModifier(ActiveSetup.IncludeDesktopModifierKeys ? 2.15 : 1.55, IsShifted)"
                                               Text="@GetLeftShiftLabel()"
-                                              aria-label="Shift"
+                                              aria-label="@ShiftAriaLabel"
                                               OnClick="CycleShiftState" />
                             }
 
@@ -176,7 +176,7 @@
                                                   AutoRepeat="true"
                                                   Modifier="@BuildFunctionKeyModifier(1.45)"
                                                   Text="@InputDefaults.Symbols.Backspace"
-                                                  aria-label="Backspace"
+                                                  aria-label="@BackspaceAriaLabel"
                                                   OnClick="BackspaceAsync" />
                                 }
                                 else
@@ -196,7 +196,7 @@
                                                   Variant="@(IsShifted ? ActionButton.ButtonVariant.Solid : ActionButton.ButtonVariant.Outline)"
                                                   Modifier="@BuildFunctionKeyModifier(ActiveSetup.IncludeDesktopModifierKeys ? 2.15 : 1.55, IsShifted)"
                                                   Text="@InputDefaults.Symbols.ShiftUp"
-                                                  aria-label="Right Shift"
+                                                  aria-label="@RightShiftAriaLabel"
                                                   OnClick="CycleShiftState" />
                                 }
                             }
@@ -247,7 +247,7 @@
                     {
                         <ActionButton PressEffect="ButtonPressEffect.InwardScale"
                                       Modifier="@BuildSpaceKeyModifier()"
-                                      Text="Space"
+                                      Text="@SpaceText"
                                       OnClick="@(() => PressPrintableKeyAsync(" ", "Space"))" />
                     }
 
@@ -332,7 +332,7 @@
                                           AutoRepeat="true"
                                           Modifier="@BuildArrowKeyModifier()"
                                           Text="@InputDefaults.Symbols.ArrowUp"
-                                          aria-label="Up Arrow"
+                                          aria-label="@UpArrowAriaLabel"
                                           OnClick="@(() => FireNonPrintableKeyAsync("ArrowUp", "ArrowUp"))" />
                             <div></div>
 
@@ -340,19 +340,19 @@
                                           AutoRepeat="true"
                                           Modifier="@BuildArrowKeyModifier()"
                                           Text="@InputDefaults.Symbols.ArrowLeft"
-                                          aria-label="Left Arrow"
+                                          aria-label="@LeftArrowAriaLabel"
                                           OnClick="@(() => FireNonPrintableKeyAsync("ArrowLeft", "ArrowLeft"))" />
                             <ActionButton PressEffect="ButtonPressEffect.InwardScale"
                                           AutoRepeat="true"
                                           Modifier="@BuildArrowKeyModifier()"
                                           Text="@InputDefaults.Symbols.ArrowDown"
-                                          aria-label="Down Arrow"
+                                          aria-label="@DownArrowAriaLabel"
                                           OnClick="@(() => FireNonPrintableKeyAsync("ArrowDown", "ArrowDown"))" />
                             <ActionButton PressEffect="ButtonPressEffect.InwardScale"
                                           AutoRepeat="true"
                                           Modifier="@BuildArrowKeyModifier()"
                                           Text="@InputDefaults.Symbols.ArrowRight"
-                                          aria-label="Right Arrow"
+                                          aria-label="@RightArrowAriaLabel"
                                           OnClick="@(() => FireNonPrintableKeyAsync("ArrowRight", "ArrowRight"))" />
                         </div>
                     </div>
@@ -427,7 +427,7 @@
                                   Variant="ActionButton.ButtonVariant.Outline"
                                   Modifier="@BuildNumpadTallPlusKeyModifier()"
                                   Text="+"
-                                  aria-label="Numpad Plus"
+                                  aria-label="@NumpadPlusAriaLabel"
                                   OnClick="@(() => PressPrintableKeyAsync("+", "NumpadAdd"))" />
 
                     @foreach (var numpadDigit in _numpadMiddleRowDigits)
@@ -453,7 +453,7 @@
                     <ActionButton PressEffect="ButtonPressEffect.InwardScale"
                                   Modifier="@BuildNumpadTallEnterKeyModifier()"
                                   Text="@InputDefaults.Symbols.EnterReturn"
-                                  aria-label="Numpad Enter"
+                                  aria-label="@NumpadEnterAriaLabel"
                                   OnClick="HandleNumpadEnterAsync" />
 
                     <ActionButton PressEffect="ButtonPressEffect.InwardScale"
@@ -526,6 +526,28 @@
     [Parameter] public int MaxLength { get; set; } = InputDefaults.ScreenKeyboard.DefaultMaxLength;
     [Parameter] public string Placeholder { get; set; } = "Tap keys to type...";
     [Parameter] public string SubmitText { get; set; } = "Done \u2713";
+    /// <summary>Label for the clear pill in the preview bar.</summary>
+    [Parameter] public string ClearText { get; set; } = "Clear";
+    /// <summary>Label for the spacebar key.</summary>
+    [Parameter] public string SpaceText { get; set; } = "Space";
+    /// <summary>Accessible label for the backspace key.</summary>
+    [Parameter] public string BackspaceAriaLabel { get; set; } = "Backspace";
+    /// <summary>Accessible label for the left shift key.</summary>
+    [Parameter] public string ShiftAriaLabel { get; set; } = "Shift";
+    /// <summary>Accessible label for the right shift key.</summary>
+    [Parameter] public string RightShiftAriaLabel { get; set; } = "Right Shift";
+    /// <summary>Accessible label for the up arrow key.</summary>
+    [Parameter] public string UpArrowAriaLabel { get; set; } = "Up Arrow";
+    /// <summary>Accessible label for the left arrow key.</summary>
+    [Parameter] public string LeftArrowAriaLabel { get; set; } = "Left Arrow";
+    /// <summary>Accessible label for the down arrow key.</summary>
+    [Parameter] public string DownArrowAriaLabel { get; set; } = "Down Arrow";
+    /// <summary>Accessible label for the right arrow key.</summary>
+    [Parameter] public string RightArrowAriaLabel { get; set; } = "Right Arrow";
+    /// <summary>Accessible label for the numpad plus key.</summary>
+    [Parameter] public string NumpadPlusAriaLabel { get; set; } = "Numpad Plus";
+    /// <summary>Accessible label for the numpad enter key.</summary>
+    [Parameter] public string NumpadEnterAriaLabel { get; set; } = "Numpad Enter";
     [Parameter] public EventCallback<string?> OnSubmit { get; set; }
 
     private KeyboardSetup ActiveSetup => Setup ?? _fallbackSetup;

@@ -1,3 +1,4 @@
+@using System.Globalization
 @inherits UIComponentBase
 
 @if (!IsEditorMode)
@@ -10,13 +11,13 @@
      style="@BuildSlotStyles()"
      role="button"
      tabindex="0"
-     aria-label="@($"Template slot {SlotName}")"
+     aria-label="@string.Format(CultureInfo.CurrentCulture, AriaLabelFormat, SlotName)"
      @onclick="HandleSelectSlotAsync"
      @onkeydown="HandleKeyDownAsync"
      @attributes="AdditionalAttributes">
     <div class="template-slot-header">
         <span class="template-slot-name">@SlotName</span>
-        <span class="template-slot-badge">@(IsFilled ? "Filled" : "Empty")</span>
+        <span class="template-slot-badge">@(IsFilled ? FilledBadgeText : EmptyBadgeText)</span>
     </div>
     <div class="template-slot-body">
         @if (IsFilled && ChildContent is not null)
@@ -33,6 +34,12 @@
 @code {
     [Parameter] public string SlotName { get; set; } = TemplateDefaults.TemplateSlot.DefaultSlotName;
     [Parameter] public string PlaceholderText { get; set; } = TemplateDefaults.TemplateSlot.DefaultPlaceholderText;
+    /// <summary>Format string for the template slot aria-label. Receives SlotName as {0}.</summary>
+    [Parameter] public string AriaLabelFormat { get; set; } = "Template slot {0}";
+    /// <summary>Badge text displayed when the slot has content.</summary>
+    [Parameter] public string FilledBadgeText { get; set; } = "Filled";
+    /// <summary>Badge text displayed when the slot is empty.</summary>
+    [Parameter] public string EmptyBadgeText { get; set; } = "Empty";
     [Parameter] public bool IsEditorMode { get; set; }
     [Parameter] public bool IsFilled { get; set; }
     [Parameter] public EventCallback<string> OnSelectSlot { get; set; }

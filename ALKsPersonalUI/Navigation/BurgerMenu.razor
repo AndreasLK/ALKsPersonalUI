@@ -5,7 +5,7 @@
                   Shape="ActionButton.ButtonShape.Rounded"
                   Modifier="@BuildTriggerButtonModifier()"
                   OnClick="ToggleDrawerAsync"
-                  aria-label="Toggle navigation menu"
+                  aria-label="@ToggleAriaLabel"
                   aria-expanded="@IsOpen">
         @CurrentTriggerIcon
     </ActionButton>
@@ -20,7 +20,7 @@
                 <TitledWindow Title="@Title"
                               Modifier="@BuildDrawerWindowModifier()">
                     <HeaderActions>
-                        <CloseButton OnClick="CloseDrawerAsync" AriaLabel="Close menu" />
+                        <CloseButton OnClick="CloseDrawerAsync" AriaLabel="@CloseAriaLabel" />
                     </HeaderActions>
                     <ChildContent>
                         <nav class="drawer-nav" @onclick="CloseDrawerAsync">
@@ -35,6 +35,10 @@
 
 @code {
     [Parameter] public string Title { get; set; } = NavigationDefaults.BurgerMenu.DefaultTitle;
+    /// <summary>Accessible label for the button that toggles the navigation drawer.</summary>
+    [Parameter] public string ToggleAriaLabel { get; set; } = "Toggle navigation menu";
+    /// <summary>Accessible label for the close button inside the navigation drawer.</summary>
+    [Parameter] public string CloseAriaLabel { get; set; } = "Close menu";
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
 
