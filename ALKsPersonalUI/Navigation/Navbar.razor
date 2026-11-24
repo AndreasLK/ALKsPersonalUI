@@ -24,7 +24,7 @@
                 }
             </a>
 
-            <nav class="navbar-links-desktop" aria-label="Main navigation">
+            <nav class="navbar-links-desktop" aria-label="@NavigationAriaLabel">
                 @NavItems
             </nav>
 
@@ -49,6 +49,8 @@
 
 @code {
     [Parameter] public string Title { get; set; } = NavigationDefaults.Navbar.DefaultTitle;
+    /// <summary>Accessible label for the desktop navigation landmark.</summary>
+    [Parameter] public string NavigationAriaLabel { get; set; } = "Main navigation";
     [Parameter] public string BrandHref { get; set; } = NavigationDefaults.Navbar.DefaultBrandHref;
     [Parameter] public string? BrandImageSource { get; set; }
     [Parameter] public string? BrandImageAlt { get; set; }
