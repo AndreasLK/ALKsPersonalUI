@@ -1,3 +1,4 @@
+@using System.Globalization
 @inherits UIComponentBase
 
 <div class="@BuildTileCssClasses()"
@@ -18,7 +19,7 @@
         {
             <button type="button"
                     class="media-tile-check"
-                    aria-label="@(IsSelected ? $"Deselect {Title}" : $"Select {Title}")"
+                    aria-label="@string.Format(CultureInfo.CurrentCulture, IsSelected ? DeselectAriaLabelFormat : SelectAriaLabelFormat, Title)"
                     @onclick="HandleToggleSelectAsync"
                     @onclick:stopPropagation="true">
                 @if (IsSelected)
@@ -45,6 +46,10 @@
     [Parameter] public string? Subtitle { get; set; }
     [Parameter] public bool IsSelected { get; set; }
     [Parameter] public bool IsSelectionMode { get; set; }
+    /// <summary>Format string for the selection button aria-label when unselected. Receives Title as {0}.</summary>
+    [Parameter] public string SelectAriaLabelFormat { get; set; } = "Select {0}";
+    /// <summary>Format string for the selection button aria-label when selected. Receives Title as {0}.</summary>
+    [Parameter] public string DeselectAriaLabelFormat { get; set; } = "Deselect {0}";
     [Parameter] public EventCallback OnClick { get; set; }
     [Parameter] public EventCallback<bool> OnToggleSelect { get; set; }
 
