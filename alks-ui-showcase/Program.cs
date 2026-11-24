@@ -1,4 +1,4 @@
-using ALKsPersonalUI;
+using ALKsPersonalUI; //Force reload due to packages not building
 using ALKsPersonalUI.Core;
 using ALKsPersonalUI.Showcase;
 using Microsoft.AspNetCore.Components.Web;
