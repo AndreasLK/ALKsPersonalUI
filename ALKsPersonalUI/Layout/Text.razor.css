@@ -1,5 +1,5 @@
 .ui-text {
-    font-family: sans-serif;
+    font-family: var(--ui-font-family, sans-serif);
     line-height: 1.4;
     margin: 0;
     box-sizing: border-box;

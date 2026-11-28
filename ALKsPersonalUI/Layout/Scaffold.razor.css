@@ -3,7 +3,7 @@
     width: 100%;
     background-color: var(--ui-bg-app, #18181b);
     color: var(--ui-text, #ffffff);
-    font-family: sans-serif;
+    font-family: var(--ui-font-family, sans-serif);
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
