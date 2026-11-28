@@ -1,0 +1,95 @@
+@using ALKsPersonalUI.Core
+
+@switch (Node.Type)
+{
+    case "Modal":
+        <Modal IsOpen="@IsPopupOpen"
+               IsOpenChanged="HandlePopupOpenChangedAsync"
+               Title="@InterpolateProp("Title")"
+               TitleImageSource="@JsonUiSanitizer.SanitizeImageUrl(InterpolateProp("TitleImageSource"))"
+               TitleImageAlt="@InterpolateProp("TitleImageAlt")"
+               CloseOnBackdropClick="@Node.GetBool("CloseOnBackdropClick", true)"
+               FooterContent="@ResolveSlot("FooterContent")"
+               Modifier="@ResolvedModifier">
+            @RenderChildren()
+        </Modal>
+        break;
+
+    case "BottomSheet":
+        <BottomSheet IsOpen="@IsPopupOpen"
+                     IsOpenChanged="HandlePopupOpenChangedAsync"
+                     Title="@InterpolateProp("Title")"
+                     MaxWidth="@ResolveSafeMaxWidth()"
+                     CloseOnBackdropClick="@Node.GetBool("CloseOnBackdropClick", true)"
+                     HeaderActions="@ResolveSlot("HeaderActions")"
+                     Modifier="@ResolvedModifier">
+            @RenderChildren()
+        </BottomSheet>
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired] public JsonUiNode Node { get; set; } = default!;
+    [Parameter, EditorRequired] public JsonUiRenderContext Context { get; set; } = default!;
+    [Parameter] public int Depth { get; set; }
+
+    private UIModifier ResolvedModifier => JsonUiStyleMapper.MapToModifier(Node.Style);
+
+    private bool IsPopupOpen =>
+        !string.IsNullOrWhiteSpace(Node.BindKey)
+            ? Context.State.GetBool(Node.BindKey)
+            : Node.GetBool("IsOpen", false);
+
+    private string InterpolateProp(string key, string fallback = "") =>
+        Context.State.Interpolate(Node.GetProp(key, fallback));
+
+    private string ResolveSafeMaxWidth()
+    {
+        var raw = InterpolateProp("MaxWidth");
+        return JsonUiSanitizer.IsSafeCssValue(raw)
+            ? raw.Trim()
+            : "680px";
+    }
+
+    private async Task HandlePopupOpenChangedAsync(bool isOpen)
+    {
+        if (!string.IsNullOrWhiteSpace(Node.BindKey))
+        {
+            Context.State.SetValue(Node.BindKey, isOpen);
+        }
+
+        if (!isOpen && Node.Events is not null && Node.Events.ContainsKey(JsonUiDefaults.EventClose))
+        {
+            await Context.DispatchEventAsync(Node, JsonUiDefaults.EventClose, "false");
+            return;
+        }
+
+        Context.NotifyStateChanged();
+    }
+
+    private RenderFragment RenderChildren() => __builder =>
+    {
+        if (Node.Children is null)
+        {
+            return;
+        }
+
+        foreach (var child in Node.Children)
+        {
+            @Context.RenderChild(child, Depth + 1)
+        }
+    };
+
+    private RenderFragment? ResolveSlot(string slotName)
+    {
+        if (Node.Slots is null || !Node.Slots.TryGetValue(slotName, out var slotNode))
+        {
+            return null;
+        }
+
+        return __builder =>
+        {
+            @Context.RenderChild(slotNode, Depth + 1)
+        };
+    }
+}
