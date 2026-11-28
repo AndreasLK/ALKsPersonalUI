@@ -1,0 +1,202 @@
+@using ALKsPersonalUI.Core
+
+@switch (Node.Type)
+{
+    case "Text":
+        <ALKsPersonalUI.Layout.Text Variant="@ParseEnum(Node.GetProp("Variant"), TypographyVariant.Body)"
+                                    Weight="@ResolveFontWeight()"
+                                    Align="@ParseEnum(Node.GetProp("Align"), TextAlignment.Start)"
+                                    Color="@ResolveSafeColor()"
+                                    Wrap="@Node.GetBool("Wrap", true)"
+                                    MaxLines="@Node.GetInt("MaxLines", 0)"
+                                    Modifier="@ResolvedModifier">
+            @Context.State.Interpolate(Node.Text ?? Node.GetProp("Value"))
+        </ALKsPersonalUI.Layout.Text>
+        break;
+
+    case "Image":
+        <Image Source="@JsonUiSanitizer.SanitizeImageUrl(InterpolateProp("Source"))"
+               Alt="@InterpolateProp("Alt", "Image")"
+               FallbackText="@InterpolateProp("FallbackText", "Image")"
+               Modifier="@ResolvedModifier" />
+        break;
+
+    case "Pill":
+        <Pill Text="@InterpolateProp("Text", "Pill")"
+              Active="@Node.GetBool("Active")"
+              Modifier="@ResolvedModifier" />
+        break;
+
+    case "ProgressBar":
+        <ProgressBar Value="@ResolveInterpolatedDouble("Value", JsonUiDefaults.DefaultProgressValue)"
+                     Max="@ResolveInterpolatedDouble("Max", JsonUiDefaults.DefaultProgressMax)"
+                     Label="@InterpolateProp("Label", "Progress")"
+                     ShowPercentage="@Node.GetBool("ShowPercentage", true)"
+                     Modifier="@ResolvedModifier" />
+        break;
+
+    case "CountdownTimer":
+        var totalSeconds = Math.Max(1, Node.GetInt("TotalSeconds", JsonUiDefaults.DefaultCountdownSeconds));
+        <CountdownTimer TotalSeconds="@totalSeconds"
+                        AutoStart="@Node.GetBool("AutoStart", true)"
+                        Modifier="@ResolvedModifier"
+                        OnCompleted="@(() => Context.DispatchEventAsync(Node, JsonUiDefaults.EventCompleted, null))" />
+        break;
+
+    case "Leaderboard":
+        @RenderLeaderboard()
+        break;
+
+    case "LockBanner":
+        <LockBanner IsLocked="@Node.GetBool("IsLocked", true)"
+                    LockedByUser="@InterpolateProp("LockedByUser", "editor")"
+                    Modifier="@ResolvedModifier" />
+        break;
+
+    case "MediaTile":
+        var isSelected = !string.IsNullOrWhiteSpace(Node.BindKey)
+            ? Context.State.GetBool(Node.BindKey)
+            : Node.GetBool("IsSelected", false);
+        <MediaTile Title="@InterpolateProp("Title", "Media")"
+                   Subtitle="@InterpolateProp("Subtitle")"
+                   Source="@JsonUiSanitizer.SanitizeImageUrl(InterpolateProp("Source"))"
+                   IsSelectionMode="@Node.GetBool("IsSelectionMode", true)"
+                   IsSelected="@isSelected"
+                   Modifier="@ResolvedModifier"
+                   OnToggleSelect="@OnMediaTileToggledAsync" />
+        break;
+
+    case "Breadcrumbs":
+        <Breadcrumbs Items="@(new[] { new Breadcrumbs.BreadcrumbItem("1", "Home"), new Breadcrumbs.BreadcrumbItem("2", "JSON Showcase") })"
+                     Modifier="@ResolvedModifier" />
+        break;
+
+    case "SimpleSpinner":
+        <SimpleSpinner Modifier="@ResolvedModifier" />
+        break;
+
+    case "OrbitalLoader":
+        <OrbitalLoader Modifier="@ResolvedModifier">
+            @RenderChildren()
+        </OrbitalLoader>
+        break;
+
+    case "Mars":
+        <Mars Modifier="@ResolvedModifier" />
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired] public JsonUiNode Node { get; set; } = default!;
+    [Parameter, EditorRequired] public JsonUiRenderContext Context { get; set; } = default!;
+    [Parameter] public int Depth { get; set; }
+
+    private UIModifier ResolvedModifier => JsonUiStyleMapper.MapToModifier(Node.Style);
+
+    private string InterpolateProp(string key, string fallback = "") =>
+        Context.State.Interpolate(Node.GetProp(key, fallback));
+
+    private string? ResolveSafeColor()
+    {
+        var rawColor = InterpolateProp("Color");
+        return JsonUiSanitizer.IsSafeCssValue(rawColor) ? rawColor.Trim() : null;
+    }
+
+    private double ResolveInterpolatedDouble(string key, double fallback)
+    {
+        var raw = InterpolateProp(key);
+        return JsonUiSessionState.TryConvertToDouble(raw, out var parsed) ? parsed : fallback;
+    }
+
+    private async Task OnMediaTileToggledAsync(bool isSelected)
+    {
+        if (!string.IsNullOrWhiteSpace(Node.BindKey))
+        {
+            Context.State.SetValue(Node.BindKey, isSelected);
+        }
+
+        await Context.DispatchEventAsync(Node, JsonUiDefaults.EventClick, isSelected ? "true" : "false");
+        Context.NotifyStateChanged();
+    }
+
+    private RenderFragment RenderChildren() => __builder =>
+    {
+        if (Node.Children is null)
+        {
+            return;
+        }
+
+        foreach (var child in Node.Children)
+        {
+            @Context.RenderChild(child, Depth + 1)
+        }
+    };
+
+    private RenderFragment RenderLeaderboard() => __builder =>
+    {
+        var sourceName = Node.GetProp("DataSource", "leaderboard");
+        IReadOnlyList<IReadOnlyDictionary<string, object?>>? rows = null;
+        if (Context.DataSources is not null)
+        {
+            Context.DataSources.TryGetValue(sourceName, out rows);
+        }
+
+        var columns = ParseLeaderboardColumns(Node.GetProp("Columns", "Player:name,Score:score"));
+        var highlightField = Node.GetProp("HighlightKey");
+        var highlightStateKey = Node.GetProp("HighlightStateKey");
+        var highlightTarget = !string.IsNullOrWhiteSpace(highlightStateKey)
+            ? Context.State.GetString(highlightStateKey)
+            : string.Empty;
+
+        <Leaderboard Items="@rows"
+                     Columns="@columns"
+                     TopCount="@Math.Max(1, Node.GetInt("TopCount", 10))"
+                     RankHeader="@InterpolateProp("RankHeader", "#")"
+                     EmptyText="@InterpolateProp("EmptyText", "No entries yet.")"
+                     IsHighlighted="@(row => IsRowHighlighted(row, highlightField, highlightTarget))"
+                     Modifier="@ResolvedModifier" />
+    };
+
+    private static List<Leaderboard<IReadOnlyDictionary<string, object?>>.Column> ParseLeaderboardColumns(string spec)
+    {
+        var columns = new List<Leaderboard<IReadOnlyDictionary<string, object?>>.Column>();
+        foreach (var segment in spec.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var parts = segment.Split(':', 2, StringSplitOptions.TrimEntries);
+            var title = parts[0];
+            var fieldKey = parts.Length > 1 ? parts[1] : parts[0];
+            columns.Add(new Leaderboard<IReadOnlyDictionary<string, object?>>.Column(
+                title,
+                row => row is not null && row.TryGetValue(fieldKey, out var value) ? value : string.Empty));
+        }
+
+        return columns;
+    }
+
+    private static bool IsRowHighlighted(
+        IReadOnlyDictionary<string, object?> row,
+        string highlightField,
+        string highlightTarget)
+    {
+        if (string.IsNullOrWhiteSpace(highlightField) || string.IsNullOrWhiteSpace(highlightTarget))
+        {
+            return false;
+        }
+
+        return row.TryGetValue(highlightField, out var value)
+            && string.Equals(JsonUiSessionState.FormatValue(value), highlightTarget, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static TEnum ParseEnum<TEnum>(string? rawValue, TEnum fallback) where TEnum : struct, Enum =>
+        !string.IsNullOrWhiteSpace(rawValue) && Enum.TryParse<TEnum>(rawValue.Trim(), ignoreCase: true, out var parsed)
+            ? parsed
+            : fallback;
+
+    private FontWeight? ResolveFontWeight() =>
+        ParseNullableEnum<FontWeight>(Node.GetProp("Weight"));
+
+    private static TEnum? ParseNullableEnum<TEnum>(string? rawValue) where TEnum : struct, Enum =>
+        !string.IsNullOrWhiteSpace(rawValue) && Enum.TryParse<TEnum>(rawValue.Trim(), ignoreCase: true, out var parsed)
+            ? parsed
+            : null;
+}

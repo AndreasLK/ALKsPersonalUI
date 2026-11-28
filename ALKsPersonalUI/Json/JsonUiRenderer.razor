@@ -1,198 +1,295 @@
 @using ALKsPersonalUI.Json
+@using ALKsPersonalUI.Overlays
+@implements IDisposable
 
-@if (Node is not null)
+@if (ResolvedRootNode is not null || _activeDocument?.Shell is not null)
 {
-    @RenderNode(Node)
+    @if (HasScopedTheme)
+    {
+        <div class="ui-json-runtime-scope" style="@ScopedThemeVariables">
+            @RenderDocumentExperience()
+        </div>
+    }
+    else
+    {
+        @RenderDocumentExperience()
+    }
 }
 
 @code {
-    [Parameter] public JsonUiNode? Node { get; set; }
-    [Parameter] public EventCallback<string> OnAction { get; set; }
-
-    private RenderFragment RenderNode(JsonUiNode node) => __builder =>
+    private static readonly HashSet<string> LayoutNodeTypes = new(StringComparer.Ordinal)
     {
-        switch (node.Type)
-        {
-            case "Column":
-                <Column Gap="@node.GetProp("Gap", "1rem")">
-                    @RenderChildren(node)
-                </Column>
-                break;
-
-            case "Row":
-                <Row Gap="@node.GetProp("Gap", "0.75rem")" Wrap="@node.GetBool("Wrap", true)">
-                    @RenderChildren(node)
-                </Row>
-                break;
-
-            case "Box":
-                <Box>
-                    @RenderChildren(node)
-                </Box>
-                break;
-
-            case "Window":
-                <Window>
-                    @RenderChildren(node)
-                </Window>
-                break;
-
-            case "TitledWindow":
-                <TitledWindow Title="@node.GetProp("Title", "Window")">
-                    @RenderChildren(node)
-                </TitledWindow>
-                break;
-
-            case "Divider":
-                <Divider />
-                break;
-
-            case "Spacer":
-                <Spacer />
-                break;
-
-            case "Text":
-                <ALKsPersonalUI.Layout.Text Variant="TypographyVariant.Body">
-                    @(node.Text ?? node.GetProp("Value"))
-                </ALKsPersonalUI.Layout.Text>
-                break;
-
-            case "Image":
-                <Image Source="@node.GetProp("Source")"
-                       Alt="@node.GetProp("Alt", "Image")"
-                       FallbackText="@node.GetProp("FallbackText", "Image")" />
-                break;
-
-            case "FrameBox":
-                <FrameBox BorderColor="@node.GetProp("BorderColor", "var(--ui-accent)")"
-                          Padding="@node.GetProp("Padding", "1rem")">
-                    @RenderChildren(node)
-                </FrameBox>
-                break;
-
-            case "TemplateSlot":
-                <TemplateSlot SlotName="@node.GetProp("SlotName", "Slot")"
-                              PlaceholderText="@node.GetProp("PlaceholderText", "Drop or select content")"
-                              IsEditorMode="@node.GetBool("IsEditorMode", true)"
-                              IsFilled="@node.GetBool("IsFilled", false)">
-                    @RenderChildren(node)
-                </TemplateSlot>
-                break;
-
-            case "AspectRatioFrame":
-                <AspectRatioFrame AspectWidth="@node.GetInt("AspectWidth", 16)"
-                                  AspectHeight="@node.GetInt("AspectHeight", 9)">
-                    @RenderChildren(node)
-                </AspectRatioFrame>
-                break;
-
-            case "ActionButton":
-                <ActionButton Text="@node.GetProp("Text", "Button")"
-                              OnClick="@(() => TriggerActionAsync(node.GetProp("Text", "Button")))" />
-                break;
-
-            case "CloseButton":
-                <CloseButton OnClick="@(() => TriggerActionAsync(node.GetProp("AriaLabel", "Close")))" />
-                break;
-
-            case "Pill":
-                <Pill Text="@node.GetProp("Text", "Pill")" Active="@node.GetBool("Active")" />
-                break;
-
-            case "ProgressBar":
-                <ProgressBar Value="@node.GetDouble("Value", 60)"
-                             Max="@node.GetDouble("Max", 100)"
-                             Label="@node.GetProp("Label", "Progress")"
-                             ShowPercentage="@node.GetBool("ShowPercentage", true)" />
-                break;
-
-            case "CountdownTimer":
-                <CountdownTimer TotalSeconds="@node.GetInt("TotalSeconds", 30)"
-                                AutoStart="@node.GetBool("AutoStart", true)" />
-                break;
-
-            case "LockBanner":
-                <LockBanner IsLocked="@node.GetBool("IsLocked", true)"
-                            LockedByUser="@node.GetProp("LockedByUser", "editor")" />
-                break;
-
-            case "TextInput":
-                <TextInput Label="@node.GetProp("Label", "Text Input")"
-                           Placeholder="@node.GetProp("Placeholder", "Type here...")" />
-                break;
-
-            case "TextArea":
-                <TextArea Label="@node.GetProp("Label", "Text Area")"
-                          Placeholder="@node.GetProp("Placeholder", "Enter notes...")"
-                          Rows="@node.GetInt("Rows", 3)" />
-                break;
-
-            case "SearchInput":
-                <SearchInput Placeholder="@node.GetProp("Placeholder", "Search...")" />
-                break;
-
-            case "NumberInput":
-                <NumberInput TValue="int" Label="@node.GetProp("Label", "Number")" />
-                break;
-
-            case "Checkbox":
-                <Checkbox Label="@node.GetProp("Label", "Check me")" />
-                break;
-
-            case "FileUpload":
-                <FileUpload PromptText="@node.GetProp("PromptText", "Tap to choose files")"
-                            AllowMultiple="@node.GetBool("AllowMultiple", true)" />
-                break;
-
-            case "ImageUpload":
-                <ImageUpload PromptText="@node.GetProp("PromptText", "Tap to choose images")"
-                             AllowMultiple="@node.GetBool("AllowMultiple", true)"
-                             AllowFolderUpload="@node.GetBool("AllowFolderUpload", false)"
-                             ShowPreview="@node.GetBool("ShowPreview", true)" />
-                break;
-
-            case "Breadcrumbs":
-                <Breadcrumbs Items="@(new[] { new Breadcrumbs.BreadcrumbItem("1", "Home"), new Breadcrumbs.BreadcrumbItem("2", "JSON Showcase") })" />
-                break;
-
-            case "PageCarousel":
-                var activePageIndex = node.GetInt("ActivePageIndex", 0);
-                <PageCarousel ActivePageIndex="@activePageIndex"
-                              PageCount="@node.GetInt("PageCount", 2)"
-                              OnPageChanged="@(index => UpdateProp(node, "ActivePageIndex", index.ToString()))">
-                    @if (node.Children is { Count: > 0 })
-                    {
-                        var safeIndex = Math.Clamp(activePageIndex, 0, node.Children.Count - 1);
-                        @RenderNode(node.Children[safeIndex])
-                    }
-                </PageCarousel>
-                break;
-
-            case "MediaTile":
-                <MediaTile Title="@node.GetProp("Title", "Media")"
-                           Subtitle="@node.GetProp("Subtitle")"
-                           IsSelectionMode="@node.GetBool("IsSelectionMode", true)"
-                           IsSelected="@node.GetBool("IsSelected", false)"
-                           OnToggleSelect="@(isSelected => UpdateProp(node, "IsSelected", isSelected.ToString()))" />
-                break;
-
-            case "SimpleSpinner":
-                <SimpleSpinner />
-                break;
-
-            case "OrbitalLoader":
-                <OrbitalLoader>
-                    @RenderChildren(node)
-                </OrbitalLoader>
-                break;
-
-            case "Mars":
-                <Mars />
-                break;
-        }
+        "Column", "Row", "Box", "Grid", "Window", "TitledWindow", "Divider",
+        "Spacer", "FrameBox", "TemplateSlot", "AspectRatioFrame", "PageCarousel", "KioskShell", "ViewOutlet"
     };
 
-    private async Task TriggerActionAsync(string actionName)
+    private static readonly HashSet<string> OverlayNodeTypes = new(StringComparer.Ordinal)
+    {
+        "Modal", "BottomSheet"
+    };
+
+    private static readonly HashSet<string> InputNodeTypes = new(StringComparer.Ordinal)
+    {
+        "ActionButton", "CloseButton", "ChoiceCard", "ScreenKeyboard", "TextInput",
+        "TextArea", "SearchInput", "NumberInput", "Checkbox", "FileUpload", "ImageUpload"
+    };
+
+    [Inject] private IServiceProvider ServiceProvider { get; set; } = default!;
+
+    private readonly JsonUiSessionState _sessionState = new();
+    private JsonUiDocument? _activeDocument;
+    private JsonUiDocument? _lastDocumentParam;
+    private string? _lastJsonParam;
+    private JsonUiNode? _lastNodeParam;
+    private string? _lastDocumentId;
+    private bool _isAttached;
+    private bool _isDisposed;
+
+    /// <summary>
+    /// Gets or sets a legacy root <see cref="JsonUiNode"/> for single-tree rendering.
+    /// </summary>
+    [Parameter] public JsonUiNode? Node { get; set; }
+
+    /// <summary>
+    /// Gets or sets a self-contained <see cref="JsonUiDocument"/> experience package.
+    /// </summary>
+    [Parameter] public JsonUiDocument? Document { get; set; }
+
+    /// <summary>
+    /// Gets or sets a raw JSON string representing a <see cref="JsonUiDocument"/>.
+    /// </summary>
+    [Parameter] public string? Json { get; set; }
+
+    /// <summary>
+    /// Gets or sets the backwards-compatible callback invoked by legacy <c>ActionButton</c> and <c>CloseButton</c> clicks.
+    /// </summary>
+    [Parameter] public EventCallback<string> OnAction { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked when a declarative <see cref="JsonUiActionType.HostCommand"/> executes.
+    /// </summary>
+    [Parameter] public EventCallback<JsonUiHostCommand> OnHostCommand { get; set; }
+
+    /// <summary>
+    /// Gets or sets host-supplied data collections keyed by source name for components such as <c>Leaderboard</c>.
+    /// </summary>
+    [Parameter] public IReadOnlyDictionary<string, IReadOnlyList<IReadOnlyDictionary<string, object?>>>? DataSources { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the host is currently offline, dynamically updating <c>KioskShell</c> banners.
+    /// </summary>
+    [Parameter] public bool IsOffline { get; set; }
+
+    private JsonUiNode? ResolvedRootNode =>
+        _activeDocument is not null ? _activeDocument.ResolveViewNode(_sessionState.ActiveView) : Node;
+
+    private string ScopedThemeVariables => JsonUiThemeResolver.ResolveScopedCssVariables(_activeDocument);
+    private bool HasScopedTheme => !string.IsNullOrEmpty(ScopedThemeVariables);
+    private string ViewSubtreeKey => $"{_sessionState.SessionGeneration}:{_sessionState.ActiveView}";
+    private string ShellSubtreeKey => $"shell:{_sessionState.SessionGeneration}";
+
+    protected override void OnInitialized() => _isAttached = true;
+
+    /// <summary>
+    /// Updates a single session state value from the host application without resetting the active view or session.
+    /// </summary>
+    public Task SetStateValueAsync(string key, object? value)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return Task.CompletedTask;
+        }
+
+        return ApplyHostStateUpdatesAsync(new Dictionary<string, object?>(StringComparer.Ordinal) { [key] = value });
+    }
+
+    /// <summary>
+    /// Merges multiple session state values from the host application without resetting the active view or session.
+    /// </summary>
+    public Task UpdateStateAsync(IReadOnlyDictionary<string, object?> stateUpdates)
+    {
+        if (stateUpdates is null || stateUpdates.Count == 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        // Snapshot incoming dictionary before marshaling onto the renderer synchronization context.
+        var snapshot = new Dictionary<string, object?>(stateUpdates, StringComparer.Ordinal);
+        return ApplyHostStateUpdatesAsync(snapshot);
+    }
+
+    /// <summary>
+    /// Attempts to read a current session state value for host inspection.
+    /// </summary>
+    public bool TryGetStateValue(string key, out object? value) =>
+        _sessionState.TryGetValue(key, out value);
+
+    private async Task ApplyHostStateUpdatesAsync(Dictionary<string, object?> snapshot)
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        if (!_isAttached)
+        {
+            foreach (var (key, value) in snapshot)
+            {
+                _sessionState.SetValue(key, value);
+            }
+
+            return;
+        }
+
+        try
+        {
+            await InvokeAsync(() =>
+            {
+                if (_isDisposed)
+                {
+                    return;
+                }
+
+                foreach (var (key, value) in snapshot)
+                {
+                    _sessionState.SetValue(key, value);
+                }
+
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex) when (ex is ObjectDisposedException or InvalidOperationException)
+        {
+            // Ignore updates arriving after circuit disconnect or component disposal.
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (HasDocumentOrNodeChanged())
+        {
+            InitializeRuntimeFromParameters();
+        }
+    }
+
+    private bool HasDocumentOrNodeChanged()
+    {
+        if (!ReferenceEquals(Document, _lastDocumentParam))
+        {
+            return true;
+        }
+
+        if (!string.Equals(Json, _lastJsonParam, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        if (Document is null && string.IsNullOrWhiteSpace(Json) && !ReferenceEquals(Node, _lastNodeParam))
+        {
+            return true;
+        }
+
+        return Document is not null && !string.Equals(Document.Id, _lastDocumentId, StringComparison.Ordinal);
+    }
+
+    private void InitializeRuntimeFromParameters()
+    {
+        _lastDocumentParam = Document;
+        _lastJsonParam = Json;
+        _lastNodeParam = Node;
+        _lastDocumentId = Document?.Id;
+
+        _activeDocument = Document ?? (!string.IsNullOrWhiteSpace(Json) ? JsonUiDocument.FromJson(Json) : null);
+        _sessionState.Reset(_activeDocument);
+    }
+
+    private RenderFragment RenderDocumentExperience() => __builder =>
+    {
+        var shellNode = _activeDocument?.Shell;
+        if (shellNode is not null)
+        {
+            <div @key="ShellSubtreeKey">
+                @RenderNodeWithOutlet(shellNode, 0, RenderActiveViewSubtree())
+            </div>
+            return;
+        }
+
+        @RenderActiveViewSubtree()
+    };
+
+    private RenderFragment RenderActiveViewSubtree() => __builder =>
+    {
+        if (ResolvedRootNode is null)
+        {
+            return;
+        }
+
+        <div @key="ViewSubtreeKey">
+            @RenderNode(ResolvedRootNode, 0)
+        </div>
+    };
+
+    private RenderFragment RenderNode(JsonUiNode node, int depth) =>
+        RenderNodeWithOutlet(node, depth, activeViewContent: null);
+
+    private RenderFragment RenderNodeWithOutlet(JsonUiNode node, int depth, RenderFragment? activeViewContent) => __builder =>
+    {
+        if (depth > JsonUiDefaults.MaxRenderDepth || !JsonUiConditionEvaluator.Evaluate(node.VisibleWhen, _sessionState))
+        {
+            return;
+        }
+
+        var context = new JsonUiRenderContext(
+            _sessionState,
+            DataSources,
+            DispatchNodeEventAsync,
+            TriggerLegacyActionAsync,
+            StateHasChanged,
+            (child, childDepth) => RenderNodeWithOutlet(child, childDepth, activeViewContent),
+            IsOffline,
+            activeViewContent);
+
+        if (OverlayNodeTypes.Contains(node.Type))
+        {
+            <JsonUiOverlayNodeRenderer Node="@node" Context="@context" Depth="@depth" />
+            return;
+        }
+
+        if (LayoutNodeTypes.Contains(node.Type))
+        {
+            <JsonUiLayoutNodeRenderer Node="@node" Context="@context" Depth="@depth" />
+            return;
+        }
+
+        if (InputNodeTypes.Contains(node.Type))
+        {
+            <JsonUiInputNodeRenderer Node="@node" Context="@context" />
+            return;
+        }
+
+        <JsonUiDisplayNodeRenderer Node="@node" Context="@context" Depth="@depth" />
+    };
+
+    private async Task DispatchNodeEventAsync(JsonUiNode node, string eventName, string? eventValue)
+    {
+        if (node.Events is null || !node.Events.TryGetValue(eventName, out var actions) || actions.Count == 0)
+        {
+            return;
+        }
+
+        var toastService = ServiceProvider.GetService(typeof(ToastService)) as ToastService;
+        await JsonUiActionDispatcher.DispatchAsync(
+            actions,
+            _sessionState,
+            _activeDocument,
+            OnHostCommand.HasDelegate ? cmd => OnHostCommand.InvokeAsync(cmd) : null,
+            toastService,
+            eventValue);
+
+        StateHasChanged();
+    }
+
+    private async Task TriggerLegacyActionAsync(string actionName)
     {
         if (OnAction.HasDelegate)
         {
@@ -200,22 +297,5 @@
         }
     }
 
-    private static void UpdateProp(JsonUiNode node, string key, string value)
-    {
-        node.Props ??= new();
-        node.Props[key] = value;
-    }
-
-    private RenderFragment RenderChildren(JsonUiNode node) => __builder =>
-    {
-        if (node.Children is null)
-        {
-            return;
-        }
-
-        foreach (var child in node.Children)
-        {
-            @RenderNode(child)
-        }
-    };
+    public void Dispose() => _isDisposed = true;
 }

@@ -1,0 +1,200 @@
+@using ALKsPersonalUI.Core
+
+@switch (Node.Type)
+{
+    case "Column":
+        <Column Gap="@Node.GetProp("Gap", JsonUiDefaults.DefaultColumnGap)"
+                Modifier="@ResolvedModifier">
+            @RenderChildren()
+        </Column>
+        break;
+
+    case "Row":
+        <Row Gap="@Node.GetProp("Gap", JsonUiDefaults.DefaultRowGap)"
+             Wrap="@Node.GetBool("Wrap", true)"
+             Modifier="@ResolvedModifier">
+            @RenderChildren()
+        </Row>
+        break;
+
+    case "Box":
+        <Box Modifier="@ResolvedModifier">
+            @RenderChildren()
+        </Box>
+        break;
+
+    case "Grid":
+        <Grid Columns="@Math.Max(JsonUiDefaults.MinGridColumns, Node.GetInt("Columns", LayoutDefaults.Grid.DefaultColumns))"
+              MinColumnWidth="@Node.GetProp("MinColumnWidth", LayoutDefaults.Grid.DefaultMinColumnWidth)"
+              Gap="@Node.GetProp("Gap", string.Empty)"
+              Modifier="@ResolvedModifier">
+            @RenderChildren()
+        </Grid>
+        break;
+
+    case "Window":
+        <Window Modifier="@ResolvedModifier">
+            @RenderChildren()
+        </Window>
+        break;
+
+    case "TitledWindow":
+        <TitledWindow Title="@InterpolateProp("Title", "Window")"
+                      Modifier="@ResolvedModifier">
+            @RenderChildren()
+        </TitledWindow>
+        break;
+
+    case "Divider":
+        <Divider Modifier="@ResolvedModifier" />
+        break;
+
+    case "Spacer":
+        <Spacer Modifier="@ResolvedModifier" />
+        break;
+
+    case "FrameBox":
+        <FrameBox BorderColor="@Node.GetProp("BorderColor", JsonUiDefaults.DefaultFrameBorderColor)"
+                  Padding="@Node.GetProp("Padding", JsonUiDefaults.DefaultFramePadding)"
+                  Modifier="@ResolvedModifier">
+            @RenderChildren()
+        </FrameBox>
+        break;
+
+    case "TemplateSlot":
+        <TemplateSlot SlotName="@InterpolateProp("SlotName", "Slot")"
+                      PlaceholderText="@InterpolateProp("PlaceholderText", "Drop or select content")"
+                      IsEditorMode="@Node.GetBool("IsEditorMode", true)"
+                      IsFilled="@Node.GetBool("IsFilled", false)"
+                      Modifier="@ResolvedModifier">
+            @RenderChildren()
+        </TemplateSlot>
+        break;
+
+    case "AspectRatioFrame":
+        <AspectRatioFrame AspectWidth="@Node.GetInt("AspectWidth", JsonUiDefaults.DefaultAspectWidth)"
+                          AspectHeight="@Node.GetInt("AspectHeight", JsonUiDefaults.DefaultAspectHeight)"
+                          Modifier="@ResolvedModifier">
+            @RenderChildren()
+        </AspectRatioFrame>
+        break;
+
+    case "PageCarousel":
+        @RenderPageCarousel()
+        break;
+
+    case "KioskShell":
+        @RenderKioskShell()
+        break;
+
+    case "ViewOutlet":
+        @Context.ActiveViewContent
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired] public JsonUiNode Node { get; set; } = default!;
+    [Parameter, EditorRequired] public JsonUiRenderContext Context { get; set; } = default!;
+    [Parameter] public int Depth { get; set; }
+
+    private UIModifier ResolvedModifier => JsonUiStyleMapper.MapToModifier(Node.Style);
+
+    private string InterpolateProp(string key, string fallback = "") =>
+        Context.State.Interpolate(Node.GetProp(key, fallback));
+
+    private RenderFragment RenderChildren() => __builder =>
+    {
+        if (Node.Children is null)
+        {
+            return;
+        }
+
+        foreach (var child in Node.Children)
+        {
+            @Context.RenderChild(child, Depth + 1)
+        }
+    };
+
+    private RenderFragment? ResolveSlot(string slotName)
+    {
+        if (Node.Slots is null || !Node.Slots.TryGetValue(slotName, out var slotNode))
+        {
+            return null;
+        }
+
+        return __builder =>
+        {
+            @Context.RenderChild(slotNode, Depth + 1)
+        };
+    }
+
+    private RenderFragment RenderPageCarousel() => __builder =>
+    {
+        var childCount = Node.Children?.Count ?? 0;
+        var pageCount = Math.Max(1, Node.GetInt("PageCount", Math.Max(1, childCount)));
+        var stateKey = Node.BindKey ?? Node.Id ?? "__carousel_index";
+        var activeIndex = Context.State.GetInt(stateKey, Node.GetInt("ActivePageIndex", 0));
+        var safeIndex = childCount > 0 ? Math.Clamp(activeIndex, 0, childCount - 1) : 0;
+
+        <PageCarousel ActivePageIndex="@safeIndex"
+                      PageCount="@pageCount"
+                      ShowNavigationControls="@Node.GetBool("ShowNavigationControls", true)"
+                      Modifier="@ResolvedModifier"
+                      OnPageChanged="@(index => OnCarouselPageChanged(stateKey, index))">
+            @if (Node.Children is { Count: > 0 })
+            {
+                @Context.RenderChild(Node.Children[safeIndex], Depth + 1)
+            }
+        </PageCarousel>
+    };
+
+    private void OnCarouselPageChanged(string stateKey, int newIndex)
+    {
+        Context.State.SetValue(stateKey, (double)newIndex);
+        Context.NotifyStateChanged();
+    }
+
+    private RenderFragment RenderKioskShell() => __builder =>
+    {
+        var isOffline = Context.IsOffline || ResolveInterpolatedBool("IsOffline", false);
+        var hasExplicitChildren = Node.Children is { Count: > 0 };
+
+        <KioskShell TopBar="@ResolveSlot("TopBar")"
+                    BottomBar="@ResolveSlot("BottomBar")"
+                    FloatingAction="@ResolveSlot("FloatingAction")"
+                    ConnectionBanner="@ResolveSlot("ConnectionBanner")"
+                    AttractOverlay="@ResolveSlot("AttractOverlay")"
+                    EnableToasts="@Node.GetBool("EnableToasts", true)"
+                    IsOffline="@isOffline"
+                    IsPreview="@Node.GetBool("IsPreview", false)"
+                    IdleTimeoutSeconds="@Node.GetInt("IdleTimeoutSeconds", 0)"
+                    Modifier="@ResolvedModifier"
+                    OnIdleTimeout="@(() => Context.DispatchEventAsync(Node, JsonUiDefaults.EventIdleTimeout, null))">
+            @if (!hasExplicitChildren && Context.ActiveViewContent is not null)
+            {
+                @Context.ActiveViewContent
+            }
+            else
+            {
+                @RenderChildren()
+            }
+        </KioskShell>
+    };
+
+    private bool ResolveInterpolatedBool(string key, bool fallback)
+    {
+        var raw = Node.GetProp(key);
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return fallback;
+        }
+
+        var interpolated = Context.State.Interpolate(raw);
+        if (bool.TryParse(interpolated, out var parsed))
+        {
+            return parsed;
+        }
+
+        return string.Equals(interpolated.Trim(), "1", StringComparison.Ordinal);
+    }
+}
