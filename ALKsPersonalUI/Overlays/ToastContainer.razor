@@ -18,11 +18,27 @@
 </div>
 
 @code {
+    private bool _isDisposed;
+
     protected override void OnInitialized() =>
         ToastService.OnChange += RefreshToastDisplay;
 
-    private void RefreshToastDisplay() =>
-        InvokeAsync(StateHasChanged);
+    private void RefreshToastDisplay()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        try
+        {
+            _ = InvokeAsync(StateHasChanged);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Ignore late notifications after component disposal.
+        }
+    }
 
     private static UIModifier BuildToastModifier(ToastVariant variant) => UIModifier.Empty
         .Width(OverlayDefaults.Toast.Width)
@@ -43,6 +59,9 @@
         _ => OverlayDefaults.Toast.InfoBorderColor
     };
 
-    public void Dispose() =>
+    public void Dispose()
+    {
+        _isDisposed = true;
         ToastService.OnChange -= RefreshToastDisplay;
+    }
 }
