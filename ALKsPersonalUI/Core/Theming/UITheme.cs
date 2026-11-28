@@ -46,6 +46,7 @@ public sealed class UITheme
 
     public string InwardPressScaleFactor { get; set; } = ThemeDefaults.DarkDefault.InwardPressScaleFactor;
     public string MinimumTouchTargetSize { get; set; } = ThemeDefaults.DarkDefault.MinimumTouchTargetSize;
+    public string FontFamily { get; set; } = "sans-serif";
     public ButtonPressEffect DefaultPressEffect { get; set; } = ButtonPressEffect.Auto;
     public TouchInputMode DefaultTouchInputMode { get; set; } = TouchInputMode.None;
 
@@ -107,7 +108,8 @@ public sealed class UITheme
             .Add("--ui-depth", ButtonExtrusionDepth)
             .Add("--ui-anim-speed", PressAnimationDuration)
             .Add("--ui-press-scale", InwardPressScaleFactor)
-            .Add("--ui-touch-target", MinimumTouchTargetSize);
+            .Add("--ui-touch-target", MinimumTouchTargetSize)
+            .Add("--ui-font-family", FontFamily);
 
         foreach (var (variableName, variableValue) in _customCssVariables)
             styleBuilder.Add(variableName, variableValue);
