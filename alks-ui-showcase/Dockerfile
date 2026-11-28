@@ -2,10 +2,10 @@
 WORKDIR /src
 COPY ["ALKsPersonalUI/ALKsPersonalUI.csproj", "ALKsPersonalUI/"]
 COPY ["alks-ui-showcase/ALKsPersonalUI.Showcase.csproj", "alks-ui-showcase/"]
-RUN dotnet restore "alks-ui-showcase/ALKsPersonalUI.Showcase.csproj" --no-cache
+RUN dotnet restore "alks-ui-showcase/ALKsPersonalUI.Showcase.csproj" --no-cache -p:EnableNet11=false
 COPY ALKsPersonalUI/ ALKsPersonalUI/
 COPY alks-ui-showcase/ alks-ui-showcase/
-RUN dotnet publish "alks-ui-showcase/ALKsPersonalUI.Showcase.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "alks-ui-showcase/ALKsPersonalUI.Showcase.csproj" -c Release -o /app/publish /p:UseAppHost=false -p:EnableNet11=false
 
 FROM nginx:stable-alpine AS final
 WORKDIR /usr/share/nginx/html
