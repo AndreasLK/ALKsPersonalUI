@@ -18,6 +18,9 @@
 </div>
 
 @code {
+    /// <summary>Accessible label for the dismiss button on each toast notification.</summary>
+    [Parameter] public string DismissAriaLabel { get; set; } = OverlayDefaults.Toast.DismissAriaLabel;
+
     private bool _isDisposed;
 
     protected override void OnInitialized() =>
