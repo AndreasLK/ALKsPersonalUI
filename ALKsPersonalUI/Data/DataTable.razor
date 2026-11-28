@@ -1,4 +1,5 @@
 ﻿@typeparam TItem
+@using System.Globalization
 @inherits UIComponentBase
 
 <Window Modifier="@BuildTableWindowModifier()">
@@ -7,20 +8,20 @@
                   Items="GetFilterableColumnTitles()"
                   @bind-Value="_selectedFilterColumnTitle"
                   ItemDisplayTextSelector="FormatColumnDropdownLabel"
-                  AriaLabel="@DataTableDefaults.ColumnFilterAriaLabel" />
+                  AriaLabel="@ColumnFilterAriaLabel" />
 
         <TextInput @bind-Value="_searchFilterText"
-                   Placeholder="@DataTableDefaults.SearchPlaceholder" />
+                   Placeholder="@SearchPlaceholder" />
     </div>
 
     @if (Columns is not null)
     {
         @foreach (var quickFilterColumn in Columns.Where(column => column.ShowQuickFilters))
         {
-            <div class="quick-filter-bar" role="group" aria-label="@($"Quick filter by {quickFilterColumn.Title}")">
+            <div class="quick-filter-bar" role="group" aria-label="@string.Format(CultureInfo.CurrentCulture, QuickFilterAriaLabelFormat, quickFilterColumn.Title)">
                 <Pill Active="@IsSearchFilterEmpty"
                       OnClick="ClearSearchFilter">
-                    @DataTableDefaults.AllColumnsKey
+                    @AllQuickFilterText
                 </Pill>
 
                 @foreach (var distinctCategoryValue in GetQuickFilterValuesForColumn(quickFilterColumn))
@@ -97,6 +98,16 @@
 
     [Parameter] public IEnumerable<TItem>? Items { get; set; }
     [Parameter] public List<Column>? Columns { get; set; }
+    /// <summary>Accessible label for the column filter dropdown.</summary>
+    [Parameter] public string ColumnFilterAriaLabel { get; set; } = DataTableDefaults.ColumnFilterAriaLabel;
+    /// <summary>Placeholder text for the table search input.</summary>
+    [Parameter] public string SearchPlaceholder { get; set; } = DataTableDefaults.SearchPlaceholder;
+    /// <summary>Display label for the "all columns" option in the column filter dropdown.</summary>
+    [Parameter] public string AllColumnsDisplayText { get; set; } = DataTableDefaults.AllColumnsDisplayText;
+    /// <summary>Display label for the "all" pill in quick-filter bars.</summary>
+    [Parameter] public string AllQuickFilterText { get; set; } = DataTableDefaults.AllColumnsKey;
+    /// <summary>Format string for quick-filter group aria-labels. Receives the column title as {0}.</summary>
+    [Parameter] public string QuickFilterAriaLabelFormat { get; set; } = "Quick filter by {0}";
 
     private Column? _activeSortColumn;
     private bool _isSortedAscending = true;
@@ -119,9 +130,9 @@
         .RawStyle(ModifierOrEmpty.BuildFrameExtras())
         .Class(ModifierClass);
 
-    private static string FormatColumnDropdownLabel(string columnTitle) =>
+    private string FormatColumnDropdownLabel(string columnTitle) =>
         columnTitle == DataTableDefaults.AllColumnsKey
-            ? DataTableDefaults.AllColumnsDisplayText
+            ? AllColumnsDisplayText
             : columnTitle;
 
     private void ClearSearchFilter()

@@ -1,6 +1,8 @@
+using ALKsPersonalUI.Buttons;
 using ALKsPersonalUI.Core;
 using ALKsPersonalUI.Inputs;
 using ALKsPersonalUI.Tests.TestInfrastructure;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 
 namespace ALKsPersonalUI.Tests.Components;
@@ -180,5 +182,88 @@ public class InputComponentsTests : PersonalUiTestContext
         invalidRadioCut.Find("button[role='slider']").KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
         Assert.Equal("50", invalidRadioCut.Find("button[role='slider']").GetAttribute("aria-valuenow"));
         Assert.Contains("--_rs-rotation: -90deg", invalidRadioCut.Find(".dial-indicator").GetAttribute("style"));
+    }
+
+    [Fact]
+    public void ImageUpload_UsesActionButtonForClearAndRendersDefaultEnglishStrings()
+    {
+        IReadOnlyList<IBrowserFile>? lastSelectedFiles = null;
+        var cut = Render<ImageUpload>(parameters => parameters
+            .Add(upload => upload.OnImagesSelected, files => lastSelectedFiles = files));
+
+        Assert.Equal("Tap to choose images", cut.Find(".image-upload-prompt").TextContent);
+
+        var inputFile = cut.FindComponent<InputFile>();
+        inputFile.UploadFiles(InputFileContent.CreateFromBinary([1, 2, 3, 4], "photo.png", contentType: "image/png"));
+
+        Assert.NotNull(lastSelectedFiles);
+        Assert.Single(lastSelectedFiles);
+        Assert.Contains("1 image selected", cut.Markup);
+
+        var clearButton = cut.FindComponent<ActionButton>();
+        Assert.Equal(ActionButton.ButtonVariant.Outline, clearButton.Instance.Variant);
+        Assert.Equal(ActionButton.ButtonSize.Small, clearButton.Instance.Size);
+        Assert.Equal("Clear", clearButton.Instance.Text);
+        Assert.Contains("action-btn", clearButton.Find("button").ClassList);
+
+        clearButton.Find("button").Click();
+
+        Assert.NotNull(lastSelectedFiles);
+        Assert.Empty(lastSelectedFiles);
+        Assert.Empty(cut.FindAll(".image-upload-previews"));
+        Assert.Empty(cut.FindComponents<ActionButton>());
+    }
+
+    [Fact]
+    public void ImageUpload_SupportsCustomLocalizedStrings()
+    {
+        var folderCut = Render<ImageUpload>(parameters => parameters
+            .Add(upload => upload.AllowFolderUpload, true)
+            .Add(upload => upload.PromptText, "Tryk for at vælge billeder")
+            .Add(upload => upload.FolderHintText, "Vælg en mappe (inkluderer undermapper)"));
+
+        Assert.Equal("Tryk for at vælge billeder", folderCut.Find(".image-upload-prompt").TextContent);
+        Assert.Equal("Vælg en mappe (inkluderer undermapper)", folderCut.Find(".image-upload-hint").TextContent);
+
+        var cut = Render<ImageUpload>(parameters => parameters
+            .Add(upload => upload.ClearButtonText, "Ryd")
+            .Add(upload => upload.SelectionSummaryFormatter, count => $"{count} billeder valgt")
+            .Add(upload => upload.UnsupportedFormatErrorFormat, "'{0}' er ikke et understøttet format."));
+
+        var inputFile = cut.FindComponent<InputFile>();
+        inputFile.UploadFiles(
+            InputFileContent.CreateFromBinary([1, 2], "a.png", contentType: "image/png"),
+            InputFileContent.CreateFromBinary([3, 4], "b.png", contentType: "image/png"));
+
+        Assert.Contains("2 billeder valgt", cut.Markup);
+        Assert.Equal("Ryd", cut.FindComponent<ActionButton>().Instance.Text);
+
+        inputFile.UploadFiles(InputFileContent.CreateFromBinary([1], "notes.txt", contentType: "text/plain"));
+        Assert.Equal("'notes.txt' er ikke et understøttet format.", cut.Find(".image-upload-error").TextContent);
+    }
+
+    [Fact]
+    public void InputComponents_SupportCustomLocalizedAriaLabelsAndStrings()
+    {
+        var searchCut = Render<SearchInput>(parameters => parameters
+            .Add(input => input.Value, "test")
+            .Add(input => input.ClearButtonAriaLabel, "Ryd søgning"));
+        Assert.Equal("Ryd søgning", searchCut.FindComponent<CloseButton>().Instance.AriaLabel);
+
+        var numberCut = Render<NumberInput<int>>(parameters => parameters
+            .Add(input => input.TouchMode, TouchInputMode.Always)
+            .Add(input => input.DecreaseAriaLabel, "Formindsk værdi")
+            .Add(input => input.IncreaseAriaLabel, "Forøg værdi")
+            .Add(input => input.OpenNumpadAriaLabel, "Åbn numerisk tastatur"));
+        var actionButtons = numberCut.FindComponents<ActionButton>();
+        Assert.Equal("Formindsk værdi", actionButtons[0].Find("button").GetAttribute("aria-label"));
+        Assert.Equal("Forøg værdi", actionButtons[1].Find("button").GetAttribute("aria-label"));
+        Assert.Equal("Åbn numerisk tastatur", numberCut.Find("button.numpad-trigger-btn").GetAttribute("aria-label"));
+
+        var numpadCut = Render<TouchNumpad<int>>(parameters => parameters
+            .Add(pad => pad.ClearText, "Ryd")
+            .Add(pad => pad.BackspaceAriaLabel, "Tilbage"));
+        Assert.Contains("Tilbage", numpadCut.FindAll("button").Select(b => b.GetAttribute("aria-label")));
+        Assert.Contains("Ryd", numpadCut.FindAll("button").Select(b => b.TextContent.Trim()));
     }
 }

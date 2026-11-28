@@ -8,8 +8,8 @@ services:
     expose:
       - "80"
     networks:
-      - proxy_net
+      - microservices-net
 
 networks:
-  proxy_net:
+  microservices-net:
     external: true

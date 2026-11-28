@@ -76,7 +76,7 @@
                       Variant="ActionButton.ButtonVariant.Outline"
                       Modifier="@BuildSecondaryKeyModifier()"
                       Text="@InputDefaults.Symbols.Backspace"
-                      aria-label="Backspace"
+                      aria-label="@BackspaceAriaLabel"
                       OnClick="BackspaceAsync" />
     </div>
 
@@ -84,7 +84,7 @@
         <ActionButton PressEffect="ButtonPressEffect.InwardScale"
                       Variant="ActionButton.ButtonVariant.Ghost"
                       Modifier="@(UIModifier.New.Weight(1).Padding(12, 16).BaseColor("var(--ui-danger)"))"
-                      Text="Clear"
+                      Text="@ClearText"
                       OnClick="ClearAsync" />
 
         @if (OnConfirm.HasDelegate)
@@ -113,6 +113,10 @@
     [Parameter] public int MaxPinLength { get; set; } = 6;
     [Parameter] public List<TValue>? QuickSteps { get; set; }
     [Parameter] public string ConfirmText { get; set; } = "Enter \u21B5";
+    /// <summary>Label for the clear button.</summary>
+    [Parameter] public string ClearText { get; set; } = "Clear";
+    /// <summary>Accessible label for the backspace key.</summary>
+    [Parameter] public string BackspaceAriaLabel { get; set; } = "Backspace";
     [Parameter] public EventCallback<TValue> OnConfirm { get; set; }
 
     private string _numericInputBuffer = "0";

@@ -183,6 +183,67 @@
             </Window>
         </Grid>
     </TitledWindow>
+
+    <TitledWindow Title="ImageUpload & Localization" Modifier="@(UIModifier.New.FillMaxWidth())">
+        <Grid MinColumnWidth="300px" Gap="1.25rem">
+            <Window Modifier="@ShowcaseStyles.FullHeightCardWindow">
+                <Column Gap="0.75rem" Modifier="@(UIModifier.New.FillMaxWidth())">
+                    <Text Variant="TypographyVariant.Title" Value="ImageUpload (Default English)" />
+                    <Text Variant="TypographyVariant.Caption" Muted="true" Value="Uses ActionButton for Clear and backward-compatible English defaults." />
+
+                    <ImageUpload OnImagesSelected="@(files => _defaultImageCount = files.Count)" />
+
+                    <Text Variant="TypographyVariant.Caption" Muted="true" Value="@($"Selected count: {_defaultImageCount}")" />
+
+                    <Row HorizontalArrangement="Arrangement.SpaceBetween" VerticalAlignment="VerticalAlignment.Center">
+                        <Text Variant="TypographyVariant.Caption" Muted="true" Value="Code Example" />
+                        <ActionButton Variant="ActionButton.ButtonVariant.Outline"
+                                      Size="ActionButton.ButtonSize.Small"
+                                      Modifier="@ShowcaseStyles.CopyButton"
+                                      Text="Copy"
+                                      OnClick="@(() => ShowcaseStyles.CopyAsync(JS, Toast, ImageUploadDefaultSnippet, "ImageUpload code"))" />
+                    </Row>
+                    <Window Modifier="@ShowcaseStyles.CodeWindow">
+                        <Text Variant="TypographyVariant.Mono" Color="#93c5fd" Modifier="@ShowcaseStyles.PreText" Value="@ImageUploadDefaultSnippet" />
+                    </Window>
+                </Column>
+            </Window>
+
+            <Window Modifier="@ShowcaseStyles.FullHeightCardWindow">
+                <Column Gap="0.75rem" Modifier="@(UIModifier.New.FillMaxWidth())">
+                    <Text Variant="TypographyVariant.Title" Value="Localized Inputs (Custom Labels)" />
+                    <Text Variant="TypographyVariant.Caption" Muted="true" Value="All UI strings and aria-labels can be overridden via optional parameters." />
+
+                    <SearchInput @bind-Value="_localizedSearchQuery"
+                                 Placeholder="Søg i komponenter..."
+                                 AriaLabel="Søg i komponenter"
+                                 ClearButtonAriaLabel="Ryd søgning"
+                                 Modifier="@(UIModifier.New.FillMaxWidth())" />
+
+                    <ImageUpload PromptText="Tryk for at vælge billeder"
+                                 ClearButtonText="Ryd"
+                                 SelectionSummaryFormatter="@(count => count == 1 ? "1 billede valgt" : $"{count} billeder valgt")"
+                                 UnsupportedFormatErrorFormat="'{0}' er ikke et understøttet billedformat."
+                                 FileSizeExceededErrorFormat="'{0}' overskrider maks. {1} MB."
+                                 OnImagesSelected="@(files => _localizedImageCount = files.Count)" />
+
+                    <Text Variant="TypographyVariant.Caption" Muted="true" Value="@($"Valgte billeder: {_localizedImageCount}")" />
+
+                    <Row HorizontalArrangement="Arrangement.SpaceBetween" VerticalAlignment="VerticalAlignment.Center">
+                        <Text Variant="TypographyVariant.Caption" Muted="true" Value="Code Example" />
+                        <ActionButton Variant="ActionButton.ButtonVariant.Outline"
+                                      Size="ActionButton.ButtonSize.Small"
+                                      Modifier="@ShowcaseStyles.CopyButton"
+                                      Text="Copy"
+                                      OnClick="@(() => ShowcaseStyles.CopyAsync(JS, Toast, ImageUploadLocalizedSnippet, "Localized ImageUpload code"))" />
+                    </Row>
+                    <Window Modifier="@ShowcaseStyles.CodeWindow">
+                        <Text Variant="TypographyVariant.Mono" Color="#93c5fd" Modifier="@ShowcaseStyles.PreText" Value="@ImageUploadLocalizedSnippet" />
+                    </Window>
+                </Column>
+            </Window>
+        </Grid>
+    </TitledWindow>
 </Column>
 
 @code {
@@ -192,6 +253,9 @@
     private bool _demoCheck = true;
     private bool _demoSwitch = true;
     private string _selectedStore = "Rema 1000";
+    private int _defaultImageCount;
+    private int _localizedImageCount;
+    private string? _localizedSearchQuery;
 
     private readonly List<string> _danishStores =
     [
@@ -266,4 +330,17 @@
           Items=""_stores""
           @bind-Value=""_selectedStore""
           Modifier=""@(UIModifier.New.FillMaxWidth())"" />";
+
+    private const string ImageUploadDefaultSnippet = @"<ImageUpload OnImagesSelected=""HandleImagesAsync"" />";
+
+    private const string ImageUploadLocalizedSnippet = @"<SearchInput @bind-Value=""_query""
+             Placeholder=""Søg i komponenter...""
+             AriaLabel=""Søg i komponenter""
+             ClearButtonAriaLabel=""Ryd søgning"" />
+
+<ImageUpload PromptText=""Tryk for at vælge billeder""
+             ClearButtonText=""Ryd""
+             SelectionSummaryFormatter=""@(c => c == 1 ? ""1 billede valgt"" : $""{c} billeder valgt"")""
+             UnsupportedFormatErrorFormat=""'{0}' er ikke et understøttet billedformat.""
+             FileSizeExceededErrorFormat=""'{0}' overskrider maks. {1} MB."" />";
 }

@@ -1,0 +1,226 @@
+@using System.Globalization
+@using ALKsPersonalUI.Buttons
+@using ALKsPersonalUI.Core
+
+@switch (Node.Type)
+{
+    case "ActionButton":
+        <ActionButton Text="@InterpolateProp("Text", "Button")"
+                      Variant="@ParseEnum(Node.GetProp("Variant"), ActionButton.ButtonVariant.Solid)"
+                      Shape="@ParseEnum(Node.GetProp("Shape"), ActionButton.ButtonShape.Rounded)"
+                      Size="@ParseEnum(Node.GetProp("Size"), ActionButton.ButtonSize.Dynamic)"
+                      IsDisabled="@IsInteractionDisabled"
+                      Modifier="@ResolvedModifier"
+                      OnClick="@HandleActionButtonClickAsync" />
+        break;
+
+    case "CloseButton":
+        <CloseButton AriaLabel="@InterpolateProp("AriaLabel", "Close")"
+                     Modifier="@ResolvedModifier"
+                     OnClick="@HandleCloseButtonClickAsync" />
+        break;
+
+    case "ChoiceCard":
+        <ChoiceCard Title="@InterpolateProp("Title")"
+                    Description="@InterpolateProp("Description")"
+                    ImageSource="@SanitizedImageProp("ImageSource")"
+                    ImageAlt="@InterpolateProp("ImageAlt")"
+                    State="@ResolveChoiceCardState()"
+                    Disabled="@IsInteractionDisabled"
+                    Modifier="@ResolvedModifier"
+                    OnClick="@(() => Context.DispatchEventAsync(Node, JsonUiDefaults.EventClick, null))" />
+        break;
+
+    case "ScreenKeyboard":
+        <ScreenKeyboard Setup="@ResolveKeyboardSetup()"
+                        Value="@BoundStringValue"
+                        ValueChanged="@UpdateBoundStringAsync"
+                        Placeholder="@InterpolateProp("Placeholder")"
+                        IsPassword="@Node.GetBool("IsPassword", false)"
+                        MaxLength="@Node.GetInt("MaxLength", InputDefaults.ScreenKeyboard.DefaultMaxLength)"
+                        ShowPreviewBar="@Node.GetBool("ShowPreviewBar", true)"
+                        SubmitText="@InterpolateProp("SubmitText", "Done ✓")"
+                        ClearText="@InterpolateProp("ClearText", "Clear")"
+                        Modifier="@ResolvedModifier"
+                        OnSubmit="@(val => Context.DispatchEventAsync(Node, JsonUiDefaults.EventSubmit, val))" />
+        break;
+
+    case "TextInput":
+        <TextInput Label="@InterpolateProp("Label", "Text Input")"
+                   Placeholder="@InterpolateProp("Placeholder", "Type here...")"
+                   Value="@BoundStringValue"
+                   ValueChanged="@UpdateBoundStringAsync"
+                   Modifier="@ResolvedModifier" />
+        break;
+
+    case "TextArea":
+        <TextArea Label="@InterpolateProp("Label", "Text Area")"
+                  Placeholder="@InterpolateProp("Placeholder", "Enter notes...")"
+                  Rows="@Node.GetInt("Rows", JsonUiDefaults.DefaultTextAreaRows)"
+                  Value="@BoundStringValue"
+                  ValueChanged="@UpdateBoundStringAsync"
+                  IsDisabled="@IsInteractionDisabled"
+                  Modifier="@ResolvedModifier" />
+        break;
+
+    case "SearchInput":
+        <SearchInput Placeholder="@InterpolateProp("Placeholder", "Search...")"
+                     Value="@BoundStringValue"
+                     ValueChanged="@UpdateBoundStringAsync"
+                     IsDisabled="@IsInteractionDisabled"
+                     Modifier="@ResolvedModifier" />
+        break;
+
+    case "NumberInput":
+        <NumberInput TValue="double"
+                     Label="@InterpolateProp("Label", "Number")"
+                     Value="@BoundDoubleValue"
+                     ValueChanged="@UpdateBoundDoubleAsync"
+                     Disabled="@IsInteractionDisabled"
+                     Modifier="@ResolvedModifier" />
+        break;
+
+    case "Checkbox":
+        <Checkbox Label="@InterpolateProp("Label", "Check me")"
+                  Checked="@BoundBoolValue"
+                  CheckedChanged="@UpdateBoundBoolAsync"
+                  Disabled="@IsInteractionDisabled"
+                  Modifier="@ResolvedModifier" />
+        break;
+
+    case "FileUpload":
+        <FileUpload PromptText="@InterpolateProp("PromptText", "Tap to choose files")"
+                    AllowMultiple="@Node.GetBool("AllowMultiple", true)"
+                    Modifier="@ResolvedModifier" />
+        break;
+
+    case "ImageUpload":
+        <ImageUpload PromptText="@InterpolateProp("PromptText", "Tap to choose images")"
+                     AllowMultiple="@Node.GetBool("AllowMultiple", true)"
+                     AllowFolderUpload="@Node.GetBool("AllowFolderUpload", false)"
+                     ShowPreview="@Node.GetBool("ShowPreview", true)"
+                     Modifier="@ResolvedModifier" />
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired] public JsonUiNode Node { get; set; } = default!;
+    [Parameter, EditorRequired] public JsonUiRenderContext Context { get; set; } = default!;
+
+    private UIModifier ResolvedModifier => JsonUiStyleMapper.MapToModifier(Node.Style);
+
+    private bool IsInteractionDisabled =>
+        Node.GetBool("Disabled", false)
+        || (Node.DisabledWhen is not null && JsonUiConditionEvaluator.Evaluate(Node.DisabledWhen, Context.State));
+
+    private string BoundStringValue =>
+        !string.IsNullOrWhiteSpace(Node.BindKey) ? Context.State.GetString(Node.BindKey) : string.Empty;
+
+    private double BoundDoubleValue =>
+        !string.IsNullOrWhiteSpace(Node.BindKey) ? Context.State.GetDouble(Node.BindKey, 0) : 0;
+
+    private bool BoundBoolValue =>
+        !string.IsNullOrWhiteSpace(Node.BindKey) && Context.State.GetBool(Node.BindKey);
+
+    private string InterpolateProp(string key, string fallback = "") =>
+        Context.State.Interpolate(Node.GetProp(key, fallback));
+
+    private string SanitizedImageProp(string key) =>
+        JsonUiSanitizer.SanitizeImageUrl(InterpolateProp(key));
+
+    private async Task HandleActionButtonClickAsync()
+    {
+        if (Node.Events is not null && Node.Events.ContainsKey(JsonUiDefaults.EventClick))
+        {
+            await Context.DispatchEventAsync(Node, JsonUiDefaults.EventClick, null);
+            return;
+        }
+
+        // Preserve backwards compatibility with legacy OnAction(buttonText) callers.
+        await Context.TriggerLegacyActionAsync(InterpolateProp("Text", "Button"));
+    }
+
+    private async Task HandleCloseButtonClickAsync()
+    {
+        if (Node.Events is not null && Node.Events.ContainsKey(JsonUiDefaults.EventClick))
+        {
+            await Context.DispatchEventAsync(Node, JsonUiDefaults.EventClick, null);
+            return;
+        }
+
+        await Context.TriggerLegacyActionAsync(InterpolateProp("AriaLabel", "Close"));
+    }
+
+    private async Task UpdateBoundStringAsync(string? newValue)
+    {
+        if (!string.IsNullOrWhiteSpace(Node.BindKey))
+        {
+            Context.State.SetValue(Node.BindKey, newValue ?? string.Empty);
+        }
+
+        await Context.DispatchEventAsync(Node, JsonUiDefaults.EventChange, newValue);
+        Context.NotifyStateChanged();
+    }
+
+    private async Task UpdateBoundDoubleAsync(double newValue)
+    {
+        if (!string.IsNullOrWhiteSpace(Node.BindKey))
+        {
+            Context.State.SetValue(Node.BindKey, newValue);
+        }
+
+        await Context.DispatchEventAsync(
+            Node,
+            JsonUiDefaults.EventChange,
+            newValue.ToString(CultureInfo.InvariantCulture));
+        Context.NotifyStateChanged();
+    }
+
+    private async Task UpdateBoundBoolAsync(bool newValue)
+    {
+        if (!string.IsNullOrWhiteSpace(Node.BindKey))
+        {
+            Context.State.SetValue(Node.BindKey, newValue);
+        }
+
+        await Context.DispatchEventAsync(Node, JsonUiDefaults.EventChange, newValue ? "true" : "false");
+        Context.NotifyStateChanged();
+    }
+
+    private ChoiceCardState ResolveChoiceCardState()
+    {
+        var rawState = !string.IsNullOrWhiteSpace(Node.BindKey)
+            ? Context.State.GetString(Node.BindKey, Node.GetProp("State", "Neutral"))
+            : InterpolateProp("State", "Neutral");
+
+        return ParseEnum(rawState, ChoiceCardState.Neutral);
+    }
+
+    private KeyboardSetup ResolveKeyboardSetup()
+    {
+        var baseSetup = Node.GetProp("Setup").Trim().ToLowerInvariant() switch
+        {
+            "lettersonly" or "letters-only" => KeyboardSetup.LettersOnly,
+            "tenkeyless" => KeyboardSetup.Tenkeyless,
+            "fullmacro" or "full-macro" => KeyboardSetup.FullMacro,
+            "new" => KeyboardSetup.New,
+            _ => KeyboardSetup.TouchStandard
+        };
+
+        // Always clone before applying layout so static KeyboardSetup presets are never mutated.
+        var cloned = baseSetup.Clone();
+        var rawLayout = Node.GetProp("Layout");
+        if (!string.IsNullOrWhiteSpace(rawLayout)
+            && Enum.TryParse<KeyboardLayout>(rawLayout, ignoreCase: true, out var parsedLayout))
+        {
+            cloned.Layout(parsedLayout);
+        }
+
+        return cloned;
+    }
+
+    private static TEnum ParseEnum<TEnum>(string? rawValue, TEnum fallback) where TEnum : struct, Enum =>
+        !string.IsNullOrWhiteSpace(rawValue) && Enum.TryParse<TEnum>(rawValue.Trim(), ignoreCase: true, out var parsed)
+            ? parsed
+            : fallback;
+}

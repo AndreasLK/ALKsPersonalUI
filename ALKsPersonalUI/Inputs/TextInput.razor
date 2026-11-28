@@ -22,7 +22,7 @@
             <button type="button"
                     class="input-icon-btn"
                     @onclick="ClearInputAsync"
-                    aria-label="Clear text">
+                    aria-label="@ClearButtonAriaLabel">
                 @InputDefaults.TextInput.ClearSymbol
             </button>
         }
@@ -55,7 +55,7 @@
             <button type="button"
                     class="input-icon-btn"
                     @onclick="OpenKeyboardSheet"
-                    aria-label="Open screen keyboard">
+                    aria-label="@KeyboardButtonAriaLabel">
                 @InputDefaults.TextInput.KeyboardSymbol
             </button>
         }
@@ -68,14 +68,14 @@
 </div>
 
 <BottomSheet @bind-IsOpen="_isKeyboardOpen"
-             Title="@(Label ?? Placeholder ?? "Keyboard")"
+             Title="@(Label ?? Placeholder ?? KeyboardModalTitle)"
              MaxWidth="860px">
     <ScreenKeyboard Value="@_currentInputText"
                     ValueChanged="UpdateTextAndNotifyAsync"
                     Setup="@KeyboardSetup"
                     IsPassword="@(IsPassword && !_isPasswordRevealed)"
                     MaxLength="@MaxLength"
-                    Placeholder="@(Placeholder ?? "Tap keys to type...")"
+                    Placeholder="@(Placeholder ?? KeyboardPlaceholder)"
                     OnSubmit="@(_ => _isKeyboardOpen = false)" />
 </BottomSheet>
 
@@ -88,6 +88,18 @@
     [Parameter] public bool ShowClearButton { get; set; } = true;
     [Parameter] public TouchInputMode? TouchMode { get; set; }
     [Parameter] public KeyboardSetup? KeyboardSetup { get; set; }
+    /// <summary>Accessible label for the clear-text button.</summary>
+    [Parameter] public string ClearButtonAriaLabel { get; set; } = "Clear text";
+    /// <summary>Accessible label for the button that opens the touch screen keyboard.</summary>
+    [Parameter] public string KeyboardButtonAriaLabel { get; set; } = "Open screen keyboard";
+    /// <summary>Fallback title for the touch keyboard sheet when Label and Placeholder are not set.</summary>
+    [Parameter] public string KeyboardModalTitle { get; set; } = "Keyboard";
+    /// <summary>Fallback placeholder for the touch keyboard preview bar when Placeholder is not set.</summary>
+    [Parameter] public string KeyboardPlaceholder { get; set; } = "Tap keys to type...";
+    /// <summary>Accessible label for revealing a masked password.</summary>
+    [Parameter] public string ShowPasswordAriaLabel { get; set; } = "Show password";
+    /// <summary>Accessible label for hiding a revealed password.</summary>
+    [Parameter] public string HidePasswordAriaLabel { get; set; } = "Hide password";
 
     [Parameter] public string? Value { get; set; }
     [Parameter] public EventCallback<string?> ValueChanged { get; set; }
@@ -111,7 +123,7 @@
         IsPassword && !_isPasswordRevealed ? "password" : "text";
 
     private string PasswordToggleAriaLabel =>
-        _isPasswordRevealed ? "Hide password" : "Show password";
+        _isPasswordRevealed ? HidePasswordAriaLabel : ShowPasswordAriaLabel;
 
     private UIModifier BuildInnerWindowModifier() => UIModifier.Empty
         .FillMaxWidth()
