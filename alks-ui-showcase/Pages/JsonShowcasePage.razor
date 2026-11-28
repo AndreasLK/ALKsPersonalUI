@@ -10,7 +10,15 @@
             </ALKsPersonalUI.Layout.Text>
 
             <Row Gap="0.75rem" Wrap="true">
-                <ActionButton Text="Re-parse &amp; Render JSON" OnClick="ParseJson" />
+                <ActionButton Text="Interactive Quiz Runtime (JsonUiDocument)"
+                              Variant="@(_isDocumentMode ? ActionButton.ButtonVariant.Solid : ActionButton.ButtonVariant.Outline)"
+                              OnClick="@(() => _isDocumentMode = true)" />
+                <ActionButton Text="Static Node Tree (JsonUiNode)"
+                              Variant="@(!_isDocumentMode ? ActionButton.ButtonVariant.Solid : ActionButton.ButtonVariant.Outline)"
+                              OnClick="@(() => _isDocumentMode = false)" />
+                <ActionButton Text="Re-parse &amp; Render JSON"
+                              Variant="ActionButton.ButtonVariant.Ghost"
+                              OnClick="ParseJson" />
                 <ActionButton Text="@(_showJsonEditor ? "Hide JSON" : "Show / Edit JSON")"
                               Variant="ActionButton.ButtonVariant.Ghost"
                               OnClick="@(() => _showJsonEditor = !_showJsonEditor)" />
@@ -35,7 +43,13 @@
         </Column>
     </TitledWindow>
 
-    @if (_parsedRoot is not null)
+    @if (_isDocumentMode)
+    {
+        <JsonUiRenderer Json="@_quizDocumentJson"
+                        DataSources="@_leaderboardDataSources"
+                        OnHostCommand="HandleHostCommand" />
+    }
+    else if (_parsedRoot is not null)
     {
         <JsonUiRenderer Node="@_parsedRoot" OnAction="HandleNodeAction" />
     }
@@ -51,6 +65,17 @@
     private string? _lastActionMessage;
     private JsonUiNode? _parsedRoot;
     private bool _showJsonEditor;
+    private bool _isDocumentMode = true;
+    private readonly List<IReadOnlyDictionary<string, object?>> _leaderboardRows =
+    [
+        new Dictionary<string, object?> { ["name"] = "Ada", ["score"] = 20, ["elapsed"] = "12s" },
+        new Dictionary<string, object?> { ["name"] = "Linus", ["score"] = 10, ["elapsed"] = "18s" }
+    ];
+    private IReadOnlyDictionary<string, IReadOnlyList<IReadOnlyDictionary<string, object?>>> _leaderboardDataSources =>
+        new Dictionary<string, IReadOnlyList<IReadOnlyDictionary<string, object?>>>
+        {
+            ["scores"] = _leaderboardRows
+        };
     private PeriodicTimer? _progressTimer;
     private CancellationTokenSource? _timerCts;
     private Task? _progressLoopTask;
@@ -66,6 +91,148 @@
     {
         _lastActionMessage = $"Triggered: {actionName}";
     }
+
+    private void HandleHostCommand(JsonUiHostCommand command)
+    {
+        if (string.Equals(command.Command, "submitScore", StringComparison.Ordinal))
+        {
+            var player = command.Payload.TryGetValue("playerName", out var p) && p is not null
+                ? p.ToString()!
+                : "Guest";
+            var score = command.Payload.TryGetValue("score", out var s) && s is not null ? s : 0;
+            var elapsed = command.Payload.TryGetValue("elapsedSeconds", out var e) && e is not null ? $"{e}s" : "0s";
+            _leaderboardRows.Insert(0, new Dictionary<string, object?>
+            {
+                ["name"] = player,
+                ["score"] = score,
+                ["elapsed"] = elapsed
+            });
+            _lastActionMessage = $"HostCommand: submitScore ({player}: {score})";
+        }
+    }
+
+    private readonly string _quizDocumentJson = """
+    {
+      "id": "showcase-museum-quiz",
+      "title": "Space Museum Kiosk",
+      "themePreset": "cyberpunk",
+      "initialState": { "score": 0, "answered": false, "playerName": "" },
+      "initialView": "start",
+      "views": {
+        "start": {
+          "type": "TitledWindow",
+          "props": { "Title": "Space Museum Kiosk (Pure JSON)" },
+          "children": [
+            {
+              "type": "Column",
+              "props": { "Gap": "1rem" },
+              "children": [
+                { "type": "Text", "text": "Test your planetary knowledge in this self-contained JSON experience.", "props": { "Variant": "Body" } },
+                {
+                  "type": "ActionButton",
+                  "props": { "Text": "Start Quiz", "Variant": "Solid" },
+                  "events": {
+                    "click": [
+                      { "type": "markTime", "key": "quizStart" },
+                      { "type": "navigate", "target": "question" }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "question": {
+          "type": "TitledWindow",
+          "props": { "Title": "Question 1 — Score: {{score}}" },
+          "children": [
+            {
+              "type": "Column",
+              "props": { "Gap": "1rem" },
+              "children": [
+                { "type": "Text", "text": "Which planet is known as the Red Planet?", "props": { "Variant": "Title" } },
+                {
+                  "type": "Grid",
+                  "props": { "Columns": "2", "Gap": "1rem" },
+                  "children": [
+                    {
+                      "type": "ChoiceCard",
+                      "props": { "Title": "Mars", "Description": "Iron-oxide rich surface" },
+                      "disabledWhen": { "key": "answered", "operator": "isTrue" },
+                      "events": {
+                        "click": [
+                          { "type": "incrementState", "key": "score", "delta": 10 },
+                          { "type": "setState", "key": "answered", "value": true }
+                        ]
+                      }
+                    },
+                    {
+                      "type": "ChoiceCard",
+                      "props": { "Title": "Neptune", "Description": "Ice giant" },
+                      "disabledWhen": { "key": "answered", "operator": "isTrue" },
+                      "events": {
+                        "click": [
+                          { "type": "setState", "key": "answered", "value": true }
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "Text",
+                  "text": "Recorded! Current score: {{score}}.",
+                  "visibleWhen": { "key": "answered", "operator": "isTrue" }
+                },
+                {
+                  "type": "ActionButton",
+                  "props": { "Text": "Enter Player Name" },
+                  "visibleWhen": { "key": "answered", "operator": "isTrue" },
+                  "events": { "click": [ { "type": "navigate", "target": "entry" } ] }
+                }
+              ]
+            }
+          ]
+        },
+        "entry": {
+          "type": "TitledWindow",
+          "props": { "Title": "Enter Your Name" },
+          "children": [
+            {
+              "type": "ScreenKeyboard",
+              "bindKey": "playerName",
+              "props": { "Setup": "LettersOnly", "Layout": "Nordic", "SubmitText": "Submit Score" },
+              "events": {
+                "submit": [
+                  { "type": "computeElapsedSeconds", "key": "quizStart", "target": "elapsedSeconds" },
+                  { "type": "hostCommand", "target": "submitScore", "payloadKeys": [ "playerName", "score", "elapsedSeconds" ] },
+                  { "type": "navigate", "target": "results" }
+                ]
+              }
+            }
+          ]
+        },
+        "results": {
+          "type": "TitledWindow",
+          "props": { "Title": "Leaderboard" },
+          "children": [
+            {
+              "type": "Column",
+              "props": { "Gap": "1rem" },
+              "children": [
+                { "type": "Text", "text": "Thanks for playing, {{playerName}}! Final score: {{score}} in {{elapsedSeconds}}s." },
+                { "type": "Leaderboard", "props": { "DataSource": "scores", "Columns": "Player:name,Score:score,Time:elapsed" } },
+                {
+                  "type": "ActionButton",
+                  "props": { "Text": "Play Again" },
+                  "events": { "click": [ { "type": "resetSession" } ] }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+    """;
 
     private void StartProgressTimer()
     {
