@@ -86,6 +86,10 @@
     case "KioskShell":
         @RenderKioskShell()
         break;
+
+    case "ViewOutlet":
+        @Context.ActiveViewContent
+        break;
 }
 
 @code {
@@ -152,18 +156,45 @@
 
     private RenderFragment RenderKioskShell() => __builder =>
     {
+        var isOffline = Context.IsOffline || ResolveInterpolatedBool("IsOffline", false);
+        var hasExplicitChildren = Node.Children is { Count: > 0 };
+
         <KioskShell TopBar="@ResolveSlot("TopBar")"
                     BottomBar="@ResolveSlot("BottomBar")"
                     FloatingAction="@ResolveSlot("FloatingAction")"
                     ConnectionBanner="@ResolveSlot("ConnectionBanner")"
                     AttractOverlay="@ResolveSlot("AttractOverlay")"
                     EnableToasts="@Node.GetBool("EnableToasts", true)"
-                    IsOffline="@Node.GetBool("IsOffline", false)"
+                    IsOffline="@isOffline"
                     IsPreview="@Node.GetBool("IsPreview", false)"
                     IdleTimeoutSeconds="@Node.GetInt("IdleTimeoutSeconds", 0)"
                     Modifier="@ResolvedModifier"
                     OnIdleTimeout="@(() => Context.DispatchEventAsync(Node, JsonUiDefaults.EventIdleTimeout, null))">
-            @RenderChildren()
+            @if (!hasExplicitChildren && Context.ActiveViewContent is not null)
+            {
+                @Context.ActiveViewContent
+            }
+            else
+            {
+                @RenderChildren()
+            }
         </KioskShell>
     };
+
+    private bool ResolveInterpolatedBool(string key, bool fallback)
+    {
+        var raw = Node.GetProp(key);
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return fallback;
+        }
+
+        var interpolated = Context.State.Interpolate(raw);
+        if (bool.TryParse(interpolated, out var parsed))
+        {
+            return parsed;
+        }
+
+        return string.Equals(interpolated.Trim(), "1", StringComparison.Ordinal);
+    }
 }

@@ -43,6 +43,11 @@ public sealed class JsonUiDocument
     public Dictionary<string, JsonUiNode>? Views { get; set; }
 
     /// <summary>
+    /// Gets or sets an optional persistent shell node (for example, <c>KioskShell</c>) that wraps the active view across navigation.
+    /// </summary>
+    public JsonUiNode? Shell { get; set; }
+
+    /// <summary>
     /// Gets or sets an optional single root node when <see cref="Views"/> is not used.
     /// </summary>
     public JsonUiNode? Root { get; set; }

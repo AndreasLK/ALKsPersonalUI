@@ -36,4 +36,19 @@ public sealed class JsonUiAction
     /// Gets or sets the session state keys whose current values should be included in a host command payload.
     /// </summary>
     public List<string>? PayloadKeys { get; set; }
+
+    /// <summary>
+    /// Gets or sets the interpolated message text used by <see cref="JsonUiActionType.ShowToast"/>.
+    /// </summary>
+    public string? Message { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional toast severity variant (Info, Success, Warning, Danger) for <see cref="JsonUiActionType.ShowToast"/>.
+    /// </summary>
+    public string? Variant { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional condition evaluated against session state before executing this action.
+    /// </summary>
+    public JsonUiCondition? When { get; set; }
 }

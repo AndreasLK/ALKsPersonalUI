@@ -6,7 +6,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 
 		<PackageId>ALKsPersonalUI</PackageId>
-		<Version>3.2.0</Version>
+		<Version>3.3.0</Version>
 		<Authors>Andreas Liepins Krusager</Authors>
 		<Company>Andreas Liepins Krusager</Company>
 		<Title>ALK's Personal UI</Title>

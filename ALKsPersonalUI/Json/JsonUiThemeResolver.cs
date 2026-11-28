@@ -51,12 +51,31 @@ public static class JsonUiThemeResolver
 
         foreach (var (key, rawValue) in overrides)
         {
-            if (string.IsNullOrWhiteSpace(key) || !JsonUiSanitizer.IsSafeCssValue(rawValue))
+            if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(rawValue))
             {
                 continue;
             }
 
-            ApplyThemeProperty(theme, key.Trim().ToLowerInvariant(), rawValue.Trim());
+            var normalizedKey = key.Trim().ToLowerInvariant();
+            var trimmedValue = rawValue.Trim();
+
+            if (normalizedKey is "fontfamily" or "--ui-font-family")
+            {
+                if (!JsonUiSanitizer.IsSafeFontFamily(trimmedValue))
+                {
+                    continue;
+                }
+
+                theme.FontFamily = trimmedValue;
+                continue;
+            }
+
+            if (!JsonUiSanitizer.IsSafeCssValue(trimmedValue))
+            {
+                continue;
+            }
+
+            ApplyThemeProperty(theme, normalizedKey, trimmedValue);
         }
     }
 
@@ -81,7 +100,7 @@ public static class JsonUiThemeResolver
             case "mediumborderradius": theme.MediumBorderRadius = value; break;
             case "largeborderradius": theme.LargeBorderRadius = value; break;
             default:
-                if (normalizedKey.StartsWith("--", StringComparison.Ordinal))
+                if (JsonUiSanitizer.IsSafeCssVariableName(normalizedKey))
                 {
                     theme.WithCustomVariable(normalizedKey, value);
                 }

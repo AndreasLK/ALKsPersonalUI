@@ -69,6 +69,11 @@ public static class JsonUiDefaults
     public const string EventChange = "change";
 
     /// <summary>
+    /// Standard event key for closing an overlay such as a modal or bottom sheet.
+    /// </summary>
+    public const string EventClose = "close";
+
+    /// <summary>
     /// Allowed HTTPS scheme prefix for external image URLs.
     /// </summary>
     public const string HttpsSchemePrefix = "https://";

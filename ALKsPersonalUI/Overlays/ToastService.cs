@@ -10,8 +10,15 @@ public class ToastService
 {
     public event Action? OnChange;
     private readonly List<ToastMessage> _activeToasts = new();
+    private readonly object _syncLock = new();
 
-    public IReadOnlyList<ToastMessage> GetToasts() => _activeToasts;
+    public IReadOnlyList<ToastMessage> GetToasts()
+    {
+        lock (_syncLock)
+        {
+            return _activeToasts.ToArray();
+        }
+    }
 
     public void ShowInfo(string messageText) => Show(messageText, ToastVariant.Info);
     public void ShowSuccess(string messageText) => Show(messageText, ToastVariant.Success);
@@ -24,15 +31,22 @@ public class ToastService
         int durationMilliseconds = OverlayDefaults.Toast.DefaultDurationMilliseconds)
     {
         var newToast = new ToastMessage(Guid.NewGuid(), messageText, variant);
-        _activeToasts.Add(newToast);
+        lock (_syncLock)
+        {
+            _activeToasts.Add(newToast);
+        }
+
         NotifyToastsChanged();
         _ = DismissAfterDelayAsync(newToast.Id, durationMilliseconds);
     }
 
     public void Remove(Guid toastId)
     {
-        var removedCount = _activeToasts.RemoveAll(existingToast => existingToast.Id == toastId);
-        var wasAnyToastRemoved = removedCount > 0;
+        bool wasAnyToastRemoved;
+        lock (_syncLock)
+        {
+            wasAnyToastRemoved = _activeToasts.RemoveAll(existingToast => existingToast.Id == toastId) > 0;
+        }
 
         if (wasAnyToastRemoved)
             NotifyToastsChanged();

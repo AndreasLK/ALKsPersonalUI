@@ -214,4 +214,116 @@ public sealed class JsonUiRuntimeComponentTests : BunitContext
 
         Assert.Contains("Count: 0", cut.Markup);
     }
+
+    [Fact]
+    public async Task Renderer_SupportsModalAndBottomSheetPopupsViaBindKey()
+    {
+        var json = """
+        {
+          "initialState": { "modalOpen": false, "sheetOpen": false, "closedCount": 0 },
+          "root": {
+            "type": "Column",
+            "children": [
+              {
+                "type": "ActionButton",
+                "props": { "Text": "Open Modal" },
+                "events": { "click": [ { "type": "setState", "key": "modalOpen", "value": true } ] }
+              },
+              {
+                "type": "ActionButton",
+                "props": { "Text": "Open Sheet" },
+                "events": { "click": [ { "type": "setState", "key": "sheetOpen", "value": true } ] }
+              },
+              {
+                "type": "Modal",
+                "bindKey": "modalOpen",
+                "props": { "Title": "Feedback Popup" },
+                "events": { "close": [ { "type": "incrementState", "key": "closedCount", "delta": 1 } ] },
+                "children": [ { "type": "Text", "text": "Inside Modal", "props": { "Weight": "Bold" } } ]
+              },
+              {
+                "type": "BottomSheet",
+                "bindKey": "sheetOpen",
+                "props": { "Title": "Details Sheet", "MaxWidth": "28rem" },
+                "children": [ { "type": "Text", "text": "Inside Sheet" } ]
+              }
+            ]
+          }
+        }
+        """;
+
+        var cut = Render<JsonUiRenderer>(p => p.Add(x => x.Json, json));
+        Assert.DoesNotContain("Inside Modal", cut.Markup);
+
+        cut.FindAll("button")[0].Click();
+        Assert.Contains("Inside Modal", cut.Markup);
+        Assert.Contains("font-weight: 700", cut.Markup);
+
+        // Close modal via its close button and verify close event incremented closedCount.
+        await cut.InvokeAsync(() => cut.FindComponent<ALKsPersonalUI.Overlays.Modal>().Instance.IsOpenChanged.InvokeAsync(false));
+        Assert.DoesNotContain("Inside Modal", cut.Markup);
+        Assert.True(cut.Instance.TryGetStateValue("closedCount", out var closed) && Convert.ToInt32(closed) == 1);
+
+        cut.FindAll("button")[1].Click();
+        Assert.Contains("Inside Sheet", cut.Markup);
+    }
+
+    [Fact]
+    public async Task Renderer_SupportsHostStateUpdatesDynamicOfflineAndPersistentShell()
+    {
+        var json = """
+        {
+          "initialState": { "player": "Guest" },
+          "initialView": "first",
+          "shell": {
+            "type": "KioskShell",
+            "props": { "IsPreview": "true" },
+            "slots": {
+              "ConnectionBanner": {
+                "type": "Text",
+                "text": "OFFLINE_BANNER_ACTIVE"
+              }
+            }
+          },
+          "views": {
+            "first": {
+              "type": "Column",
+              "children": [
+                { "type": "Text", "text": "Welcome, {{player}}" },
+                {
+                  "type": "ActionButton",
+                  "props": { "Text": "Next View" },
+                  "events": { "click": [ { "type": "navigate", "target": "second" } ] }
+                }
+              ]
+            },
+            "second": {
+              "type": "Text",
+              "text": "Second View for {{player}}"
+            }
+          }
+        }
+        """;
+
+        var cut = Render<JsonUiRenderer>(p => p
+            .Add(x => x.Json, json)
+            .Add(x => x.IsOffline, false));
+
+        var initialShellInstance = cut.FindComponent<ALKsPersonalUI.Templates.KioskShell>().Instance;
+        Assert.DoesNotContain("OFFLINE_BANNER_ACTIVE", cut.Markup);
+        Assert.Contains("Welcome, Guest", cut.Markup);
+
+        // Host updates state without resetting active view, and toggles offline live.
+        await cut.Instance.SetStateValueAsync("player", "Astrid");
+        Assert.Contains("Welcome, Astrid", cut.Markup);
+
+        cut.Render(p => p.Add(x => x.IsOffline, true));
+        Assert.Contains("OFFLINE_BANNER_ACTIVE", cut.Markup);
+
+        // Navigate to second view; persistent KioskShell instance should be preserved.
+        cut.Find("button").Click();
+        Assert.Contains("Second View for Astrid", cut.Markup);
+        var currentShellInstance = cut.FindComponent<ALKsPersonalUI.Templates.KioskShell>().Instance;
+        Assert.Same(initialShellInstance, currentShellInstance);
+    }
 }

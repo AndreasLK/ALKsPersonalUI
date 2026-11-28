@@ -22,6 +22,12 @@
                 <ActionButton Text="@(_showJsonEditor ? "Hide JSON" : "Show / Edit JSON")"
                               Variant="ActionButton.ButtonVariant.Ghost"
                               OnClick="@(() => _showJsonEditor = !_showJsonEditor)" />
+                @if (_isDocumentMode)
+                {
+                    <ActionButton Text="@(_isOffline ? "Simulate Online" : "Simulate Offline")"
+                                  Variant="ActionButton.ButtonVariant.Outline"
+                                  OnClick="@(() => _isOffline = !_isOffline)" />
+                }
                 @if (!string.IsNullOrWhiteSpace(_lastActionMessage))
                 {
                     <Pill Text="@_lastActionMessage" Active="true" />
@@ -45,7 +51,9 @@
 
     @if (_isDocumentMode)
     {
-        <JsonUiRenderer Json="@_quizDocumentJson"
+        <JsonUiRenderer @ref="_jsonRenderer"
+                        Json="@_quizDocumentJson"
+                        IsOffline="@_isOffline"
                         DataSources="@_leaderboardDataSources"
                         OnHostCommand="HandleHostCommand" />
     }
@@ -66,6 +74,8 @@
     private JsonUiNode? _parsedRoot;
     private bool _showJsonEditor;
     private bool _isDocumentMode = true;
+    private bool _isOffline;
+    private JsonUiRenderer? _jsonRenderer;
     private readonly List<IReadOnlyDictionary<string, object?>> _leaderboardRows =
     [
         new Dictionary<string, object?> { ["name"] = "Ada", ["score"] = 20, ["elapsed"] = "12s" },
@@ -92,13 +102,14 @@
         _lastActionMessage = $"Triggered: {actionName}";
     }
 
-    private void HandleHostCommand(JsonUiHostCommand command)
+    private async Task HandleHostCommand(JsonUiHostCommand command)
     {
         if (string.Equals(command.Command, "submitScore", StringComparison.Ordinal))
         {
-            var player = command.Payload.TryGetValue("playerName", out var p) && p is not null
-                ? p.ToString()!
+            var rawPlayer = command.Payload.TryGetValue("playerName", out var p) && p is not null
+                ? p.ToString()!.Trim()
                 : "Guest";
+            var player = string.IsNullOrWhiteSpace(rawPlayer) ? "Guest" : rawPlayer;
             var score = command.Payload.TryGetValue("score", out var s) && s is not null ? s : 0;
             var elapsed = command.Payload.TryGetValue("elapsedSeconds", out var e) && e is not null ? $"{e}s" : "0s";
             _leaderboardRows.Insert(0, new Dictionary<string, object?>
@@ -108,6 +119,11 @@
                 ["elapsed"] = elapsed
             });
             _lastActionMessage = $"HostCommand: submitScore ({player}: {score})";
+
+            if (_jsonRenderer is not null)
+            {
+                await _jsonRenderer.SetStateValueAsync("playerName", player);
+            }
         }
     }
 
@@ -116,8 +132,22 @@
       "id": "showcase-museum-quiz",
       "title": "Space Museum Kiosk",
       "themePreset": "cyberpunk",
-      "initialState": { "score": 0, "answered": false, "playerName": "" },
+      "themeOverrides": { "fontFamily": "'Space Grotesk', sans-serif" },
+      "initialState": { "score": 0, "answered": false, "playerName": "", "showHintModal": false },
       "initialView": "start",
+      "shell": {
+        "type": "KioskShell",
+        "props": { "IsPreview": "true", "EnableToasts": "true" },
+        "slots": {
+          "ConnectionBanner": {
+            "type": "Box",
+            "style": { "background": "var(--ui-danger)", "padding": "0.5rem 1rem" },
+            "children": [
+              { "type": "Text", "text": "Offline Mode — Scores will sync when reconnected.", "props": { "Weight": "SemiBold" } }
+            ]
+          }
+        }
+      },
       "views": {
         "start": {
           "type": "TitledWindow",
@@ -127,15 +157,49 @@
               "type": "Column",
               "props": { "Gap": "1rem" },
               "children": [
-                { "type": "Text", "text": "Test your planetary knowledge in this self-contained JSON experience.", "props": { "Variant": "Body" } },
+                { "type": "Text", "text": "Test your planetary knowledge in this self-contained JSON experience.", "props": { "Variant": "Body", "Weight": "Medium" } },
                 {
-                  "type": "ActionButton",
-                  "props": { "Text": "Start Quiz", "Variant": "Solid" },
-                  "events": {
-                    "click": [
-                      { "type": "markTime", "key": "quizStart" },
-                      { "type": "navigate", "target": "question" }
-                    ]
+                  "type": "Row",
+                  "props": { "Gap": "0.75rem" },
+                  "children": [
+                    {
+                      "type": "ActionButton",
+                      "props": { "Text": "Start Quiz", "Variant": "Solid" },
+                      "events": {
+                        "click": [
+                          { "type": "markTime", "key": "quizStart" },
+                          { "type": "navigate", "target": "question" }
+                        ]
+                      }
+                    },
+                    {
+                      "type": "ActionButton",
+                      "props": { "Text": "Exhibit Hint", "Variant": "Outline" },
+                      "events": {
+                        "click": [
+                          { "type": "setState", "key": "showHintModal", "value": true }
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "Modal",
+                  "bindKey": "showHintModal",
+                  "props": { "Title": "Exhibit Hint" },
+                  "children": [
+                    { "type": "Text", "text": "Look for the planet famous for iron-oxide dust!" }
+                  ],
+                  "slots": {
+                    "FooterContent": {
+                      "type": "ActionButton",
+                      "props": { "Text": "Got it", "Variant": "Solid" },
+                      "events": {
+                        "click": [
+                          { "type": "setState", "key": "showHintModal", "value": false }
+                        ]
+                      }
+                    }
                   }
                 }
               ]
@@ -162,7 +226,8 @@
                       "events": {
                         "click": [
                           { "type": "incrementState", "key": "score", "delta": 10 },
-                          { "type": "setState", "key": "answered", "value": true }
+                          { "type": "setState", "key": "answered", "value": true },
+                          { "type": "showToast", "message": "Correct! Score is now {{score}}.", "variant": "Success", "when": { "key": "score", "operator": "greaterThan", "value": 0 } }
                         ]
                       }
                     },

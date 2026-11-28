@@ -22,6 +22,18 @@ public static partial class JsonUiSanitizer
     private static readonly Regex SafeCssValuePattern =
         new(@"^[A-Za-z0-9\s\.\,\#\%\(\)\-\+\/]+$", RegexOptions.Compiled);
 
+    private static readonly Regex SafeCssVariableNamePattern =
+        new(@"^--[A-Za-z0-9\-]+$", RegexOptions.Compiled);
+
+    private static readonly Regex UnquotedFontTokenPattern =
+        new(@"^[A-Za-z0-9][A-Za-z0-9 \-]*$", RegexOptions.Compiled);
+
+    private static readonly Regex SingleQuotedFontTokenPattern =
+        new(@"^'[A-Za-z0-9 \-]+'$", RegexOptions.Compiled);
+
+    private static readonly Regex SafeCssVarRefPattern =
+        new(@"^var\(--[A-Za-z0-9\-]+\)$", RegexOptions.Compiled);
+
     /// <summary>
     /// Returns the trimmed URL if it matches an allow-listed safe image scheme; otherwise returns an empty string.
     /// </summary>
@@ -71,6 +83,52 @@ public static partial class JsonUiSanitizer
         }
 
         return SafeCssValuePattern.IsMatch(trimmed);
+    }
+
+    /// <summary>
+    /// Validates a CSS custom property name (for example, <c>--ui-accent</c>) against a strict identifier allow-list.
+    /// </summary>
+    public static bool IsSafeCssVariableName(string? name) =>
+        !string.IsNullOrWhiteSpace(name) && SafeCssVariableNamePattern.IsMatch(name.Trim());
+
+    /// <summary>
+    /// Validates a CSS <c>font-family</c> list, allowing unquoted names, balanced single-quoted font names, and <c>var(--...)</c> tokens without newlines or breakout characters.
+    /// </summary>
+    public static bool IsSafeFontFamily(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var trimmed = value.Trim();
+        if (trimmed.Contains('\r') || trimmed.Contains('\n'))
+        {
+            return false;
+        }
+
+        var tokens = trimmed.Split(',', StringSplitOptions.TrimEntries);
+        if (tokens.Length == 0)
+        {
+            return false;
+        }
+
+        foreach (var token in tokens)
+        {
+            if (string.IsNullOrEmpty(token))
+            {
+                return false;
+            }
+
+            if (!UnquotedFontTokenPattern.IsMatch(token)
+                && !SingleQuotedFontTokenPattern.IsMatch(token)
+                && !SafeCssVarRefPattern.IsMatch(token))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static bool IsSafeHttpsUrl(string url) =>

@@ -43,5 +43,10 @@ public enum JsonUiActionType
     /// <summary>
     /// Emits a named command with resolved payload values to the hosting application.
     /// </summary>
-    HostCommand
+    HostCommand,
+
+    /// <summary>
+    /// Displays a toast notification through <see cref="ALKsPersonalUI.Overlays.ToastService"/>.
+    /// </summary>
+    ShowToast
 }

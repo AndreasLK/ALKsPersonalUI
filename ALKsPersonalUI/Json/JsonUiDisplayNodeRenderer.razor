@@ -4,6 +4,7 @@
 {
     case "Text":
         <ALKsPersonalUI.Layout.Text Variant="@ParseEnum(Node.GetProp("Variant"), TypographyVariant.Body)"
+                                    Weight="@ResolveFontWeight()"
                                     Align="@ParseEnum(Node.GetProp("Align"), TextAlignment.Start)"
                                     Color="@ResolveSafeColor()"
                                     Wrap="@Node.GetBool("Wrap", true)"
@@ -190,4 +191,12 @@
         !string.IsNullOrWhiteSpace(rawValue) && Enum.TryParse<TEnum>(rawValue.Trim(), ignoreCase: true, out var parsed)
             ? parsed
             : fallback;
+
+    private FontWeight? ResolveFontWeight() =>
+        ParseNullableEnum<FontWeight>(Node.GetProp("Weight"));
+
+    private static TEnum? ParseNullableEnum<TEnum>(string? rawValue) where TEnum : struct, Enum =>
+        !string.IsNullOrWhiteSpace(rawValue) && Enum.TryParse<TEnum>(rawValue.Trim(), ignoreCase: true, out var parsed)
+            ? parsed
+            : null;
 }

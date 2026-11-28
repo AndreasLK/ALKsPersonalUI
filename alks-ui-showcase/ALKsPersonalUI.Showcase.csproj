@@ -15,7 +15,7 @@
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.*" />
 		<!-- Use local library source inside the monorepo; fall back to NuGet for standalone Docker builds or -p:UseNuGetPackage=true verification -->
 		<ProjectReference Include="..\ALKsPersonalUI\ALKsPersonalUI.csproj" Condition="Exists('..\ALKsPersonalUI\ALKsPersonalUI.csproj') And '$(UseNuGetPackage)' != 'true'" />
-		<PackageReference Include="ALKsPersonalUI" Version="3.2.0" Condition="!Exists('..\ALKsPersonalUI\ALKsPersonalUI.csproj') Or '$(UseNuGetPackage)' == 'true'" />
+		<PackageReference Include="ALKsPersonalUI" Version="3.3.0" Condition="!Exists('..\ALKsPersonalUI\ALKsPersonalUI.csproj') Or '$(UseNuGetPackage)' == 'true'" />
 	</ItemGroup>
 
 </Project>

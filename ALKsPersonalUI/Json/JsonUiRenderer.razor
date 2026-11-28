@@ -1,20 +1,18 @@
 @using ALKsPersonalUI.Json
+@using ALKsPersonalUI.Overlays
+@implements IDisposable
 
-@if (ResolvedRootNode is not null)
+@if (ResolvedRootNode is not null || _activeDocument?.Shell is not null)
 {
     @if (HasScopedTheme)
     {
         <div class="ui-json-runtime-scope" style="@ScopedThemeVariables">
-            <div @key="ViewSubtreeKey">
-                @RenderNode(ResolvedRootNode, 0)
-            </div>
+            @RenderDocumentExperience()
         </div>
     }
     else
     {
-        <div @key="ViewSubtreeKey">
-            @RenderNode(ResolvedRootNode, 0)
-        </div>
+        @RenderDocumentExperience()
     }
 }
 
@@ -22,7 +20,12 @@
     private static readonly HashSet<string> LayoutNodeTypes = new(StringComparer.Ordinal)
     {
         "Column", "Row", "Box", "Grid", "Window", "TitledWindow", "Divider",
-        "Spacer", "FrameBox", "TemplateSlot", "AspectRatioFrame", "PageCarousel", "KioskShell"
+        "Spacer", "FrameBox", "TemplateSlot", "AspectRatioFrame", "PageCarousel", "KioskShell", "ViewOutlet"
+    };
+
+    private static readonly HashSet<string> OverlayNodeTypes = new(StringComparer.Ordinal)
+    {
+        "Modal", "BottomSheet"
     };
 
     private static readonly HashSet<string> InputNodeTypes = new(StringComparer.Ordinal)
@@ -31,12 +34,16 @@
         "TextArea", "SearchInput", "NumberInput", "Checkbox", "FileUpload", "ImageUpload"
     };
 
+    [Inject] private IServiceProvider ServiceProvider { get; set; } = default!;
+
     private readonly JsonUiSessionState _sessionState = new();
     private JsonUiDocument? _activeDocument;
     private JsonUiDocument? _lastDocumentParam;
     private string? _lastJsonParam;
     private JsonUiNode? _lastNodeParam;
     private string? _lastDocumentId;
+    private bool _isAttached;
+    private bool _isDisposed;
 
     /// <summary>
     /// Gets or sets a legacy root <see cref="JsonUiNode"/> for single-tree rendering.
@@ -68,12 +75,94 @@
     /// </summary>
     [Parameter] public IReadOnlyDictionary<string, IReadOnlyList<IReadOnlyDictionary<string, object?>>>? DataSources { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether the host is currently offline, dynamically updating <c>KioskShell</c> banners.
+    /// </summary>
+    [Parameter] public bool IsOffline { get; set; }
+
     private JsonUiNode? ResolvedRootNode =>
         _activeDocument is not null ? _activeDocument.ResolveViewNode(_sessionState.ActiveView) : Node;
 
     private string ScopedThemeVariables => JsonUiThemeResolver.ResolveScopedCssVariables(_activeDocument);
     private bool HasScopedTheme => !string.IsNullOrEmpty(ScopedThemeVariables);
     private string ViewSubtreeKey => $"{_sessionState.SessionGeneration}:{_sessionState.ActiveView}";
+    private string ShellSubtreeKey => $"shell:{_sessionState.SessionGeneration}";
+
+    protected override void OnInitialized() => _isAttached = true;
+
+    /// <summary>
+    /// Updates a single session state value from the host application without resetting the active view or session.
+    /// </summary>
+    public Task SetStateValueAsync(string key, object? value)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return Task.CompletedTask;
+        }
+
+        return ApplyHostStateUpdatesAsync(new Dictionary<string, object?>(StringComparer.Ordinal) { [key] = value });
+    }
+
+    /// <summary>
+    /// Merges multiple session state values from the host application without resetting the active view or session.
+    /// </summary>
+    public Task UpdateStateAsync(IReadOnlyDictionary<string, object?> stateUpdates)
+    {
+        if (stateUpdates is null || stateUpdates.Count == 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        // Snapshot incoming dictionary before marshaling onto the renderer synchronization context.
+        var snapshot = new Dictionary<string, object?>(stateUpdates, StringComparer.Ordinal);
+        return ApplyHostStateUpdatesAsync(snapshot);
+    }
+
+    /// <summary>
+    /// Attempts to read a current session state value for host inspection.
+    /// </summary>
+    public bool TryGetStateValue(string key, out object? value) =>
+        _sessionState.TryGetValue(key, out value);
+
+    private async Task ApplyHostStateUpdatesAsync(Dictionary<string, object?> snapshot)
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        if (!_isAttached)
+        {
+            foreach (var (key, value) in snapshot)
+            {
+                _sessionState.SetValue(key, value);
+            }
+
+            return;
+        }
+
+        try
+        {
+            await InvokeAsync(() =>
+            {
+                if (_isDisposed)
+                {
+                    return;
+                }
+
+                foreach (var (key, value) in snapshot)
+                {
+                    _sessionState.SetValue(key, value);
+                }
+
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex) when (ex is ObjectDisposedException or InvalidOperationException)
+        {
+            // Ignore updates arriving after circuit disconnect or component disposal.
+        }
+    }
 
     protected override void OnParametersSet()
     {
@@ -114,7 +203,36 @@
         _sessionState.Reset(_activeDocument);
     }
 
-    private RenderFragment RenderNode(JsonUiNode node, int depth) => __builder =>
+    private RenderFragment RenderDocumentExperience() => __builder =>
+    {
+        var shellNode = _activeDocument?.Shell;
+        if (shellNode is not null)
+        {
+            <div @key="ShellSubtreeKey">
+                @RenderNodeWithOutlet(shellNode, 0, RenderActiveViewSubtree())
+            </div>
+            return;
+        }
+
+        @RenderActiveViewSubtree()
+    };
+
+    private RenderFragment RenderActiveViewSubtree() => __builder =>
+    {
+        if (ResolvedRootNode is null)
+        {
+            return;
+        }
+
+        <div @key="ViewSubtreeKey">
+            @RenderNode(ResolvedRootNode, 0)
+        </div>
+    };
+
+    private RenderFragment RenderNode(JsonUiNode node, int depth) =>
+        RenderNodeWithOutlet(node, depth, activeViewContent: null);
+
+    private RenderFragment RenderNodeWithOutlet(JsonUiNode node, int depth, RenderFragment? activeViewContent) => __builder =>
     {
         if (depth > JsonUiDefaults.MaxRenderDepth || !JsonUiConditionEvaluator.Evaluate(node.VisibleWhen, _sessionState))
         {
@@ -127,7 +245,15 @@
             DispatchNodeEventAsync,
             TriggerLegacyActionAsync,
             StateHasChanged,
-            RenderNode);
+            (child, childDepth) => RenderNodeWithOutlet(child, childDepth, activeViewContent),
+            IsOffline,
+            activeViewContent);
+
+        if (OverlayNodeTypes.Contains(node.Type))
+        {
+            <JsonUiOverlayNodeRenderer Node="@node" Context="@context" Depth="@depth" />
+            return;
+        }
 
         if (LayoutNodeTypes.Contains(node.Type))
         {
@@ -151,11 +277,13 @@
             return;
         }
 
+        var toastService = ServiceProvider.GetService(typeof(ToastService)) as ToastService;
         await JsonUiActionDispatcher.DispatchAsync(
             actions,
             _sessionState,
             _activeDocument,
             OnHostCommand.HasDelegate ? cmd => OnHostCommand.InvokeAsync(cmd) : null,
+            toastService,
             eventValue);
 
         StateHasChanged();
@@ -168,4 +296,6 @@
             await OnAction.InvokeAsync(actionName);
         }
     }
+
+    public void Dispose() => _isDisposed = true;
 }
