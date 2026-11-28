@@ -1,9 +1,11 @@
 ﻿FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 WORKDIR /src
-COPY ["ALKsPersonalUI.Showcase.csproj", "./"]
-RUN dotnet restore "ALKsPersonalUI.Showcase.csproj" --no-cache
-COPY . .
-RUN dotnet publish "ALKsPersonalUI.Showcase.csproj" -c Release -o /app/publish /p:UseAppHost=false
+COPY ["ALKsPersonalUI/ALKsPersonalUI.csproj", "ALKsPersonalUI/"]
+COPY ["alks-ui-showcase/ALKsPersonalUI.Showcase.csproj", "alks-ui-showcase/"]
+RUN dotnet restore "alks-ui-showcase/ALKsPersonalUI.Showcase.csproj" --no-cache
+COPY ALKsPersonalUI/ ALKsPersonalUI/
+COPY alks-ui-showcase/ alks-ui-showcase/
+RUN dotnet publish "alks-ui-showcase/ALKsPersonalUI.Showcase.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM nginx:stable-alpine AS final
 WORKDIR /usr/share/nginx/html

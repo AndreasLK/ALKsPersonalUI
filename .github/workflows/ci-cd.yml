@@ -105,7 +105,7 @@ jobs:
       - name: Build and push showcase container image
         uses: docker/build-push-action@v6
         with:
-          context: ./alks-ui-showcase
+          context: .
           file: ./alks-ui-showcase/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
