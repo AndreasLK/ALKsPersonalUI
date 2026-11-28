@@ -1,3 +1,4 @@
+@using System.Globalization
 @using Microsoft.AspNetCore.Components.Forms
 @inherits UIComponentBase
 
@@ -24,11 +25,17 @@
 </div>
 
 @code {
+    private const int BytesPerMegabyte = 1024 * 1024;
+
     [Parameter] public bool AllowMultiple { get; set; }
     [Parameter] public string AcceptedExtensions { get; set; } = InputDefaults.FileUpload.DefaultAcceptedExtensions;
     [Parameter] public long MaxFileSizeBytes { get; set; } = InputDefaults.FileUpload.DefaultMaxFileSizeBytes;
     [Parameter] public int MaxAllowedFiles { get; set; } = InputDefaults.FileUpload.DefaultMaxAllowedFiles;
     [Parameter] public string PromptText { get; set; } = InputDefaults.FileUpload.DefaultPromptText;
+    /// <summary>Format string for oversized file errors. Receives the file name as {0} and max size in MB as {1}.</summary>
+    [Parameter] public string FileSizeExceededErrorFormat { get; set; } = "'{0}' exceeds the maximum size of {1} MB.";
+    /// <summary>Format string for unsupported file extension errors. Receives the file name as {0}.</summary>
+    [Parameter] public string UnsupportedExtensionErrorFormat { get; set; } = "'{0}' has an unsupported file extension.";
     [Parameter] public bool IsDisabled { get; set; }
     [Parameter] public EventCallback<IReadOnlyList<IBrowserFile>> OnFilesSelected { get; set; }
 
@@ -46,13 +53,20 @@
         {
             if (file.Size > MaxFileSizeBytes)
             {
-                _validationError = $"'{file.Name}' exceeds the maximum size of {MaxFileSizeBytes / (1024 * 1024)} MB.";
+                _validationError = string.Format(
+                    CultureInfo.CurrentCulture,
+                    FileSizeExceededErrorFormat,
+                    file.Name,
+                    MaxFileSizeBytes / BytesPerMegabyte);
                 return;
             }
 
             if (!IsExtensionAllowed(file.Name))
             {
-                _validationError = $"'{file.Name}' has an unsupported file extension.";
+                _validationError = string.Format(
+                    CultureInfo.CurrentCulture,
+                    UnsupportedExtensionErrorFormat,
+                    file.Name);
                 return;
             }
 

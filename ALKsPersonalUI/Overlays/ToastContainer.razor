@@ -9,7 +9,7 @@
                 <div class="toast-inner">
                     <span>@toast.Text</span>
                     <CloseButton Shape="ActionButton.ButtonShape.Pill"
-                                 AriaLabel="@OverlayDefaults.Toast.DismissAriaLabel"
+                                 AriaLabel="@DismissAriaLabel"
                                  OnClick="() => ToastService.Remove(toast.Id)" />
                 </div>
             </Window>
@@ -18,6 +18,8 @@
 </div>
 
 @code {
+    /// <summary>Accessible label for the dismiss button on each toast notification.</summary>
+    [Parameter] public string DismissAriaLabel { get; set; } = OverlayDefaults.Toast.DismissAriaLabel;
     protected override void OnInitialized() =>
         ToastService.OnChange += RefreshToastDisplay;
 

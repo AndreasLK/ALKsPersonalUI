@@ -20,7 +20,7 @@
                           aria-label="@Title"
                           @attributes="AdditionalAttributes">
                 <HeaderActions>
-                    <CloseButton OnClick="CloseModalAsync" AriaLabel="@OverlayDefaults.Modal.CloseAriaLabel" />
+                    <CloseButton OnClick="CloseModalAsync" AriaLabel="@CloseAriaLabel" />
                 </HeaderActions>
                 <ChildContent>
                     @ChildContent
@@ -38,6 +38,8 @@
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
     [Parameter] public string Title { get; set; } = OverlayDefaults.Modal.DefaultTitle;
+    /// <summary>Accessible label for the close button in the modal header.</summary>
+    [Parameter] public string CloseAriaLabel { get; set; } = OverlayDefaults.Modal.CloseAriaLabel;
     [Parameter] public string? TitleImageSource { get; set; }
     [Parameter] public string? TitleImageAlt { get; set; }
     [Parameter] public string? TitleImageSize { get; set; }

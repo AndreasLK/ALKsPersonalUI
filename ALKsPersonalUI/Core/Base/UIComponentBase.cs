@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using Microsoft.AspNetCore.Components; //Force update showcase
 
 namespace ALKsPersonalUI.Core;
 

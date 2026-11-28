@@ -99,7 +99,7 @@ jobs:
         with:
           images: ${{ steps.image-name.outputs.image }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
             type=sha,prefix=sha-
 
       - name: Build and push showcase container image

@@ -18,7 +18,7 @@
                           @attributes="AdditionalAttributes">
                 <HeaderActions>
                     @HeaderActions
-                    <CloseButton OnClick="CloseSheetAsync" AriaLabel="Close sheet" />
+                    <CloseButton OnClick="CloseSheetAsync" AriaLabel="@CloseAriaLabel" />
                 </HeaderActions>
                 <ChildContent>
                     @ChildContent
@@ -32,6 +32,8 @@
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
     [Parameter] public string Title { get; set; } = "Options";
+    /// <summary>Accessible label for the close button in the sheet header.</summary>
+    [Parameter] public string CloseAriaLabel { get; set; } = "Close sheet";
     [Parameter] public string MaxWidth { get; set; } = "680px";
     [Parameter] public bool CloseOnBackdropClick { get; set; } = true;
     [Parameter] public RenderFragment? HeaderActions { get; set; }
