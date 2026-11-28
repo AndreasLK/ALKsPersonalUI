@@ -1,11 +1,11 @@
-﻿# ALK's Personal UI v3.1.5
+﻿# ALK's Personal UI v3.3.0
 
 A tactile, auto-adaptive desktop and touch kiosk component library for Blazor. Features 3D tactile buttons, touch-focused input handlers, on-screen keyboards, numeric keypads, bottom sheets, sliders, windows, modals, toasts, segmented controls, and procedural planetary loaders.
 
 ## 1. Installation
 
 ```bash
-dotnet add package ALKsPersonalUI --version 3.1.5
+dotnet add package ALKsPersonalUI --version 3.3.0
 ```
 
 
